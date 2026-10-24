@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LinuxExplode.Vistas.MainWindow"
+        Title="LINUX EXPLODE"
+        Width="1280" Height="820"
+        MinWidth="980" MinHeight="620"
+        Icon="/Assets/logo.png"
+        Background="{StaticResource Fundo}"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid ColumnDefinitions="236,*">
+
+    <!-- ===================== Barra lateral ===================== -->
+    <Border Grid.Column="0" Background="#0C0C0C" BorderBrush="{StaticResource Linha}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="14,18,14,14">
+
+        <StackPanel Grid.Row="0" Spacing="2" Margin="6,0,6,18">
+          <TextBlock Text="LINUX" FontSize="19" FontWeight="Bold" LetterSpacing="3" Foreground="{StaticResource Muted}" />
+          <TextBlock Text="EXPLODE" FontSize="19" FontWeight="Bold" LetterSpacing="3" />
+          <TextBlock Text="hardware · sensores · bench" FontSize="10" Foreground="{StaticResource Faint}" Margin="0,6,0,0" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="2" Name="Nav">
+            <Button Classes="nav ativo" Name="NavSistema"   Content="Sistema"        Click="IrSistema" />
+            <Button Classes="nav"       Name="NavSensores"  Content="Sensores"       Click="IrSensores" />
+            <Button Classes="nav"       Name="NavDiscos"    Content="Discos e saúde" Click="IrDiscos" />
+            <Button Classes="nav"       Name="NavBench"     Content="EXPLODE BENCH"    Click="IrBench" />
+            <Button Classes="nav"       Name="NavRede"      Content="Rede"           Click="IrRede" />
+            <Button Classes="nav"       Name="NavRelatorio" Content="Relatório"      Click="IrRelatorio" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Spacing="4" Margin="6,14,6,0">
+          <TextBlock Name="RodapeVersao" Text="v0.1.0" FontSize="10" Foreground="{StaticResource Faint}" />
+          <TextBlock Name="RodapeEstado" Text="a ler hardware…" FontSize="10" Foreground="{StaticResource Faint}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ===================== Conteúdo ===================== -->
+    <ContentControl Grid.Column="1" Name="Conteudo" />
+  </Grid>
+</Window>

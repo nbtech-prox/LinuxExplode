@@ -1,0 +1,163 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <!-- Paleta monocromática, igual à linguagem visual do EXPLODE -->
+    <SolidColorBrush x:Key="Fundo" Color="#0A0A0A" />
+    <SolidColorBrush x:Key="Cartao" Color="#111111" />
+    <SolidColorBrush x:Key="Cartao2" Color="#151515" />
+    <SolidColorBrush x:Key="Linha" Color="#202020" />
+    <SolidColorBrush x:Key="Fg" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="Muted" Color="#8C8C8C" />
+    <SolidColorBrush x:Key="Faint" Color="#4A4A4A" />
+    <SolidColorBrush x:Key="Bom" Color="#9BE8A8" />
+    <SolidColorBrush x:Key="Atencao" Color="#E8D08C" />
+    <SolidColorBrush x:Key="Mau" Color="#E89B9B" />
+
+    <FontFamily x:Key="Mono">JetBrains Mono, DejaVu Sans Mono, Cascadia Mono, monospace</FontFamily>
+    <FontFamily x:Key="Texto">Inter, Noto Sans, Cantarell, sans-serif</FontFamily>
+  </Styles.Resources>
+
+  <!-- ===================== Tipografia ===================== -->
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Texto}" />
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+  </Style>
+
+  <Style Selector="TextBlock.titulo">
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.5" />
+  </Style>
+
+  <Style Selector="TextBlock.sub">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+  </Style>
+
+  <Style Selector="TextBlock.rotulo">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="LetterSpacing" Value="1.2" />
+  </Style>
+
+  <Style Selector="TextBlock.valor">
+    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+
+  <Style Selector="TextBlock.numero">
+    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.chave">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+  </Style>
+
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <!-- ===================== Cartões ===================== -->
+  <Style Selector="Border.cartao">
+    <Setter Property="Background" Value="{StaticResource Cartao}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="18" />
+  </Style>
+
+  <Style Selector="Border.cartao2">
+    <Setter Property="Background" Value="{StaticResource Cartao2}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+
+  <Style Selector="Border.linha">
+    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,9" />
+  </Style>
+
+  <!-- ===================== Botões ===================== -->
+  <Style Selector="Button">
+    <Setter Property="FontFamily" Value="{StaticResource Texto}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="16,9" />
+  </Style>
+
+  <Style Selector="Button.primario">
+    <Setter Property="Background" Value="{StaticResource Fg}" />
+    <Setter Property="Foreground" Value="#0A0A0A" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.primario:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#D8D8D8" />
+  </Style>
+  <Style Selector="Button.primario:pointerover">
+    <Setter Property="Foreground" Value="#0A0A0A" />
+  </Style>
+
+  <Style Selector="Button.secundario">
+    <Setter Property="Background" Value="#1A1A1A" />
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.secundario:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#242424" />
+  </Style>
+
+  <!-- Navegação lateral -->
+  <Style Selector="Button.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#161616" />
+  </Style>
+  <Style Selector="Button.nav:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+  </Style>
+  <Style Selector="Button.nav.ativo">
+    <Setter Property="Background" Value="#1C1C1C" />
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.nav.ativo /template/ ContentPresenter">
+    <Setter Property="Background" Value="#1C1C1C" />
+  </Style>
+
+  <!-- ===================== Diversos ===================== -->
+  <Style Selector="ProgressBar">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="Background" Value="#1E1E1E" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+
+  <Style Selector="ScrollViewer">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="#1C1C1C" />
+    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+  </Style>
+
+</Styles>

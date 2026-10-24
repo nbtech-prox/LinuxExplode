@@ -1,0 +1,47 @@
+LINUX EXPLODE — pacote linux-arm64 (aarch64)
+==========================================
+
+Binário self-contained: leva o runtime .NET 8 dentro. Não precisa de .NET
+instalado, nem de Flatpak, nem de root. Único requisito para a interface
+gráfica: driver de vídeo com Vulkan (Mesa RADV, ANV ou NVIDIA). A CLI
+(--cli) funciona sem Vulkan.
+
+INSTALAR
+--------
+    tar -xzf linux-explode-0.1.0-linux-arm64.tar.gz
+    cd linux-explode-0.1.0-linux-arm64
+    ./install.sh
+
+Fica em ~/.local/share/linux-explode, com atalho em ~/.local/bin/linux-explode
+e entrada no menu de aplicações. Se ~/.local/bin não estiver no PATH:
+
+    ~/.local/bin/linux-explode
+
+Para instalar noutro sítio (ou no sistema, com root):
+
+    PREFIXO=/usr/local sudo ./install.sh
+
+DESINSTALAR
+-----------
+    ./uninstall.sh                    (ou PREFIXO=... ./uninstall.sh)
+
+CORRER
+------
+    linux-explode                 interface gráfica
+    linux-explode --cli discos    S.M.A.R.T. dos discos (precisa de smartctl)
+    linux-explode --cli sensores  sensores do kernel (hwmon)
+    linux-explode --cli relatorio json
+
+O que este pacote NÃO faz sozinho
+---------------------------------
+- S.M.A.R.T. precisa de root: instala smartmontools e cria a regra sudoers
+  que a própria aplicação mostra na página Discos.
+- Super I/O da placa depende do chip (nct6683, nct6775, it87...). A app
+  mostra o que o kernel expuser; não carrega módulos.
+- Vulkan: em Raspberry Pi 4/5 e muitas placas ARM não há driver Vulkan com
+  fila de computação — a página de benchmark diz "indisponível" em vez de
+  inventar nota. A benchmark de CPU/disco funciona sempre.
+
+Verificação feita ao empacotar: binário e bibliotecas nativas confirmados
+como ELF ARM aarch64 com `file`, 219 ficheiros no payload, instalador
+testado numa instalação isolada. Não foi executado em hardware ARM.

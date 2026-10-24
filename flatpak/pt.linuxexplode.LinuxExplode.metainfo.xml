@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>pt.linuxexplode.LinuxExplode</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>LINUX EXPLODE</name>
+  <summary>Hardware, sensores, saúde dos discos e benchmarks</summary>
+
+  <description>
+    <p>
+      LINUX EXPLODE mostra a informação de hardware do computador lida diretamente do kernel —
+      /proc, /sys e DMI — sem depender de ferramentas externas: processador, memória, placa-mãe,
+      BIOS, placas de vídeo, discos e sensores.
+    </p>
+    <p>Inclui:</p>
+    <ul>
+      <li>Sensores ao vivo (temperaturas, ventoinhas, potência, tensões e frequências) via hwmon.</li>
+      <li>Discos com ocupação por partição e saúde S.M.A.R.T. quando o smartctl está disponível.</li>
+      <li>EXPLODE BENCH: path tracer determinístico para CPU (nota comparável entre máquinas),
+          banda e latência de memória, e disco com O_DIRECT (sem cache).</li>
+      <li>Diagnóstico de rede: latência, jitter, perda de pacotes, DNS e velocidade.</li>
+      <li>Relatório exportável em HTML ou JSON.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">pt.linuxexplode.LinuxExplode.desktop</launchable>
+
+  <url type="homepage">https://github.com/</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Visão geral do sistema</caption>
+      <image>https://raw.githubusercontent.com/placeholder/linuxexplode/screenshot.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-23">
+      <description>
+        <p>Primeira versão: sistema, sensores, discos, benchmarks de CPU/memória/disco, rede e relatório.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1" />
+</component>

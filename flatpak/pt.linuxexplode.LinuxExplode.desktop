@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=LINUX EXPLODE
+Comment=Hardware, sensores, saúde dos discos e benchmarks
+Exec=LinuxExplode
+Icon=pt.linuxexplode.LinuxExplode
+Terminal=false
+Type=Application
+Categories=System;Monitor;Utility;
+Keywords=hardware;sensores;sensores;benchmark;diagnostico;bench;
+StartupNotify=true
+StartupWMClass=LinuxExplode

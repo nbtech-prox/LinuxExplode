@@ -1,0 +1,25 @@
+# .NET — artefactos de compilação
+bin/
+obj/
+*.user
+*.suo
+*.log
+
+# Publicação (self-contained x64 e arm64)
+publish/
+publish-arm64/
+
+# flatpak-builder e derivados
+build-dir/
+.flatpak-builder/
+flatpak/staging/
+flatpak/build-arm64/
+flatpak/repo-arm64/
+*.flatpak
+linux-explode-*.tar.gz
+
+# IDE / sistema
+.vs/
+.idea/
+.vscode/
+.DS_Store
