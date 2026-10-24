@@ -59,7 +59,7 @@ como resumo (colunas `Average FPS`, `1% Min FPS`, `0.1% Min FPS`).
 | Fase | Conteúdo | Estado |
 |---|---|---|
 | 1 | Leitura das sessões do MangoHud e resumo na CLI | **feito nesta branch** |
-| 2 | UI: cartão de FPS/frametime com sparkline (Avalonia) na página do bench ou página própria, escolha da sessão | a fazer |
+| 2 | UI: cartão de FPS/frametime com sparkline (Avalonia) na página do bench, com escolha da sessão | **feito** (`Vistas/CartaoFps.cs`) |
 | 3 | Lançador: escolher executável, correr com `MANGOHUD=1 MANGOHUD_CONFIG=output_folder=…`, duração fixa e abrir o resumo no fim | a fazer |
 | 4 | (opcional) OpenRGB: página de RGB via SDK TCP — listar dispositivos, cor, modos | avaliar |
 | 5 | (opcional) "Arranque": units systemd + autostart com tempos de `systemd-analyze` (só leitura) | avaliar |

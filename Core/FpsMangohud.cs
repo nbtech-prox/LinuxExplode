@@ -24,6 +24,9 @@ public sealed record SessaoFps
     public double GpuTemp { get; init; }
     public double GpuPower { get; init; }
 
+    /// <summary>Série de frametimes por ordem de amostragem (para desenhar o gráfico).</summary>
+    public List<double> Frametimes { get; init; } = new();
+
     public bool Valida => Amostras > 0;
 
     /// <summary>Linha de identificação do sistema, só com os campos preenchidos.</summary>
@@ -83,10 +86,12 @@ public static class FpsMangohud
     }
 
     /// <summary>CSV mais recente entre as pastas conhecidas (null se não houver nenhum).</summary>
-    public static string? Localizar()
+    public static string? Localizar() => Listar(1).FirstOrDefault();
+
+    /// <summary>Até <paramref name="max"/> sessões, das mais recentes para as mais antigas.</summary>
+    public static List<string> Listar(int max)
     {
-        string? melhor = null;
-        DateTime melhorData = DateTime.MinValue;
+        var todos = new List<(string Caminho, DateTime Data)>();
 
         foreach (var pasta in Pastas())
         {
@@ -94,14 +99,16 @@ public static class FpsMangohud
             try
             {
                 foreach (var f in Directory.EnumerateFiles(pasta, "*.csv", SearchOption.TopDirectoryOnly))
-                {
-                    var data = File.GetLastWriteTimeUtc(f);
-                    if (data > melhorData) { melhorData = data; melhor = f; }
-                }
+                    todos.Add((f, File.GetLastWriteTimeUtc(f)));
             }
             catch { }
         }
-        return melhor;
+
+        return todos
+            .OrderByDescending(x => x.Data)
+            .Take(Math.Max(1, max))
+            .Select(x => x.Caminho)
+            .ToList();
     }
 
     public static SessaoFps Analisar(string ficheiro)
@@ -168,6 +175,7 @@ public static class FpsMangohud
 
         if (frametimes.Count == 0) return sessao;
 
+        var serie = new List<double>(frametimes);   // ordem de amostragem, para o gráfico
         frametimes.Sort();
         double soma = 0;
         foreach (var f in frametimes) soma += f;
@@ -175,6 +183,7 @@ public static class FpsMangohud
         return sessao with
         {
             Amostras = frametimes.Count,
+            Frametimes = serie,
             DuracaoSegundos = ultimoElapsed > primeiroElapsed ? (ultimoElapsed - primeiroElapsed) / 1e9 : 0,
             FpsMedio = 1000.0 / (soma / frametimes.Count),
             FpsMinimo1 = 1000.0 / MediaDosPiores(frametimes, 0.01),
