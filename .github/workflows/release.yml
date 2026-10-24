@@ -100,6 +100,13 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # O ramo --arm64 do empacotar.sh usa build-finish/build-export/build-bundle:
+      # são parte do pacote flatpak, não do org.flatpak.Builder.
+      - name: Instalar flatpak (build-finish, build-export, build-bundle)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak
+
       # Cross-publish aarch64 no anfitrião x64, sem emulação.
       - name: Compilar tar.gz e bundle aarch64
         run: ./empacotar.sh --arm64
