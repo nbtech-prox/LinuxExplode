@@ -5,6 +5,7 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 `/proc`, `/sys` e DMI — sem WMI, sem registo, sem root para as funcionalidades principais.
 
 ![estado](https://img.shields.io/badge/estado-funcional-9BE8A8)
+[![CI](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml/badge.svg)](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml)
 
 ## O que faz
 
@@ -265,6 +266,20 @@ O que **não** é portável:
 - **S.M.A.R.T.**: precisa de root em qualquer máquina; a regra sudoers é por máquina.
 - **Super I/O da placa**: depende do chip (nesta é `nct6683`, noutra pode ser `it87`, `nct6775`,
   `f71882fg` ou não existir, como nos portáteis). A app mostra o que o kernel expuser — não carrega módulos.
+
+## Integração contínua
+
+`.github/workflows/ci.yml` corre em cada push para `main`, em pull requests e a pedido
+(`workflow_dispatch`):
+
+| Job | O que faz |
+|---|---|
+| **Compilar e testar a CLI** | `dotnet restore` + `dotnet build -c Release`; corre o modo `--cli` (`info`, `sensores`, `potencia`, `freq`) no runner — o `--cli` sai antes de inicializar o Avalonia, por isso não precisa de ecrã; publica o binário x64 self-contained e anexa-o como artefacto de 7 dias |
+| **Publicar binário ARM64** | cross-publish `-r linux-arm64` a partir do anfitrião x64, sem emulação (só compila, não executa) |
+
+O build é feito sem `TreatWarningsAsErrors` porque os avisos CS0618/CS9193 do Silk.NET em
+`Core/BenchRt.cs` são conhecidos. Num runner sem `intel_rapl_msr` o cartão de potência mostra a
+nota de "sem RAPL" — o CI serve também para provar que a app degrada em vez de falhar.
 
 ## Compilar e correr
 
