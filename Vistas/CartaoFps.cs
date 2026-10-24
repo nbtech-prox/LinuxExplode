@@ -20,6 +20,9 @@ public sealed class CartaoFps : UserControl
     private readonly TextBlock _frametime = new() { Text = "—", Classes = { "numero" } };
     private readonly GraficoFrametimes _grafico = new() { Height = 90 };
     private readonly List<string> _ficheiros = new();
+    private readonly Avalonia.Threading.DispatcherTimer _vigia = new() { Interval = TimeSpan.FromSeconds(3) };
+    private string? _emCima;          // sessão actualmente mostrada
+    private string? _maisRecente;     // a mais recente na altura em que se escolheu
 
     public CartaoFps()
     {
@@ -52,6 +55,10 @@ public sealed class CartaoFps : UserControl
 
         Content = UI.Cartao("FPS · sessão do MangoHud", conteudo);
         Procurar();
+
+        // vigia: se aparecer uma sessão nova (jogo fechado entretanto), actualiza sozinho
+        _vigia.Tick += (_, _) => Vigiar();
+        _vigia.Start();
     }
 
     /// <summary>Bloco de métrica grande cujo valor pode ser actualizado (UI.Metrica só aceita texto).</summary>
@@ -63,17 +70,47 @@ public sealed class CartaoFps : UserControl
         return pilha;
     }
 
-    /// <summary>Procura os CSV mais recentes (atalho: só na pasta configurada e nas habituais).</summary>
-    private void Procurar()
+    /// <summary>Se o CSV mais recente mudou, volta a ler a lista e mostra a sessão nova.</summary>
+    private void Vigiar()
+    {
+        var recentes = FpsMangohud.Listar(6);
+        if (recentes.Count == 0) return;
+
+        bool mudou = _ficheiros.Count != recentes.Count;
+        if (!mudou)
+            for (int i = 0; i < recentes.Count; i++)
+                if (_ficheiros[i] != recentes[i]) { mudou = true; break; }
+
+        if (!mudou) return;
+
+        bool estavaNaMaisRecente = _emCima is not null && _emCima == _maisRecente;
+        Preencher(recentes);
+        if (estavaNaMaisRecente) Mostrar(0);
+    }
+
+    /// <summary>Enche a lista de sessões com data/hora retiradas do nome do ficheiro.</summary>
+    private void Preencher(List<string> recentes)
     {
         _ficheiros.Clear();
         _sessoes.Items.Clear();
 
-        foreach (var caminho in FpsMangohud.Listar(6))
+        foreach (var caminho in recentes)
         {
             _ficheiros.Add(caminho);
-            _sessoes.Items.Add($"{Path.GetFileName(caminho)}");
+            _sessoes.Items.Add(FpsMangohud.Etiqueta(caminho));
         }
+
+        _maisRecente = _ficheiros.Count > 0 ? _ficheiros[0] : null;
+
+        var anterior = _emCima is not null ? _ficheiros.IndexOf(_emCima) : -1;
+        _sessoes.SelectedIndex = anterior >= 0 ? anterior : 0;
+        _sessoes.IsEnabled = _ficheiros.Count > 0;
+    }
+
+    /// <summary>Procura os CSV mais recentes (atalho: só na pasta configurada e nas habituais).</summary>
+    private void Procurar()
+    {
+        Preencher(FpsMangohud.Listar(6));
 
         if (_ficheiros.Count == 0)
         {
@@ -84,9 +121,16 @@ public sealed class CartaoFps : UserControl
             return;
         }
 
+        if (_ficheiros.Count == 0)
+        {
+            _estado.Text = "Sem sessões do MangoHud. Corre o jogo com MANGOHUD=1 (Steam: nas opções de " +
+                           "lançamento) e a pasta ~/mangologs recebe um CSV por sessão; o comando " +
+                           "`LinuxExplode --cli fps` lê o mesmo formato.";
+            return;
+        }
+
         _sessoes.IsEnabled = true;
-        _sessoes.SelectedIndex = 0;
-        Mostrar(0);
+        Mostrar(_sessoes.SelectedIndex >= 0 ? _sessoes.SelectedIndex : 0);
     }
 
     private void MostrarEscolhida() => Mostrar(_sessoes.SelectedIndex);
@@ -94,6 +138,7 @@ public sealed class CartaoFps : UserControl
     private void Mostrar(int indice)
     {
         if (indice < 0 || indice >= _ficheiros.Count) return;
+        _emCima = _ficheiros[indice];
         var s = FpsMangohud.Analisar(_ficheiros[indice]);
         if (!s.Valida)
         {
@@ -131,14 +176,32 @@ public sealed class CartaoFps : UserControl
             ctx.FillRectangle(UI.Cor("Cartao2"), new Rect(0, 0, w, h));
             if (Valores.Count < 2) return;
 
+            // sessões sem vsync podem ter 100 mil amostras: agrega por coluna de pixels,
+            // ficando com o pior frametime de cada balde (os picos são o que interessa ver)
+            var pontos = new List<double>();
+            int colunas = Math.Max(2, (int)w);
+            if (Valores.Count > colunas * 2)
+            {
+                for (int c = 0; c < colunas; c++)
+                {
+                    int inicio = (int)((long)c * Valores.Count / colunas);
+                    int fim = (int)((long)(c + 1) * Valores.Count / colunas);
+                    double pior = 0;
+                    for (int i = inicio; i < fim && i < Valores.Count; i++)
+                        if (Valores[i] > pior) pior = Valores[i];
+                    pontos.Add(pior);
+                }
+            }
+            else pontos.AddRange(Valores);
+
             double minimo = double.MaxValue, maximo = 0, soma = 0;
-            foreach (var v in Valores)
+            foreach (var v in pontos)
             {
                 if (v < minimo) minimo = v;
                 if (v > maximo) maximo = v;
                 soma += v;
             }
-            double media = soma / Valores.Count;
+            double media = soma / pontos.Count;
             double margem = Math.Max(0.5, (maximo - minimo) * 0.15);
             double fundo = Math.Max(0.1, minimo - margem);
             double topo = maximo + margem;
@@ -152,9 +215,9 @@ public sealed class CartaoFps : UserControl
             using (var g = geometria.Open())
             {
                 bool primeiro = true;
-                for (int i = 0; i < Valores.Count; i++)
+                for (int i = 0; i < pontos.Count; i++)
                 {
-                    var p = new Point(w * i / (Valores.Count - 1), Y(Valores[i]));
+                    var p = new Point(w * i / (pontos.Count - 1), Y(pontos[i]));
                     if (primeiro) { g.BeginFigure(p, false); primeiro = false; }
                     else g.LineTo(p);
                 }

@@ -99,7 +99,11 @@ public static class FpsMangohud
             try
             {
                 foreach (var f in Directory.EnumerateFiles(pasta, "*.csv", SearchOption.TopDirectoryOnly))
+                {
+                    // o *_summary.csv é o resumo do mesmo log: não entra na lista de sessões
+                    if (Path.GetFileNameWithoutExtension(f).EndsWith("_summary", StringComparison.Ordinal)) continue;
                     todos.Add((f, File.GetLastWriteTimeUtc(f)));
+                }
             }
             catch { }
         }
@@ -242,6 +246,18 @@ public static class FpsMangohud
 
     private static bool Num(string texto, out double valor)
         => double.TryParse(texto.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out valor);
+
+    /// <summary>"…/vkcube_2026-10-24_18-40-12.csv" → "24/10 18:40 · vkcube".</summary>
+    public static string Etiqueta(string ficheiro)
+    {
+        var bruto = Path.GetFileNameWithoutExtension(ficheiro);
+        var m = System.Text.RegularExpressions.Regex.Match(bruto, @"^(?<app>.+?)_(?<data>\d{4}-\d{2}-\d{2})_(?<hora>\d{2}-\d{2}-\d{2})$");
+        if (!m.Success) return bruto;
+        if (!DateTime.TryParseExact(m.Groups["data"].Value + " " + m.Groups["hora"].Value.Replace('-', ':'),
+                "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var quando))
+            return NomeDaApp(ficheiro);
+        return $"{quando:dd/MM HH:mm} · {m.Groups["app"].Value}";
+    }
 
     /// <summary>"Cyberpunk2077_2026-10-24_18-40-12.csv" → "Cyberpunk2077".</summary>
     private static string NomeDaApp(string ficheiro)
