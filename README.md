@@ -176,6 +176,7 @@ LinuxExplode --cli info                    # resumo do sistema
 LinuxExplode --cli freq                    # frequência por núcleo/thread e relógios da GPU
 LinuxExplode --cli sensores                # todos os sensores hwmon
 LinuxExplode --cli potencia                # consumo do PC: CPU (RAPL) + GPUs, total estimado
+LinuxExplode --cli fps [ficheiro]          # sessão do MangoHud: FPS médio, 1% e 0,1% low
 LinuxExplode --cli discos                  # discos, partições e SMART
 LinuxExplode --cli rede                    # teste de rede (~15 s)
 LinuxExplode --cli bench multi ram disco   # benchmark de CPU + RAM + disco
@@ -199,8 +200,8 @@ pelo equivalente do kernel.
 | WMI (`System.Management`) | `/sys`, `/proc`, DMI | substituído |
 | LibreHardwareMonitorLib | `hwmon` (k10temp, amdgpu, nvme, nct6775…) | substituído |
 | NVML (NVIDIA) | `amdgpu` sysfs (`gpu_busy_percent`, `mem_info_vram_*`, hwmon) | substituído (AMD) |
-| DXGI / Direct3D 11 / D3D12 + DXR | não portado — benchmarks de GPU ficaram de fora | em falta |
-| ETW / PresentMon (FPS de jogos) | não portado | em falta |
+| DXGI / Direct3D 11 / D3D12 + DXR | Vulkan compute (`Core/BenchGpu.cs`) e `VK_KHR_ray_query` (`Core/BenchRt.cs`) | substituído |
+| ETW / PresentMon (FPS de jogos) | CSV do MangoHud lidos por `Core/FpsMangohud.cs` (`--cli fps`) — leitura feita, UI por fazer | parcial |
 | `FILE_FLAG_NO_BUFFERING` | `O_DIRECT` via `open(2)` | substituído |
 | Registo do Windows (tweaks, arranque) | — | não existe |
 | `winget` / instalar apps | — | não existe |
@@ -210,6 +211,9 @@ pelo equivalente do kernel.
 Resumo honesto: **60 % do código original era portável, 24 % reescrevível, 14 % impossível**
 (as funcionalidades que só fazem sentido em Windows). O que ficou de fora está identificado
 acima — não há funcionalidades "fingidas".
+
+O que continua em falta face ao original está avaliado item a item (meio, esforço e riscos) em
+[`docs/portar-em-falta.md`](docs/portar-em-falta.md).
 
 ## Benchmark de GPU (Vulkan)
 
@@ -414,9 +418,12 @@ LinuxExplode/
 
 - **S.M.A.R.T. detalhado** precisa de `smartmontools` e root. Dentro do Flatpak o acesso a
   `/dev` é limitado: a app diz isso na própria página, em vez de inventar um veredito.
-- **Benchmarks de GPU** (o antigo stress test D3D11 e o ray tracing D3D12) não foram portados —
-  exigiriam Vulkan e uma reescrita completa dos shaders.
-- **Overlay de FPS** não existe: no Windows vinha de ETW/PresentMon, sem equivalente direto.
+- **Benchmarks de GPU** do original (stress test D3D11, ray tracing D3D12) foram substituídos por
+  equivalentes em Vulkan (`Core/BenchGpu.cs`, `Core/BenchRt.cs`); o modo ray tracing exige
+  `VK_KHR_ray_query` no driver.
+- **Overlay de FPS** não existe como overlay global: em Wayland nenhuma app vê os frames de outra.
+  A via suportada é o MangoHud (layer Vulkan/OpenGL); a app já lê e resume os CSV dele (`--cli fps`),
+  faltando a interface e o lançador.
 - **Memória por módulo**: lida do SPD do próprio módulo, sem root. DDR5 usa o `spd5118` (expõe
   `/sys/bus/nvmem/devices/<bus>-<addr>/nvmem`, legível por todos); DDR4 usa o `ee1004`
   (`/sys/bus/i2c/devices/<bus>-005x/eeprom` ou o mesmo nvmem). Sem SPD, tenta o SMBIOS
