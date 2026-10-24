@@ -3,6 +3,30 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.3.0] — 2026-10-24
+
+### Adicionado
+
+- **Prévia animada do benchmark em pop-up**: as cenas do EXPLODE BENCH passam a ser renderizadas ao
+  vivo numa janela própria, com a câmara a orbitar (volta completa em ~18 s) e contador de
+  fotogramas por segundo. Três modalidades: compute Vulkan (960×540, 32 spp), ray tracing
+  `VK_KHR_ray_query` (800×450, 16 spp) e path tracer de CPU (560×315, 6 spp).
+- Botões `Ver a animar` / `Ver ray tracing a animar` nos cartões de GPU e CPU.
+- Gancho de teste `LINUXEXPLODE_PREVIA=cpu|gpu|rt` para abrir a prévia directamente.
+- Os shaders GLSL (`Assets/Shaders/*.comp`) passam a aceitar um ângulo de câmara nos push
+  constants; com o ângulo a 0 o caminho é exactamente o antigo, pelo que as notas do benchmark
+  não mudam.
+
+### Alterado
+
+- As imagens estáticas do resultado deixaram de estar embutidas nas cartas do bench — o resultado
+  passou a ser visto na janela de prévia.
+
+### Corrigido
+
+- A versão no rodapé estava fixa no `MainWindow.axaml` (`v0.1.0`) e não acompanhava o `Relatorio`.
+- Fechar a janela de prévia a meio de um fotograma podia rebentar a aplicação.
+
 ## [0.2.0] — 2026-10-24
 
 ### Adicionado
@@ -57,5 +81,6 @@ Primeiro release público.
 - A NVIDIA não publica relógios nem potência em sysfs: essas linhas ficam indisponíveis.
 - O acesso a `/dev` dentro do Flatpak é limitado, o que afecta o S.M.A.R.T. detalhado.
 
+[0.3.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.1.0

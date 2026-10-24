@@ -9,13 +9,13 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 
 ## Descarregar
 
-Última versão: **[v0.2.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.3.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 | Ficheiro | Para quê |
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.2.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.3.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 As versões anteriores continuam publicadas com os seus próprios ficheiros e checksums —
@@ -219,6 +219,35 @@ acima — não há funcionalidades "fingidas".
 
 O que continua em falta face ao original está avaliado item a item (meio, esforço e riscos) em
 [`docs/portar-em-falta.md`](docs/portar-em-falta.md).
+
+## Ver o benchmark a animar (pop-up)
+
+As duas cenas do EXPLODE BENCH já não ficam paradas numa imagem: há um **pop-up** que as renderiza
+ao vivo, com a câmara a orbitar a cena (uma volta a cada ~18 s). Na página do bench:
+
+- **GPU · EXPLODE BENCH** → `Ver a animar` (compute Vulkan) e `Ver ray tracing a animar`
+  (`VK_KHR_ray_query`).
+- **CPU · EXPLODE BENCH** → `Ver a animar` (path tracer da CPU, o mesmo do teste).
+
+O pop-up mostra a resolução, as amostras por pixel e os fotogramas por segundo reais. É a **mesma
+cena, o mesmo shader e a mesma iluminação** do teste — só muda a resolução e o número de amostras,
+escolhidos para a animação correr fluida nesta máquina:
+
+| Modalidade | Resolução | Amostras/pixel | Ritmo medido (RX 6700 XT / Ryzen 7 9700X) |
+|---|---|---|---|
+| GPU compute | 960×540 | 32 | ~60 fps |
+| Ray tracing | 800×450 | 16 | ~67 fps |
+| CPU | 560×315 | 6 | ~42 fps |
+
+A medição do benchmark **não é afectada**: a câmara só orbita no modo prévia. Com o ângulo a 0
+(a estreia do teste) o shader segue exactamente o caminho antigo, e as notas mantêm-se
+(13,0 M pts em compute e 4,0 M pts em ray tracing nesta máquina).
+
+Para abrir a prévia directamente (útil para testar):
+
+```bash
+LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=cpu ./LinuxExplode   # ou gpu, ou rt
+```
 
 ## FPS por aplicação — cartão do MangoHud
 

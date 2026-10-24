@@ -17,6 +17,9 @@ public sealed record ResultadoRt(string Nome, double Segundos, long Pontos, int 
 /// </summary>
 public static unsafe class BenchRt
 {
+    /// <summary>Ângulo da câmara na prévia animada: uma volta completa a cada ~18 s.</summary>
+    internal static float AnguloDaVez(Stopwatch relogio) => (float)(relogio.Elapsed.TotalSeconds * 0.35);
+
     public const int LarguraPadrao = 1280;
     public const int AlturaPadrao = 720;
     public const int AmostrasPadrao = 64;
@@ -27,6 +30,7 @@ public static unsafe class BenchRt
     private struct Parametros
     {
         public uint Largura, Altura, Amostras, Semente, Total, TrisPorEsfera;
+        public float Angulo;   // 0 = câmara do benchmark; != 0 orbita a cena (prévia animada)
     }
 
     private sealed record Esfera(float X, float Y, float Z, float R, float Cr, float Cg, float Cb, float E);
@@ -304,7 +308,7 @@ public static unsafe class BenchRt
 
     /// <summary>Corre o path tracer com ray query. Devolve null se a GPU não suportar ray tracing.</summary>
     public static ResultadoRt? Correr(int indice, int largura = LarguraPadrao, int altura = AlturaPadrao,
-        int amostras = AmostrasPadrao)
+        int amostras = AmostrasPadrao, Action<byte[], int>? fotograma = null, CancellationToken ct = default)
     {
         if (largura <= 0 || altura <= 0 || amostras <= 0) throw new ArgumentOutOfRangeException(nameof(largura));
 
@@ -855,6 +859,31 @@ public static unsafe class BenchRt
                 Total = (uint)total, TrisPorEsfera = (uint)trisPorEsfera
             });
             vk.WaitForFences(dev, 1, &cerca, true, ulong.MaxValue);
+
+            // ---- modo prévia animada: um fotograma por passagem, a câmara a orbitar ----
+            if (fotograma is not null)
+            {
+                var imagem = new byte[largura * altura * 4];
+                int fotogramaN = 0;
+                var relogioFotograma = Stopwatch.StartNew();
+                var limite = Stopwatch.StartNew();
+                while (!ct.IsCancellationRequested && limite.Elapsed.TotalMinutes < 30)
+                {
+                    var pv = new Parametros
+                    {
+                        Largura = (uint)largura, Altura = (uint)altura, Amostras = (uint)amostras,
+                        Semente = (uint)(11 + fotogramaN), Total = (uint)total, TrisPorEsfera = (uint)trisPorEsfera,
+                        Angulo = AnguloDaVez(limite)
+                    };
+                    Despachar(cmd, cerca, conjunto, pv);
+                    vk.WaitForFences(dev, 1, &cerca, true, ulong.MaxValue);
+                    Marshal.Copy((IntPtr)pSaida, imagem, 0, imagem.Length);
+                    fotograma((byte[])imagem.Clone(), fotogramaN++);
+                    if (relogioFotograma.Elapsed.TotalMilliseconds < 15) Thread.Sleep(1);
+                    relogioFotograma.Restart();
+                }
+                return null;   // é prévia: não produz pontuação
+            }
 
             var pars = new Parametros
             {
