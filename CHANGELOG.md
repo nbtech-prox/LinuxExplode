@@ -3,6 +3,33 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.10.0] — 2026-10-24
+
+A numeração passa a subir de **2 em 2** na parte menor: 0.10.0, 0.12.0, 0.14.0, …
+
+### Adicionado
+
+- **O pop do benchmark substitui os botões de prévia**: `Testar GPU`, `Testar ray tracing`,
+  `Multi-core` e `Single-core` abrem a cena animada e medem ao mesmo tempo. Saíram os botões
+  `Ver a animar` / `Ver ray tracing a animar` e o `Cancelar` do cartão de CPU (o pop fecha-se e
+  o teste pára).
+- **Escolha de resolução no pop-up**, de 320×180 até **3840×2160 (4K)**, tanto no compute como no
+  ray tracing. A medição continua a ser feita com 64 amostras por pixel repetidas até 1,5 s; a
+  animação adapta as amostras por fotograma (4 a 32) para se manter fluida.
+- **CPU com animação dos cores**: o pop-up mostra a imagem a construir-se bloco a bloco com uma
+  thread por core (ou uma só, em single-core) e uma barra por core com a ocupação real
+  (`/proc/stat`), além da nota ao vivo.
+- A nota medida no pop-up volta para o cartão da página (GPU e CPU), incluindo o histórico de
+  corridas do CPU.
+- Ganchos de teste `LINUXEXPLODE_PREVIA`, `LINUXEXPLODE_RESOLUCAO` e `LINUXEXPLODE_THREADS`.
+
+### Corrigido
+
+- O `ComboBox` da resolução voltava ao primeiro item quando a janela era montada — a primeira
+  medição chegava a correr a 320×180 mesmo com 1280×720 escolhido; a escolha é agora reaplicada
+  antes de medir.
+- O rodapé da página passou a mostrar a versão real (vinha fixa do `MainWindow.axaml` em v0.1.0).
+
 ## [0.3.0] — 2026-10-24
 
 ### Adicionado
@@ -81,6 +108,7 @@ Primeiro release público.
 - A NVIDIA não publica relógios nem potência em sysfs: essas linhas ficam indisponíveis.
 - O acesso a `/dev` dentro do Flatpak é limitado, o que afecta o S.M.A.R.T. detalhado.
 
+[0.10.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.10.0
 [0.3.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.1.0

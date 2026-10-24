@@ -9,13 +9,13 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 
 ## Descarregar
 
-Última versão: **[v0.3.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.10.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 | Ficheiro | Para quê |
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.3.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.10.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 As versões anteriores continuam publicadas com os seus próprios ficheiros e checksums —
@@ -220,33 +220,33 @@ acima — não há funcionalidades "fingidas".
 O que continua em falta face ao original está avaliado item a item (meio, esforço e riscos) em
 [`docs/portar-em-falta.md`](docs/portar-em-falta.md).
 
-## Ver o benchmark a animar (pop-up)
+## O pop do benchmark — animação, resolução e cores
 
-As duas cenas do EXPLODE BENCH já não ficam paradas numa imagem: há um **pop-up** que as renderiza
-ao vivo, com a câmara a orbitar a cena (uma volta a cada ~18 s). Na página do bench:
+`Testar GPU`, `Testar ray tracing`, `Multi-core` e `Single-core` abrem a cena num **pop-up** que a
+renderiza ao vivo, com a câmara a orbitar (uma volta a cada ~18 s), e medem ao mesmo tempo. Não há
+botões de prévia à parte: o teste é o pop.
 
-- **GPU · EXPLODE BENCH** → `Ver a animar` (compute Vulkan) e `Ver ray tracing a animar`
-  (`VK_KHR_ray_query`).
-- **CPU · EXPLODE BENCH** → `Ver a animar` (path tracer da CPU, o mesmo do teste).
+- **GPU e ray tracing** — um seletor de resolução vai de **320×180 a 3840×2160 (4K)**. A medição
+  mantém as 64 amostras por pixel do costume, repetidas até 1,5 s; a animação usa a resolução
+  escolhida com as amostras ajustadas por fotograma (4 a 32), para o movimento não parar.
+- **CPU** — a imagem constrói-se bloco a bloco, com uma thread por core (`Multi-core`) ou uma só
+  (`Single-core`), e há uma barra por core com a ocupação real lida de `/proc/stat`.
 
-O pop-up mostra a resolução, as amostras por pixel e os fotogramas por segundo reais. É a **mesma
-cena, o mesmo shader e a mesma iluminação** do teste — só muda a resolução e o número de amostras,
-escolhidos para a animação correr fluida nesta máquina:
+A nota aparece no pop-up e volta para o cartão da página. A nota da GPU não depende da resolução
+escolhida: 12,96 M pts a 1280×720 e 13,2 M pts a 4K nesta máquina (RX 6700 XT).
 
-| Modalidade | Resolução | Amostras/pixel | Ritmo medido (RX 6700 XT / Ryzen 7 9700X) |
+| Modalidade | Resolução | Amostras/pixel na animação | Ritmo medido |
 |---|---|---|---|
-| GPU compute | 960×540 | 32 | ~60 fps |
-| Ray tracing | 800×450 | 16 | ~67 fps |
-| CPU | 560×315 | 6 | ~42 fps |
+| GPU compute | 1280×720 (padrão) | 32 | ~55-60 fps |
+| GPU compute | 3840×2160 (4K) | 4 | ~10 fps |
+| Ray tracing | 1920×1080 | 16 | ~23 fps |
+| CPU (16 threads) | 960×540 | 1024 por passagem | blocos em contínuo |
 
-A medição do benchmark **não é afectada**: a câmara só orbita no modo prévia. Com o ângulo a 0
-(a estreia do teste) o shader segue exactamente o caminho antigo, e as notas mantêm-se
-(13,0 M pts em compute e 4,0 M pts em ray tracing nesta máquina).
-
-Para abrir a prévia directamente (útil para testar):
+Ganchos de teste (abrem o pop directamente, sem clicar):
 
 ```bash
-LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=cpu ./LinuxExplode   # ou gpu, ou rt
+LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=gpu LINUXEXPLODE_RESOLUCAO=3840x2160 ./LinuxExplode
+LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=cpu LINUXEXPLODE_THREADS=1 ./LinuxExplode
 ```
 
 ## FPS por aplicação — cartão do MangoHud
