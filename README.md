@@ -9,7 +9,7 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 
 ## Descarregar
 
-Última versão: **[v0.1.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.2.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 | Ficheiro | Para quê |
 |---|---|
@@ -214,6 +214,29 @@ acima — não há funcionalidades "fingidas".
 
 O que continua em falta face ao original está avaliado item a item (meio, esforço e riscos) em
 [`docs/portar-em-falta.md`](docs/portar-em-falta.md).
+
+## FPS por aplicação — cartão do MangoHud
+
+No fim da página **EXPLODE BENCH** há um cartão que lê as sessões que o
+[MangoHud](https://github.com/flightlessmango/MangoHud) grava em CSV. Em Wayland o compositor não
+expõe os frames de outras aplicações, por isso esta é a única forma honesta de ter FPS de jogos —
+e a app diz isso em vez de inventar números.
+
+```bash
+sudo pacman -S mangohud          # ou o equivalente da tua distro
+mkdir -p ~/mangologs             # a pasta tem de existir antes de abrir a app
+
+# Steam: opções de lançamento do jogo
+MANGOHUD=1 %command%
+```
+
+Cada sessão grava um CSV em `~/mangologs` (a config em `~/.config/MangoHud/MangoHud.conf` define
+`output_folder`, `autostart_log=15` e `log_duration=0`). O cartão mostra **FPS médio**, **1% low**,
+**0,1% low** e **frametime médio**, com uma sparkline dos frametimes, e passa sozinho para a
+sessão mais recente quando fechas o jogo. Na CLI: `LinuxExplode --cli fps [ficheiro]`.
+
+O Flatpak expõe `~/mangologs`, `~/.config/MangoHud` e `~/.local/share/MangoHud` **só de leitura**
+para a sandbox — sem isso o cartão não veria os registos.
 
 ## Benchmark de GPU (Vulkan)
 

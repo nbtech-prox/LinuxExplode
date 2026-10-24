@@ -8,7 +8,7 @@ namespace LinuxExplode.Core;
 /// <summary>Exporta a informação do sistema em HTML (com a marca EXPLODE) ou JSON.</summary>
 public static class Relatorio
 {
-    public const string Versao = "0.1.0";
+    public const string Versao = "0.2.0";
 
     public static string GerarJson(Sistema s, List<Sensor> sensores, List<DiscoInfo> discos)
     {

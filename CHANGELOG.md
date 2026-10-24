@@ -3,6 +3,23 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.2.0] — 2026-10-24
+
+### Adicionado
+
+- **FPS por aplicação** (novo cartão na página EXPLODE BENCH): lê as sessões CSV do MangoHud, com
+  FPS médio, 1% low, 0,1% low e frametime médio, sparkline dos frametimes, escolha da sessão e
+  passagem automática para a mais recente. Lê também o `*_summary.csv` do MangoHud.
+- `--cli fps [ficheiro]` para o mesmo resumo no terminal.
+- `docs/portar-em-falta.md`: avaliação do que falta face à versão Windows (o que é viável, o que é
+  difícil e o que não faz sentido portar).
+- Flatpak: permissões de leitura para `~/mangologs`, `~/.config/MangoHud` e `~/.local/share/MangoHud`.
+
+### Corrigido
+
+- README afirmava que os benchmarks D3D11/D3D12 do original não tinham sido portados; existem os
+  equivalentes em Vulkan (`BenchGpu`) e `VK_KHR_ray_query` (`BenchRt`).
+
 ## [0.1.0] — 2026-10-24
 
 Primeiro release público.
@@ -40,4 +57,5 @@ Primeiro release público.
 - A NVIDIA não publica relógios nem potência em sysfs: essas linhas ficam indisponíveis.
 - O acesso a `/dev` dentro do Flatpak é limitado, o que afecta o S.M.A.R.T. detalhado.
 
+[0.2.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.1.0
