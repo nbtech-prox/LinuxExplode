@@ -46,6 +46,7 @@ public sealed class PaginaBench : UserControl
             _corpo);
 
         _corpo.Children.Add(CartaoGpu());
+        _corpo.Children.Add(new CartaoFps());
         _corpo.Children.Add(CartaoCpu());
         _corpo.Children.Add(CartaoRam());
         _corpo.Children.Add(CartaoDisco());

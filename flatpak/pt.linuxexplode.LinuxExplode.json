@@ -11,6 +11,9 @@
     "--socket=x11",
     "--device=dri",
     "--filesystem=xdg-documents",
+    "--filesystem=~/mangologs:ro",
+    "--filesystem=~/.config/MangoHud:ro",
+    "--filesystem=~/.local/share/MangoHud:ro",
     "--talk-name=org.freedesktop.Notifications",
     "--talk-name=org.freedesktop.Flatpak"
   ],

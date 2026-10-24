@@ -23,6 +23,8 @@ public static class Cli
             case "potencia":
                 PotenciaInfo();
                 return 0;
+            case "fps":
+                return FpsInfo(args.Length > 2 ? args[2] : null);
             case "discos":
                 DiscosInfo();
                 return 0;
@@ -34,7 +36,7 @@ public static class Cli
             case "bench":
                 return Bench(args);
             default:
-                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|discos|rede|bench|relatorio] [html|json]\n" +
+                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|relatorio] [html|json]\n" +
                               "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]");
                 return 2;
         }
@@ -125,6 +127,37 @@ public static class Cli
         Console.WriteLine($"  total medido        {p.TotalTexto}  ({p.TotalRotulo})");
         if (p.EnergiaKWh is not null) Console.WriteLine($"  desde o arranque    {p.EnergiaKWh:0.000} kWh (pacote)");
         if (p.Aviso is not null) Console.WriteLine("  nota: " + p.Aviso);
+    }
+
+    /// <summary>Resumo de uma sessão do MangoHud (FPS, 1% low, frametimes).</summary>
+    private static int FpsInfo(string? ficheiro)
+    {
+        var caminho = ficheiro ?? FpsMangohud.Localizar();
+        if (caminho is null)
+        {
+            Console.WriteLine("sem logs do MangoHud.");
+            Console.WriteLine("  o MangoHud só grava CSV com uma pasta de saída configurada, por exemplo:");
+            Console.WriteLine("  MANGOHUD_CONFIG=\"output_folder=$HOME/mangologs,autostart_log=5\" mangohud <programa>");
+            Console.WriteLine("  pastas procuradas: " + string.Join(", ", FpsMangohud.Pastas()));
+            return 1;
+        }
+
+        var s = FpsMangohud.Analisar(caminho);
+        Console.WriteLine("ficheiro   " + caminho);
+        Console.WriteLine("aplicação  " + s.App);
+        if (!s.Valida)
+        {
+            Console.WriteLine("  sem amostras válidas no CSV");
+            return 1;
+        }
+
+        if (s.Sistema.Length > 0) Console.WriteLine("sistema    " + s.Sistema);
+        Console.WriteLine($"amostras   {s.Amostras} · {s.DuracaoSegundos:0.0} s");
+        Console.WriteLine($"FPS        médio {s.FpsMedio:0.0} · 1% low {s.FpsMinimo1:0.0} · 0.1% low {s.FpsMinimo01:0.0}");
+        Console.WriteLine($"frametime  médio {s.FrametimeMedioMs:0.00} ms" +
+                          (s.FrametimePiorMs > 0 ? $" · pior {s.FrametimePiorMs:0.00} ms" : ""));
+        Console.WriteLine($"GPU        {s.GpuLoad:0}% · {s.GpuTemp:0} °C · {s.GpuPower:0} W · CPU {s.CpuLoad:0}%");
+        return 0;
     }
 
     private static void DiscosInfo()
