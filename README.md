@@ -15,8 +15,13 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.1.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.2.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
+
+As versões anteriores continuam publicadas com os seus próprios ficheiros e checksums —
+[v0.1.0](https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.1.0) foi a primeira versão
+pública. O selo **Latest** passa apenas para a mais recente; nada é apagado.
+Todas em [Releases](https://github.com/nbtech-prox/LinuxExplode/releases).
 
 ## O que faz
 
@@ -281,7 +286,7 @@ encontrou GPU em vez de inventar uma nota.
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.1.0-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.2.0-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -375,15 +380,15 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.1.0-linux-arm64.tar.gz   38 MB  instalador sem root
+#   linux-explode-0.2.0-linux-arm64.tar.gz   38 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.1.0-linux-arm64.tar.gz
-cd linux-explode-0.1.0-linux-arm64 && ./install.sh
+tar -xzf linux-explode-0.2.0-linux-arm64.tar.gz
+cd linux-explode-0.2.0-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
 ```
