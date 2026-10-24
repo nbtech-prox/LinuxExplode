@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    name: Compilar e testar a CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: LinuxExplode.csproj
+
+      - name: Restore
+        run: dotnet restore
+
+      # Os avisos CS0618/CS9193 do Silk.NET em BenchRt.cs são conhecidos:
+      # compila-se sem TreatWarningsAsErrors de propósito.
+      - name: Build (Release)
+        run: dotnet build -c Release --no-restore -v n
+
+      # O modo --cli sai antes de inicializar o Avalonia, por isso corre sem ecrã.
+      - name: Smoke test (CLI, sem janela)
+        run: |
+          set -euo pipefail
+          BIN=./bin/Release/net8.0/LinuxExplode
+          $BIN --cli info | tee /tmp/info.txt
+          grep -q 'LINUX EXPLODE' /tmp/info.txt
+          $BIN --cli sensores | head -20
+          $BIN --cli potencia
+          $BIN --cli freq | head -10
+
+      - name: Publicar binário x64 (self-contained)
+        run: >
+          dotnet publish LinuxExplode.csproj -c Release -r linux-x64 --self-contained true
+          -p:DebugType=None -o publish-check --nologo
+
+      - name: Confirmar o binário publicado
+        run: ./publish-check/LinuxExplode --cli info | head -3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-explode-linux-x64
+          path: publish-check/
+          retention-days: 7
+
+  compilar-arm64:
+    name: Publicar binário ARM64 (sem correr)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # Cross-publish: compila para aarch64 no anfitrião x64, sem emulação.
+      - name: Publicar linux-arm64
+        run: >
+          dotnet publish LinuxExplode.csproj -c Release -r linux-arm64 --self-contained true
+          -p:DebugType=None -o publish-arm64-check --nologo
