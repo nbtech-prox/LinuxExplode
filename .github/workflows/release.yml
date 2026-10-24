@@ -1,0 +1,82 @@
+name: Release
+
+# Constrói os artefactos com o próprio empacotar.sh e anexa-os ao release da tag.
+# Corre em push de tag v* e, à mão, para reconstruir os assets de uma tag existente.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existente cujos assets devem ser reconstruídos (ex.: v0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  assets:
+    name: Construir e anexar assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Obter o código da tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # flatpak-builder corre a partir do org.flatpak.Builder (é o que o empacotar.sh usa),
+      # e o manifesto aponta para o SDK/Platform 25.08.
+      - name: Instalar Flatpak, Builder e runtime 25.08
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          dbus-run-session -- bash -c '
+            set -euo pipefail
+            flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+            flatpak install --user -y --noninteractive flathub \
+              org.flatpak.Builder \
+              org.freedesktop.Platform/x86_64/25.08 \
+              org.freedesktop.Sdk/x86_64/25.08
+          '
+
+      - name: Compilar bundles x86_64 e ARM64
+        run: |
+          set -euo pipefail
+          dbus-run-session -- ./empacotar.sh --bundle
+          ./empacotar.sh --arm64
+
+      - name: Gerar checksums
+        run: |
+          set -euo pipefail
+          sha256sum linux-explode.flatpak linux-explode-aarch64.flatpak \
+                    linux-explode-*-linux-arm64.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Anexar ao release da tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "LINUX EXPLODE $TAG" --generate-notes --verify-tag
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            linux-explode.flatpak \
+            linux-explode-aarch64.flatpak \
+            linux-explode-*-linux-arm64.tar.gz \
+            SHA256SUMS
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "  \(.name)  \(.size) bytes  \(.state)"'

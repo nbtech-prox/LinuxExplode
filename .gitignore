@@ -17,6 +17,7 @@ flatpak/build-arm64/
 flatpak/repo-arm64/
 *.flatpak
 linux-explode-*.tar.gz
+SHA256SUMS
 
 # IDE / sistema
 .vs/
