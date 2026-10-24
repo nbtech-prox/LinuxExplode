@@ -70,6 +70,10 @@ como resumo (colunas `Average FPS`, `1% Min FPS`, `0.1% Min FPS`).
   vez de apresentar números inventados. Nesta máquina não está instalado.
 - **Sem overlay global.** Em Wayland um overlay sobre outro processo exige `wlr-layer-shell` (niri
   suporta) **e** um layer Vulkan/OpenGL injetado no jogo — muito mais do que a app faz hoje.
+- **Flatpak:** a sandbox não via `~/mangologs`, `~/.config/MangoHud` nem `~/.local/share/MangoHud`.
+  O manifesto passou a expor essas três pastas **só de leitura** (`--filesystem=…:ro`). Atenção:
+  o flatpak ignora mounts para caminhos que não existem — a pasta tem de existir *antes* de a app
+  arrancar, senão o cartão diz "sem sessões".
 - **OpenRGB** fala com os LEDs por i2c/USB-HID: o servidor é que precisa de permissões; a app só
   conversa com o socket.
 - **Escrita de estado** (activar/desactivar serviços, aplicar `sysctl`) exige polkit/root: a v1 do
@@ -89,7 +93,7 @@ Instalar e capturar com qualquer aplicação Vulkan/OpenGL (nesta máquina: `sud
 já instalado; o `vulkan-tools` traz o `vkcube`):
 
 ```bash
-mkdir -p ~/mangologs
+mkdir -p ~/mangologs ~/.config/MangoHud   # têm de existir antes de abrir a app (ver Flatpak)
 MANGOHUD=1 MANGOHUD_CONFIG="output_folder=$HOME/mangologs,autostart_log=2,log_duration=10" \
   mangohud vkcube          # ou o jogo/programa que se quer medir
 
