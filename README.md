@@ -292,6 +292,21 @@ O build é feito sem `TreatWarningsAsErrors` porque os avisos CS0618/CS9193 do S
 `Core/BenchRt.cs` são conhecidos. Num runner sem `intel_rapl_msr` o cartão de potência mostra a
 nota de "sem RAPL" — o CI serve também para provar que a app degrada em vez de falhar.
 
+O `.github/workflows/release.yml` trata dos artefactos de publicação. Corre em push de tag `v*`
+e, à mão (`workflow_dispatch` com a tag), para reconstruir os assets de um release existente:
+
+| Job | O que faz |
+|---|---|
+| **preparar** | cria o release da tag, se ainda não existir |
+| **Flatpak x86_64** | instala `flatpak` + `org.flatpak.Builder` + Platform/SDK 25.08 e corre `./empacotar.sh --bundle` |
+| **ARM64** | corre `./empacotar.sh --arm64` num runner limpo (cross-publish aarch64, sem emulação) |
+| **SHA256SUMS** | descarrega os assets já publicados, gera o `SHA256SUMS` e volta a anexá-lo |
+
+Os dois builds correm em jobs separados de propósito: na mesma directoria, depois do
+`flatpak-builder`, o glob `**/*.axaml` do Avalonia apanhava `build-dir/` e o publish arm64 falhava
+com *Could not find file …/\*\*/\*.axaml*. O `.csproj` exclui esses artefactos via
+`DefaultItemExcludes`, o que também acelera o build local a seguir a um `empacotar.sh`.
+
 ## Compilar e correr
 
 Requisitos: .NET SDK 8 (`dotnet --version` ≥ 8.0) e, para o Flatpak, `flatpak` + `org.flatpak.Builder`.
