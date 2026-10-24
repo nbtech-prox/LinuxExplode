@@ -11,6 +11,7 @@ public sealed record SessaoFps
     public string Cpu { get; init; } = "";
     public string Gpu { get; init; } = "";
     public string Driver { get; init; } = "";
+    public string Kernel { get; init; } = "";
     public int Amostras { get; init; }
     public double DuracaoSegundos { get; init; }
     public double FpsMedio { get; init; }
@@ -24,6 +25,10 @@ public sealed record SessaoFps
     public double GpuPower { get; init; }
 
     public bool Valida => Amostras > 0;
+
+    /// <summary>Linha de identificação do sistema, só com os campos preenchidos.</summary>
+    public string Sistema => string.Join(" · ",
+        new[] { Os, Cpu, Gpu, Driver, Kernel }.Where(x => !string.IsNullOrWhiteSpace(x)));
 }
 
 /// <summary>
@@ -113,7 +118,7 @@ public static class FpsMangohud
             cabecalho = i;
             break;
         }
-        if (cabecalho < 0) return sessao;
+        if (cabecalho < 0) return LerResumo(linhas, sessao);
 
         // bloco de sistema: linha 0 = nomes, linha 1 = valores
         if (cabecalho >= 2)
@@ -131,7 +136,8 @@ public static class FpsMangohud
                 Os = Campo("os"),
                 Cpu = Campo("cpu"),
                 Gpu = Campo("gpu"),
-                Driver = Campo("driver")
+                Driver = Campo("driver"),
+                Kernel = Campo("kernel")
             };
         }
 
@@ -182,6 +188,40 @@ public static class FpsMangohud
         };
     }
 
+    /// <summary>
+    /// CSV de resumo que o MangoHud escreve ao lado do log
+    /// (<c>0.1% Min FPS,1% Min FPS,97% Percentile FPS,Average FPS,…</c>).
+    /// </summary>
+    private static SessaoFps LerResumo(string[] linhas, SessaoFps sessao)
+    {
+        for (int i = 0; i < linhas.Length; i++)
+        {
+            var nomes = linhas[i].Split(',');
+            int iMedia = Array.FindIndex(nomes, n => n.Trim().Equals("Average FPS", StringComparison.OrdinalIgnoreCase));
+            if (iMedia < 0 || i + 1 >= linhas.Length) continue;
+
+            var valores = linhas[i + 1].Split(',');
+            double Campo(string chave)
+            {
+                int j = Array.FindIndex(nomes, n => n.Trim().Equals(chave, StringComparison.OrdinalIgnoreCase));
+                return j >= 0 && j < valores.Length && Num(valores[j], out var v) ? v : 0;
+            }
+
+            return sessao with
+            {
+                FpsMedio = Campo("Average FPS"),
+                FpsMinimo1 = Campo("1% Min FPS"),
+                FpsMinimo01 = Campo("0.1% Min FPS"),
+                FrametimeMedioMs = Campo("Average Frame Time"),
+                GpuLoad = Campo("GPU Load"),
+                CpuLoad = Campo("CPU Load"),
+                GpuTemp = Campo("Average GPU Temp"),
+                Amostras = 1   // o resumo não traz contagem de amostras
+            };
+        }
+        return sessao;
+    }
+
     /// <summary>Média dos piores <paramref name="fracao"/> dos frametimes (já ordenados).</summary>
     private static double MediaDosPiores(List<double> ordenados, double fracao)
     {
@@ -198,6 +238,7 @@ public static class FpsMangohud
     private static string NomeDaApp(string ficheiro)
     {
         var nome = Path.GetFileNameWithoutExtension(ficheiro);
+        if (nome.EndsWith("_summary", StringComparison.Ordinal)) nome = nome[..^"_summary".Length];
         var m = System.Text.RegularExpressions.Regex.Match(
             nome, @"^(?<app>.+?)_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$");
         return m.Success ? m.Groups["app"].Value : nome;

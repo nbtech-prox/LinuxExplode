@@ -151,10 +151,11 @@ public static class Cli
             return 1;
         }
 
-        if (s.Os.Length > 0) Console.WriteLine($"sistema    {s.Os} · {s.Cpu} · {s.Gpu} · {s.Driver}");
+        if (s.Sistema.Length > 0) Console.WriteLine("sistema    " + s.Sistema);
         Console.WriteLine($"amostras   {s.Amostras} · {s.DuracaoSegundos:0.0} s");
         Console.WriteLine($"FPS        médio {s.FpsMedio:0.0} · 1% low {s.FpsMinimo1:0.0} · 0.1% low {s.FpsMinimo01:0.0}");
-        Console.WriteLine($"frametime  médio {s.FrametimeMedioMs:0.00} ms · pior {s.FrametimePiorMs:0.00} ms");
+        Console.WriteLine($"frametime  médio {s.FrametimeMedioMs:0.00} ms" +
+                          (s.FrametimePiorMs > 0 ? $" · pior {s.FrametimePiorMs:0.00} ms" : ""));
         Console.WriteLine($"GPU        {s.GpuLoad:0}% · {s.GpuTemp:0} °C · {s.GpuPower:0} W · CPU {s.CpuLoad:0}%");
         return 0;
     }
