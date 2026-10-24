@@ -7,6 +7,17 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 ![estado](https://img.shields.io/badge/estado-funcional-9BE8A8)
 [![CI](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml/badge.svg)](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml)
 
+## Descarregar
+
+Última versão: **[v0.1.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+
+| Ficheiro | Para quê |
+|---|---|
+| `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
+| `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
+| `linux-explode-0.1.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
+
 ## O que faz
 
 | Módulo | O que mostra | Fonte |
