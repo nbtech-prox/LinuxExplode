@@ -15,8 +15,28 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // a versão no rodapé vem do Relatorio (antes era texto fixo no .axaml e ficava desactualizada)
+        if (this.FindControl<TextBlock>("RodapeVersao") is { } rodape)
+            rodape.Text = "v" + Core.Relatorio.Versao;
+
         _ativo = this.FindControl<Button>("NavSistema");
         Navegar((Environment.GetEnvironmentVariable("LINUXEXPLODE_PAGINA") ?? "sistema").ToLowerInvariant());
+
+        // gancho de teste/depuração: abrir já a prévia animada (LINUXEXPLODE_PREVIA=cpu|gpu|rt)
+        var previa = Environment.GetEnvironmentVariable("LINUXEXPLODE_PREVIA")?.ToLowerInvariant();
+        if (previa is "cpu" or "gpu" or "rt")
+        {
+            Opened += (_, _) =>
+            {
+                var modalidade = previa switch
+                {
+                    "cpu" => Vistas.ModalidadePrevia.Cpu,
+                    "gpu" => Vistas.ModalidadePrevia.Gpu,
+                    _ => Vistas.ModalidadePrevia.Rt
+                };
+                new Vistas.JanelaPrevia(modalidade).Show(this);
+            };
+        }
 
         Opened += async (_, _) =>
         {

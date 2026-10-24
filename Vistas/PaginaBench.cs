@@ -15,7 +15,6 @@ public sealed class PaginaBench : UserControl
     private readonly StackPanel _corpo = new() { Spacing = 14 };
 
     // CPU bench
-    private readonly Image _imagem = new() { Stretch = Stretch.Uniform, MaxHeight = 300 };
     private readonly ProgressBar _progresso = new() { Minimum = 0, Maximum = 1, Value = 0 };
     private readonly TextBlock _estado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pontuacao = new() { Text = "—", Classes = { "numero" } };
@@ -34,7 +33,6 @@ public sealed class PaginaBench : UserControl
 
     // GPU bench
     private readonly ComboBox _gpuLista = new() { Width = 560, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly Image _gpuImagem = new() { Stretch = Stretch.Uniform, MaxHeight = 320 };
     private readonly TextBlock _gpuEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _gpuPontuacao = new() { Text = "—", Classes = { "numero" } };
     private readonly List<InfoGpu> _gpus = new();
@@ -94,19 +92,10 @@ public sealed class PaginaBench : UserControl
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         botoes.Children.Add(UI.Botao("Testar GPU", true, () => _ = CorrerGpu(false)));
         botoes.Children.Add(UI.Botao("Testar ray tracing", false, () => _ = CorrerGpu(true)));
+        botoes.Children.Add(UI.Botao("Ver a animar", false, () => AbrirPrevia(ModalidadePrevia.Gpu, false)));
+        botoes.Children.Add(UI.Botao("Ver ray tracing a animar", false, () => AbrirPrevia(ModalidadePrevia.Rt, false)));
         conteudo.Children.Add(botoes);
         conteudo.Children.Add(_gpuEstado);
-
-        conteudo.Children.Add(new Border
-        {
-            Background = new SolidColorBrush(Color.Parse("#0D0D0D")),
-            BorderBrush = UI.Cor("Linha"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            MinHeight = 150,
-            Padding = new Thickness(6),
-            Child = _gpuImagem
-        });
 
         var linhaNota = new StackPanel { Spacing = 2 };
         linhaNota.Children.Add(UI.Texto("NOTA GPU", "rotulo"));
@@ -157,12 +146,6 @@ public sealed class PaginaBench : UserControl
                 return;
             }
 
-            var bmp = new WriteableBitmap(new PixelSize(largura, altura),
-                new Avalonia.Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (var fb = bmp.Lock())
-                Marshal.Copy(rgba, 0, fb.Address, rgba.Length);
-            _gpuImagem.Source = bmp;
-
             _gpuPontuacao.Text = pontos.ToString("N0");
             _gpuEstado.Text = $"{nome} · {(rayTracing ? "ray tracing" : "compute")} · {segundos:0.00} s · " +
                               $"{passagens} passagens · {largura}×{altura} @ {amostras} spp" +
@@ -172,6 +155,18 @@ public sealed class PaginaBench : UserControl
         {
             _gpuEstado.Text = "falhou: " + ex.Message;
         }
+    }
+
+    /// <summary>Abre o pop-up com a cena a animar (mesma cena do teste, em baixa resolução).</summary>
+    private void AbrirPrevia(ModalidadePrevia modalidade, bool rayTracing)
+    {
+        int indice = 0;
+        if (modalidade != ModalidadePrevia.Cpu && _gpuLista.SelectedIndex >= 0 && _gpuLista.SelectedIndex < _gpus.Count)
+            indice = _gpus[_gpuLista.SelectedIndex].Indice;
+
+        var janela = new JanelaPrevia(modalidade, indice);
+        if (TopLevel.GetTopLevel(this) is Window dono) janela.Show(dono);
+        else janela.Show();
     }
 
     // ------------------------------------------------------------------ CPU
@@ -186,6 +181,7 @@ public sealed class PaginaBench : UserControl
             _cts?.Cancel();
             _estado.Text = "cancelado";
         }));
+        botoes.Children.Add(UI.Botao("Ver a animar", false, () => AbrirPrevia(ModalidadePrevia.Cpu, false)));
 
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
@@ -194,16 +190,6 @@ public sealed class PaginaBench : UserControl
         conteudo.Children.Add(botoes);
         conteudo.Children.Add(_progresso);
         conteudo.Children.Add(_estado);
-        conteudo.Children.Add(new Border
-        {
-            Background = new SolidColorBrush(Color.Parse("#0D0D0D")),
-            BorderBrush = UI.Cor("Linha"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            MinHeight = 150,
-            Padding = new Thickness(6),
-            Child = _imagem
-        });
 
         var linhaNota = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
         var pilha = new StackPanel { Spacing = 2 };
@@ -234,14 +220,12 @@ public sealed class PaginaBench : UserControl
         _pintor.Tick += (_, _) =>
         {
             _progresso.Value = bench.BucketsTotal > 0 ? (double)bench.BucketsDone / bench.BucketsTotal : 0;
-            AtualizarImagem(bench);
         };
         _pintor.Start();
 
         try
         {
             var resultado = await Task.Run(() => bench.Run(threads, TimeSpan.Zero, _cts.Token));
-            AtualizarImagem(bench);
             _progresso.Value = 1;
 
             double nota = resultado.Score;
@@ -267,16 +251,6 @@ public sealed class PaginaBench : UserControl
             _cts?.Dispose();
             _cts = null;
         }
-    }
-
-    private void AtualizarImagem(BenchRenderer bench)
-    {
-        var pixels = bench.Pixels;
-        var bmp = new WriteableBitmap(new PixelSize(BenchRenderer.Width, BenchRenderer.Height),
-            new Avalonia.Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
-        using (var fb = bmp.Lock())
-            Marshal.Copy(pixels, 0, fb.Address, pixels.Length);
-        _imagem.Source = bmp;
     }
 
     // ------------------------------------------------------------------ RAM

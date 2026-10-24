@@ -86,6 +86,44 @@ public sealed class BenchRenderer
         return new BenchResult(threads, sw.Elapsed.TotalSeconds, SamplesDone, passes);
     }
 
+    /// <summary>
+    /// Prévia animada para o pop-up: fotogramas de baixa resolução em paralelo, com a câmara a
+    /// orbitar a cena. Usa a mesma cena e o mesmo <see cref="Trace"/> do benchmark — só a
+    /// resolução, as amostras e a câmara mudam (o benchmark não é tocado).
+    /// </summary>
+    public static void Previa(int largura, int altura, int spp, CancellationToken ct, Action<int[], int> fotograma)
+    {
+        var px = new int[largura * altura];
+        float aspeto = (float)largura / altura;
+        int n = 0;
+        var relogio = Stopwatch.StartNew();          // ritmo dos fotogramas
+        var relogioCena = Stopwatch.StartNew();      // relógio da câmara (independente do fps)
+
+        while (!ct.IsCancellationRequested)
+        {
+            Camera.Definir((float)(relogioCena.Elapsed.TotalSeconds * 0.35), aspeto);
+            var destino = px;
+            Parallel.For(0, altura, y =>
+            {
+                for (int x = 0; x < largura; x++)
+                {
+                    uint seed = (uint)(y * largura + x) * 9781u + 0x9E3779B9u + (uint)(n * 7919);
+                    float soma = 0;
+                    for (int s = 0; s < spp; s++)
+                    {
+                        float u = (x + Rnd(ref seed)) / largura, v = (y + Rnd(ref seed)) / altura;
+                        soma += MathF.Min(Trace(Camera.Ray(u, v), ref seed), 4f);
+                    }
+                    destino[y * largura + x] = ToPixel(soma / spp);
+                }
+            });
+
+            fotograma((int[])destino.Clone(), n++);
+            if (relogio.Elapsed.TotalMilliseconds < 15) Thread.Sleep(1);
+            relogio.Restart();
+        }
+    }
+
     private void RenderBucket((int X, int Y, int W, int H) b, CancellationToken ct)
     {
         for (int y = b.Y; y < b.Y + b.H; y++)
@@ -138,12 +176,23 @@ public sealed class BenchRenderer
 
     private static class Camera
     {
-        private static readonly Vector3 Origin = new(0, 2.1f, -7.2f);
-        private static readonly Vector3 Lower, Horizontal, Vertical;
-        static Camera()
+        private static Vector3 Origin = new(0, 2.1f, -7.2f);
+        private static Vector3 Lower, Horizontal, Vertical;
+
+        static Camera() => Definir(0f, (float)Width / Height);
+
+        /// <summary>
+        /// Fixa a câmara. Com <paramref name="angulo"/> = 0 fica exatamente a câmara do benchmark;
+        /// com outro valor orbita a cena em volta do alvo (usado na prévia animada).
+        /// </summary>
+        public static void Definir(float angulo, float aspect)
         {
             var target = new Vector3(0, 0.75f, 0);
-            float vfov = 38f * MathF.PI / 180, aspect = (float)Width / Height;
+            Origin = angulo == 0f
+                ? new Vector3(0, 2.1f, -7.2f)
+                : new Vector3(MathF.Sin(angulo) * 7.2f, 2.1f + 0.45f * MathF.Sin(angulo * 0.6f), -MathF.Cos(angulo) * 7.2f);
+
+            float vfov = 38f * MathF.PI / 180;
             float hh = MathF.Tan(vfov / 2), hw = aspect * hh;
             var w = Vector3.Normalize(Origin - target);
             var u = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, w));
@@ -152,6 +201,7 @@ public sealed class BenchRenderer
             Horizontal = 2 * hw * u;
             Vertical = -2 * hh * v;
         }
+
         public static (Vector3 O, Vector3 D) Ray(float s, float t)
             => (Origin, Vector3.Normalize(Lower + s * Horizontal + t * Vertical - Origin));
     }

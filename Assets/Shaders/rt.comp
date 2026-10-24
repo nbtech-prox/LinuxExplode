@@ -13,6 +13,7 @@ layout(push_constant) uniform Parametros {
     uint semente;
     uint total;
     uint trisPorEsfera;
+    float angulo;
 } p;
 
 layout(binding = 0) uniform accelerationStructureEXT tlas;
@@ -141,13 +142,27 @@ void main()
     vec3 acc = vec3(0.0);
     float aspeto = float(p.largura) / float(p.altura);
 
+    // Câmara: angulo == 0 mantém a imagem original do benchmark; caso contrário orbita a cena.
+    bool orbitar = p.angulo != 0.0;
+    vec3 ro = vec3(0.0, 0.35, -3.2);
+    vec3 frente = vec3(0.0), direita = vec3(0.0), cima = vec3(0.0);
+    if (orbitar)
+    {
+        vec3 alvo = vec3(0.0, -0.15, 0.0);
+        ro = vec3(sin(p.angulo) * 3.2, 0.35 + 0.25 * sin(p.angulo * 0.5), -cos(p.angulo) * 3.2);
+        frente = normalize(alvo - ro);
+        direita = normalize(cross(vec3(0.0, 1.0, 0.0), frente));
+        cima = cross(frente, direita);
+    }
+
     for (uint s = 0u; s < p.amostras; s++)
     {
         vec2 uv = (vec2(gid) + vec2(rnd(), rnd())) / vec2(p.largura, p.altura) * 2.0 - 1.0;
         uv.y = -uv.y;
         uv.x *= aspeto;
-        vec3 rd = normalize(vec3(uv, 1.7));
-        acc += traco(vec3(0.0, 0.35, -3.2), rd);
+        vec3 rd = orbitar ? normalize(uv.x * direita + uv.y * cima + 1.7 * frente)
+                          : normalize(vec3(uv, 1.7));
+        acc += traco(ro, rd);
     }
 
     acc /= float(p.amostras);
