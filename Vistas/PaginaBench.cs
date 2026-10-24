@@ -1,10 +1,7 @@
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using LinuxExplode.Core;
 
@@ -15,13 +12,10 @@ public sealed class PaginaBench : UserControl
     private readonly StackPanel _corpo = new() { Spacing = 14 };
 
     // CPU bench
-    private readonly ProgressBar _progresso = new() { Minimum = 0, Maximum = 1, Value = 0 };
     private readonly TextBlock _estado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pontuacao = new() { Text = "—", Classes = { "numero" } };
     private readonly TextBlock _historico = new() { Text = "", Classes = { "mono" } };
     private readonly List<string> _runs = new();
-    private DispatcherTimer? _pintor;
-    private CancellationTokenSource? _cts;
 
     // RAM bench
     private readonly TextBlock _ramEstado = new() { Text = "pronto", Classes = { "sub" } };
@@ -53,9 +47,10 @@ public sealed class PaginaBench : UserControl
         {
             CarregarGpus();
             // modo de teste automático: LINUXEXPLODE_AUTOTEST=1 (compute) ou "rt" (ray tracing)
+            // abre o pop do bench, que é o caminho real do botão Testar GPU
             var auto = Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST");
             if (!string.IsNullOrEmpty(auto) && _gpus.Count > 0)
-                _ = CorrerGpu(auto == "rt");
+                AbrirPrevia(auto == "rt" ? ModalidadePrevia.Rt : ModalidadePrevia.Gpu);
         };
     }
 
@@ -84,16 +79,14 @@ public sealed class PaginaBench : UserControl
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
             "O mesmo path tracer da CPU, agora em compute shader Vulkan: " +
-            $"{BenchGpu.LarguraPadrao}×{BenchGpu.AlturaPadrao}, {BenchGpu.AmostrasPadrao} amostras por pixel, " +
-            $"repetido até {BenchGpu.AlvoSegundos:0.0} s para a nota ser estável. " +
+            $"{BenchGpu.AmostrasPadrao} amostras por pixel, repetido até {BenchGpu.AlvoSegundos:0.0} s para a nota " +
+            "ser estável — a resolução escolhe-se no pop-up, de 320×180 até 4K. " +
             "O modo ray tracing usa VK_KHR_ray_query com 64 esferas em BVH — a nota não é comparável com a de compute.", "sub"));
         conteudo.Children.Add(_gpuLista);
 
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        botoes.Children.Add(UI.Botao("Testar GPU", true, () => _ = CorrerGpu(false)));
-        botoes.Children.Add(UI.Botao("Testar ray tracing", false, () => _ = CorrerGpu(true)));
-        botoes.Children.Add(UI.Botao("Ver a animar", false, () => AbrirPrevia(ModalidadePrevia.Gpu, false)));
-        botoes.Children.Add(UI.Botao("Ver ray tracing a animar", false, () => AbrirPrevia(ModalidadePrevia.Rt, false)));
+        botoes.Children.Add(UI.Botao("Testar GPU", true, () => AbrirPrevia(ModalidadePrevia.Gpu)));
+        botoes.Children.Add(UI.Botao("Testar ray tracing", false, () => AbrirPrevia(ModalidadePrevia.Rt)));
         conteudo.Children.Add(botoes);
         conteudo.Children.Add(_gpuEstado);
 
@@ -105,66 +98,43 @@ public sealed class PaginaBench : UserControl
         return UI.Cartao("GPU · EXPLODE BENCH (Vulkan)", conteudo);
     }
 
-    private async Task CorrerGpu(bool rayTracing = false)
-    {
-        if (_gpus.Count == 0) { CarregarGpus(); return; }
-
-        int indice = _gpuLista.SelectedIndex >= 0 && _gpuLista.SelectedIndex < _gpus.Count
-            ? _gpus[_gpuLista.SelectedIndex].Indice
-            : _gpus[0].Indice;
-
-        _gpuEstado.Text = rayTracing
-            ? "a construir BLAS/TLAS e a aquecer a GPU…"
-            : "a compilar o pipeline e a aquecer a GPU…";
-        _gpuPontuacao.Text = "—";
-
-        try
-        {
-            var (pontos, segundos, passagens, largura, altura, amostras, nome, rgba, extra) =
-                await Task.Run(() =>
-                {
-                    if (rayTracing)
-                    {
-                        var rr = BenchRt.Correr(indice);
-                        return rr is null
-                            ? (0L, 0.0, 0, 0, 0, 0, "", Array.Empty<byte>(), 0)
-                            : (rr.Pontos, rr.Segundos, rr.Passagens, rr.Largura, rr.Altura, rr.Amostras,
-                               rr.Nome, rr.Rgba, rr.Esferas);
-                    }
-                    var rc = BenchGpu.Correr(indice);
-                    return rc is null
-                        ? (0L, 0.0, 0, 0, 0, 0, "", Array.Empty<byte>(), 0)
-                        : (rc.Pontos, rc.Segundos, rc.Passagens, rc.Largura, rc.Altura, rc.Amostras,
-                           rc.Nome, rc.Rgba, 0);
-                });
-
-            if (rgba.Length == 0)
-            {
-                _gpuEstado.Text = rayTracing
-                    ? "indisponível: esta GPU não expõe VK_KHR_ray_query"
-                    : "falhou: não foi possível criar o dispositivo Vulkan";
-                return;
-            }
-
-            _gpuPontuacao.Text = pontos.ToString("N0");
-            _gpuEstado.Text = $"{nome} · {(rayTracing ? "ray tracing" : "compute")} · {segundos:0.00} s · " +
-                              $"{passagens} passagens · {largura}×{altura} @ {amostras} spp" +
-                              (extra > 0 ? $" · {extra} esferas em BVH" : "");
-        }
-        catch (Exception ex)
-        {
-            _gpuEstado.Text = "falhou: " + ex.Message;
-        }
-    }
-
-    /// <summary>Abre o pop-up com a cena a animar (mesma cena do teste, em baixa resolução).</summary>
-    private void AbrirPrevia(ModalidadePrevia modalidade, bool rayTracing)
+    /// <summary>
+    /// Abre o pop do bench: a cena a animar + a medição, com escolha de resolução nos testes de GPU.
+    /// A nota e o detalhe voltam para o cartão à medida que são medidos.
+    /// </summary>
+    private void AbrirPrevia(ModalidadePrevia modalidade, int threads = 0)
     {
         int indice = 0;
         if (modalidade != ModalidadePrevia.Cpu && _gpuLista.SelectedIndex >= 0 && _gpuLista.SelectedIndex < _gpus.Count)
             indice = _gpus[_gpuLista.SelectedIndex].Indice;
 
-        var janela = new JanelaPrevia(modalidade, indice);
+        string ultimaNota = "—";
+
+        var janela = new JanelaPrevia(modalidade, indice, threads, r =>
+        {
+            ultimaNota = r.Nota;
+            if (modalidade == ModalidadePrevia.Cpu)
+            {
+                _pontuacao.Text = r.Nota;
+                _estado.Text = r.Detalhe;
+            }
+            else
+            {
+                _gpuPontuacao.Text = r.Nota;
+                _gpuEstado.Text = (modalidade == ModalidadePrevia.Rt ? "ray tracing · " : "compute · ") + r.Detalhe;
+            }
+        });
+
+        if (modalidade == ModalidadePrevia.Cpu)
+        {
+            janela.Closed += (_, _) =>
+            {
+                _runs.Insert(0, $"{DateTime.Now:HH:mm}  {ultimaNota} pts  ({threads}T)");
+                if (_runs.Count > 6) _runs.RemoveAt(_runs.Count - 1);
+                _historico.Text = string.Join("\n", _runs);
+            };
+        }
+
         if (TopLevel.GetTopLevel(this) is Window dono) janela.Show(dono);
         else janela.Show();
     }
@@ -174,21 +144,14 @@ public sealed class PaginaBench : UserControl
     private Control CartaoCpu()
     {
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        botoes.Children.Add(UI.Botao("Multi-core", true, () => _ = CorrerCpu(Environment.ProcessorCount)));
-        botoes.Children.Add(UI.Botao("Single-core", false, () => _ = CorrerCpu(1)));
-        botoes.Children.Add(UI.Botao("Cancelar", false, () =>
-        {
-            _cts?.Cancel();
-            _estado.Text = "cancelado";
-        }));
-        botoes.Children.Add(UI.Botao("Ver a animar", false, () => AbrirPrevia(ModalidadePrevia.Cpu, false)));
+        botoes.Children.Add(UI.Botao("Multi-core", true, () => AbrirPrevia(ModalidadePrevia.Cpu, Environment.ProcessorCount)));
+        botoes.Children.Add(UI.Botao("Single-core", false, () => AbrirPrevia(ModalidadePrevia.Cpu, 1)));
 
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
             "O mesmo renderizador do EXPLODE BENCH original: path tracer determinístico, 960×540, 1024 amostras por pixel. " +
             "A nota é amostras por segundo ÷ 10.000 — comparável entre máquinas.", "sub"));
         conteudo.Children.Add(botoes);
-        conteudo.Children.Add(_progresso);
         conteudo.Children.Add(_estado);
 
         var linhaNota = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
@@ -204,53 +167,6 @@ public sealed class PaginaBench : UserControl
         conteudo.Children.Add(linhaNota);
 
         return UI.Cartao("CPU · EXPLODE BENCH", conteudo);
-    }
-
-    private async Task CorrerCpu(int threads)
-    {
-        if (_cts is not null) return;
-
-        _cts = new CancellationTokenSource();
-        _progresso.Value = 0;
-        _estado.Text = threads == 1 ? "a renderizar (single-core)…" : $"a renderizar com {threads} threads…";
-        _pontuacao.Text = "—";
-
-        var bench = new BenchRenderer();
-        _pintor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
-        _pintor.Tick += (_, _) =>
-        {
-            _progresso.Value = bench.BucketsTotal > 0 ? (double)bench.BucketsDone / bench.BucketsTotal : 0;
-        };
-        _pintor.Start();
-
-        try
-        {
-            var resultado = await Task.Run(() => bench.Run(threads, TimeSpan.Zero, _cts.Token));
-            _progresso.Value = 1;
-
-            double nota = resultado.Score;
-            _pontuacao.Text = nota.ToString("N0");
-            _estado.Text = $"{resultado.Threads} thread(s) · {resultado.Seconds:0.0} s · " +
-                           $"{resultado.Samples:N0} amostras · {resultado.Passes} passada(s)";
-            _runs.Insert(0, $"{DateTime.Now:HH:mm}  {nota:N0} pts  ({resultado.Threads}T, {resultado.Seconds:0.0}s)");
-            if (_runs.Count > 6) _runs.RemoveAt(_runs.Count - 1);
-            _historico.Text = string.Join("\n", _runs);
-        }
-        catch (OperationCanceledException)
-        {
-            _estado.Text = "cancelado";
-        }
-        catch (Exception ex)
-        {
-            _estado.Text = "falhou: " + ex.Message;
-        }
-        finally
-        {
-            _pintor?.Stop();
-            _pintor = null;
-            _cts?.Dispose();
-            _cts = null;
-        }
     }
 
     // ------------------------------------------------------------------ RAM

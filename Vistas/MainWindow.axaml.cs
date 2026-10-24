@@ -34,7 +34,8 @@ public partial class MainWindow : Window
                     "gpu" => Vistas.ModalidadePrevia.Gpu,
                     _ => Vistas.ModalidadePrevia.Rt
                 };
-                new Vistas.JanelaPrevia(modalidade).Show(this);
+                int threads = int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_THREADS"), out int t) ? t : 0;
+                new Vistas.JanelaPrevia(modalidade, 0, threads).Show(this);
             };
         }
 
