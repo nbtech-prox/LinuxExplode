@@ -7,21 +7,36 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 ![estado](https://img.shields.io/badge/estado-funcional-9BE8A8)
 [![CI](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml/badge.svg)](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml)
 
-## Descarregar
+## Descarregar e actualizar
 
-Última versão: **[v0.12.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.14.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+
+### Pelo gestor de aplicações (recomendado)
+
+O projecto publica um **repositório Flatpak** em `https://nbtech-prox.github.io/LinuxExplode/`.
+Acrescenta-se uma vez e a partir daí as actualizações aparecem no gestor de aplicações:
+
+```bash
+flatpak remote-add --user --no-gpg-verify linuxexplode https://nbtech-prox.github.io/LinuxExplode/
+flatpak install --user linuxexplode pt.linuxexplode.LinuxExplode
+flatpak update --user
+```
+
+O repositório não está assinado com GPG (daí `--no-gpg-verify`).
+
+### Pelos ficheiros
 
 | Ficheiro | Para quê |
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.12.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.14.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
-As versões anteriores continuam publicadas com os seus próprios ficheiros e checksums —
-[v0.1.0](https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.1.0) foi a primeira versão
-pública. O selo **Latest** passa apenas para a mais recente; nada é apagado.
-Todas em [Releases](https://github.com/nbtech-prox/LinuxExplode/releases).
+Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
+chega a anunciar uma actualização que falha. Para actualizar por aí, usa o repositório acima.
+
+As versões sobem de **2 em 2** na parte menor: 0.10.0 → 0.12.0 → 0.14.0 → 0.16.0 …
 
 ## O que faz
 
@@ -332,7 +347,7 @@ encontrou GPU em vez de inventar uma nota.
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.2.0-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.14.0-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -426,15 +441,15 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.2.0-linux-arm64.tar.gz   38 MB  instalador sem root
+#   linux-explode-0.14.0-linux-arm64.tar.gz  38 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.2.0-linux-arm64.tar.gz
-cd linux-explode-0.2.0-linux-arm64 && ./install.sh
+tar -xzf linux-explode-0.14.0-linux-arm64.tar.gz
+cd linux-explode-0.14.0-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
 ```
