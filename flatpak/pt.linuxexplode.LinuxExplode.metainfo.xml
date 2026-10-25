@@ -25,20 +25,42 @@
 
   <launchable type="desktop-id">pt.linuxexplode.LinuxExplode.desktop</launchable>
 
-  <url type="homepage">https://github.com/</url>
+  <url type="homepage">https://github.com/nbtech-prox/LinuxExplode</url>
+  <url type="bugtracker">https://github.com/nbtech-prox/LinuxExplode/issues</url>
+
+  <developer id="github.com.nbtech-prox">
+    <name>Nuno Batista</name>
+  </developer>
 
   <screenshots>
     <screenshot type="default">
       <caption>Visão geral do sistema</caption>
-      <image>https://raw.githubusercontent.com/placeholder/linuxexplode/screenshot.png</image>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-bench.png</image>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="0.16.0" date="2026-10-25">
+      <description>
+        <p>O histórico mostra um resultado por tipo de teste (multi-core e single-core), substituído
+        só quando muda, e a aplicação actualiza pelo gestor de pacotes.</p>
+        <p>Testes de CPU em corridas que fecham e recomeçam, com o quadro completo 2,5 s à vista.</p>
+      </description>
+    </release>
     <release version="0.14.0" date="2026-10-25">
       <description>
         <p>Testes de CPU em corridas que recomeçam sozinhas, repositório Flatpak actualizável e
         animação do pop com qualidade igual em todas as resoluções.</p>
+      </description>
+    </release>
+    <release version="0.12.0" date="2026-10-25">
+      <description>
+        <p>Animação do pop com orçamento de amostras por fotograma: nitidez igual de 320x180 a 4K.</p>
+      </description>
+    </release>
+    <release version="0.10.0" date="2026-10-24">
+      <description>
+        <p>O pop do benchmark: Testar abre a animação, resolução até 4K e ocupação dos cores.</p>
       </description>
     </release>
     <release version="0.1.0" date="2026-10-23">

@@ -14,9 +14,10 @@ public sealed class PaginaBench : UserControl
     // CPU bench
     private readonly TextBlock _estado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pontuacao = new() { Text = "—", Classes = { "numero" } };
-    private readonly TextBlock _historico = new() { Text = "", Classes = { "mono" } };
-    private readonly List<string> _runs = new();
-    private string _ultimaChaveCpu = "";
+    private readonly TextBlock _historico = new() { Text = "sem resultados", Classes = { "mono" } };
+    // Um resultado por tipo de teste — não uma lista: o cartão mostra o último resultado de cada
+    // modalidade e substitui-o quando aparece um diferente.
+    private readonly Dictionary<string, (string Chave, string Linha)> _resultados = new();
 
     // RAM bench
     private readonly TextBlock _ramEstado = new() { Text = "pronto", Classes = { "sub" } };
@@ -51,7 +52,8 @@ public sealed class PaginaBench : UserControl
             // abre o pop do bench, que é o caminho real do botão Testar GPU
             var auto = Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST");
             if (auto == "cpu")
-                AbrirPrevia(ModalidadePrevia.Cpu);
+                AbrirPrevia(ModalidadePrevia.Cpu, int.TryParse(
+                    Environment.GetEnvironmentVariable("LINUXEXPLODE_THREADS"), out int t) && t > 0 ? t : 0);
             else if (!string.IsNullOrEmpty(auto) && _gpus.Count > 0)
                 AbrirPrevia(auto == "rt" ? ModalidadePrevia.Rt : ModalidadePrevia.Gpu);
         };
@@ -107,6 +109,10 @@ public sealed class PaginaBench : UserControl
     /// </summary>
     private void AbrirPrevia(ModalidadePrevia modalidade, int threads = 0)
     {
+        // 0 threads = "todos os cores" (a prévia faz o mesmo); normalizar aqui garante que a linha
+        // do histórico diz o número real de threads usadas.
+        if (modalidade == ModalidadePrevia.Cpu && threads <= 0) threads = Environment.ProcessorCount;
+
         int indice = 0;
         if (modalidade != ModalidadePrevia.Cpu && _gpuLista.SelectedIndex >= 0 && _gpuLista.SelectedIndex < _gpus.Count)
             indice = _gpus[_gpuLista.SelectedIndex].Indice;
@@ -118,19 +124,16 @@ public sealed class PaginaBench : UserControl
             ultimaNota = r.Nota;
             if (modalidade == ModalidadePrevia.Cpu)
             {
-                // O resultado fica fixo: só muda (e só entra no histórico) quando é diferente.
-                var chave = ChaveDoResultado(r.Nota);
-                if (chave == _ultimaChaveCpu) return;
+                var tipo = threads == 1 ? "single" : "multi";
 
-                _ultimaChaveCpu = chave;
+                // O resultado fica fixo: só substitui o anterior quando é diferente.
+                var chave = ChaveDoResultado(r.Nota);
+                if (_resultados.TryGetValue(tipo, out var guardado) && guardado.Chave == chave) return;
+
+                _resultados[tipo] = (chave, $"{r.Nota} pts · {threads}T · {DateTime.Now:HH:mm}");
                 _pontuacao.Text = r.Nota;
                 _estado.Text = r.Detalhe;
-                if (r.CorridaConcluida)
-                {
-                    _runs.Insert(0, $"{DateTime.Now:HH:mm}  {r.Nota} pts  ({threads}T)");
-                    if (_runs.Count > 6) _runs.RemoveAt(_runs.Count - 1);
-                    _historico.Text = string.Join("\n", _runs);
-                }
+                MostrarResultados();
             }
             else
             {
@@ -141,6 +144,22 @@ public sealed class PaginaBench : UserControl
 
         if (TopLevel.GetTopLevel(this) is Window dono) janela.Show(dono);
         else janela.Show();
+    }
+
+    /// <summary>
+    /// Um resultado por modalidade (multi-core / single-core), lado a lado no cartão. Não acumula:
+    /// cada linha é o último resultado daquele tipo, substituído quando aparece um diferente.
+    /// </summary>
+    private void MostrarResultados()
+    {
+        var linhas = new List<string>();
+
+        if (_resultados.TryGetValue("multi", out var multi))
+            linhas.Add($"{"Multi-core",-12} {multi.Linha}");
+        if (_resultados.TryGetValue("single", out var single))
+            linhas.Add($"{"Single-core",-12} {single.Linha}");
+
+        _historico.Text = linhas.Count == 0 ? "sem resultados" : string.Join("\n", linhas);
     }
 
     /// <summary>

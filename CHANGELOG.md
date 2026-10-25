@@ -3,6 +3,21 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.16.0] — 2026-10-25
+
+### Alterado
+
+- **O histórico do cartão mostra um resultado por tipo de teste**, não uma lista: `Multi-core` e
+  `Single-core` têm cada um a sua linha, com a nota, as threads e a hora da última medição. Deixa de
+  acumular linhas a cada corrida (antes acrescentava até 6).
+- Cada linha só é substituída quando o resultado é **diferente** (dois algarismos significativos:
+  5 603 e 5 598 são o mesmo resultado). A nota grande acompanha a mesma regra e mostra sempre o
+  último resultado distinto.
+- As threads passam a ser normalizadas antes de abrir o pop: `0` significa todos os cores, e a linha
+  do histórico indica sempre o número real usado (antes podia mostrar `0T`).
+- `LINUXEXPLODE_AUTOTEST=cpu` abre a prévia de CPU pela página e respeita `LINUXEXPLODE_THREADS`, para
+  se poder testar o cartão (multi e single) sem cliques.
+
 ## [0.14.0] — 2026-10-25
 
 ### Alterado
