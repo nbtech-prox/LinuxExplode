@@ -1,17 +1,17 @@
 # ROADMAP — LINUX EXPLODE
 
 Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é dada por concluída.
-As versões sobem de **2 em 2** na parte menor (0.18.0 → 0.20.0 → 0.22.0 …) e cada uma sai com notas,
+As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.0 (aba STRESS, gráficos ao vivo, throttling, energia, histórico comparado,
+- **Estado actual:** 0.20.1 (aba STRESS, gráficos ao vivo, throttling, energia, histórico comparado,
   temas, `--json`).
 - **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
 - **Idioma:** interface, documentação e notas em pt-PT.
 
 ---
 
-## Fase 1 — 0.20.0 (feito)
+## Fase 1 — 0.20.1 (feito)
 
 | # | O que entrou | Onde |
 |---|---|---|
@@ -28,7 +28,7 @@ CHANGELOG; `--json` validado com `json.load` em todos os comandos.
 
 ---
 
-## Fase 2 — 0.22.0 · Alertas e confiança nos dados
+## Fase 2 — 0.20.3 · Alertas e confiança nos dados
 
 Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o utilizador olhe.
 
@@ -41,7 +41,7 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 ---
 
-## Fase 3 — 0.24.0 · Monitorização profunda
+## Fase 3 — 0.20.5 · Monitorização profunda
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
@@ -51,7 +51,7 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 ---
 
-## Fase 4 — 0.26.0 · Benchmarks com mais sinal
+## Fase 4 — 0.20.7 · Benchmarks com mais sinal
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
@@ -62,7 +62,7 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 ---
 
-## Fase 5 — 0.28.0 · Stress e discos
+## Fase 5 — 0.20.9 · Stress e discos
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
@@ -73,7 +73,7 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 ---
 
-## Fase 6 — 0.30.0 · Dados e integração
+## Fase 6 — 0.20.11 · Dados e integração
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|

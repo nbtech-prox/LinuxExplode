@@ -40,7 +40,7 @@
   </screenshots>
 
   <releases>
-    <release version="0.20.0" date="2026-10-25">
+    <release version="0.20.1" date="2026-10-25">
       <description>
         <p>Gráficos ao vivo de 60 s, deteccao de throttling, energia e custo por kWh, historico de
         resultados comparado e --json na linha de comandos.</p>
