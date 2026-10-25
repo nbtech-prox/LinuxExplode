@@ -50,6 +50,8 @@ jobs:
           $BIN --cli usb --json   | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d["dados"],list), d'
           $BIN --cli audio --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "Nos" in d["dados"], d'
           $BIN --cli ranking > /tmp/ranking.txt
+          # o $HOME do sandbox Flatpak é temporário: sem --persist o histórico e as sessões desaparecem
+          grep -q -- '--persist=.local/share/linux-explode' flatpak/pt.linuxexplode.LinuxExplode.json
           $BIN --cli gravar 2 --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["dados"]["amostras"] == 2, d'
 
       - name: Testes unitários

@@ -12,6 +12,7 @@
     "--socket=x11",
     "--device=dri",
     "--filesystem=xdg-documents",
+    "--persist=.local/share/linux-explode",
     "--filesystem=~/mangologs:ro",
     "--filesystem=~/.config/MangoHud:ro",
     "--filesystem=~/.local/share/MangoHud:ro",

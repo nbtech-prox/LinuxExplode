@@ -346,6 +346,9 @@ não "ferver" de fotograma para fotograma.
 
 ### Histórico comparado — melhor, mediana e variação
 
+No Flatpak esta pasta é persistida (`--persist=.local/share/linux-explode`) e vive em
+`~/.var/app/pt.linuxexplode.LinuxExplode/.local/share/linux-explode` — não se perde ao fechar.
+
 Cada nota fica guardada em `~/.local/share/linux-explode/resultados.json` com a data e a versão do
 programa. Por baixo da nota, o cartão mostra o melhor resultado, a mediana e a variação da última
 corrida em relação à mediana:
@@ -900,7 +903,8 @@ LinuxExplode/
   ou o do runtime do Flatpak) — compare corridas do mesmo binário, não uma do `--cli` com outra da app.
 - **Latência de memória** mede o que a máquina faz naquele momento: turbo, afinidade de threads e
   outras cargas mudam o valor. Para comparar, corre com a máquina em repouso e usa a mediana.
-- **Sessões** têm resolução de 1 s: picos mais curtos do que isso não aparecem no CSV.
+- **Sessões** têm resolução de 1 s: picos mais curtos do que isso não aparecem no CSV. No Flatpak o
+  CSV fica em `~/.var/app/pt.linuxexplode.LinuxExplode/.local/share/linux-explode/sessoes/`.
 
 ## Licença
 

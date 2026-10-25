@@ -75,6 +75,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.9" date="2026-10-25">
+      <description>
+        <p>Correcao importante: dentro do Flatpak o historico de resultados e as sessoes gravadas
+        perdiam-se entre arranques, porque o diretorio pessoal do sandbox e temporario. O manifesto
+        passa a persistir .local/share/linux-explode, por isso o ranking, a comparacao com corridas
+        anteriores e os CSV das sessoes sobrevivem a fechar a aplicacao.</p>
+      </description>
+    </release>
     <release version="0.20.7" date="2026-10-25">
       <description>
         <p>Benchmarks com mais sinal: ranking local com mediana de 3 corridas e aviso de variância,

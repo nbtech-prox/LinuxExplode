@@ -3,6 +3,21 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.9] — 2026-10-25
+
+### Corrigido
+
+- **Dentro do Flatpak o histórico e as sessões não sobreviviam a fechar a aplicação.** O `$HOME` do
+  sandbox é um diretório temporário (`/home/nbtech` falso, em tmpfs): `resultados.json` e os CSV das
+  sessões eram escritos lá e desapareciam no arranque seguinte, pelo que o ranking e a comparação com
+  corridas anteriores vinham sempre vazios na versão instalada. O manifesto passa a ter
+  `--persist=.local/share/linux-explode`, que mapeia essa pasta para
+  `~/.var/app/pt.linuxexplode.LinuxExplode/.local/share/linux-explode` — fica fora do sandbox, em disco.
+  Verificado com dois arranques seguidos dentro do Flatpak: o segundo `--cli ranking` já mostra a corrida
+  registada pelo primeiro.
+- O CI passa a verificar que o manifesto mantém essa persistência (uma linha esquecida aqui volta a
+  quebrar o histórico sem ninguém notar).
+
 ## [0.20.7] — 2026-10-25
 
 ### Adicionado

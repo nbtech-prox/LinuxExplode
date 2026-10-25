@@ -4,13 +4,9 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.7 (ranking local com mediana de 3 corridas, curva de latência de memória,
+- **Estado actual:** 0.20.9 (ranking local com mediana de 3 corridas, curva de latência de memória,
   tarefa do mundo real e sessões gravadas em CSV, para além da aba Dispositivos, cartão da placa-mãe,
   bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`, alertas e 99 testes).
-- **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
-- **Idioma:** interface, documentação e notas em pt-PT.
-
----
 
 ## Fase 1 — 0.20.1 (feito)
 
@@ -67,7 +63,20 @@ capturas reais em `docs/captura-dispositivos.png` e `docs/captura-placa.png`, e 
 
 ---
 
-## Fase 5 — 0.20.9 · Stress e discos (próxima)
+## Fase 3.1 — 0.20.9 · Histórico que sobrevive no Flatpak (feito)
+
+| Item | Porquê | Como foi verificado |
+|---|---|---|
+| Persistir `.local/share/linux-explode` no sandbox | O `$HOME` do Flatpak é temporário: histórico e sessões desapareciam a cada arranque | `--persist=.local/share/linux-explode` no manifesto; dois arranques seguidos dentro do Flatpak, o segundo `--cli ranking` mostra a corrida do primeiro. O CI passa a falhar se a linha desaparecer |
+
+Esta correcção adiantou-se à Fase 5 (que passa a 0.20.11) por ser um defeito visível na versão
+instalada: sem ela o ranking e o histórico comparado não funcionavam no Flatpak.
+- **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
+- **Idioma:** interface, documentação e notas em pt-PT.
+
+---
+
+## Fase 5 — 0.20.11 · Stress e discos (próxima)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
@@ -78,7 +87,7 @@ capturas reais em `docs/captura-dispositivos.png` e `docs/captura-placa.png`, e 
 
 ---
 
-## Fase 6 — 0.20.11 · Dados e integração
+## Fase 6 — 0.20.13 · Dados e integração
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
