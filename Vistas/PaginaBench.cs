@@ -50,7 +50,9 @@ public sealed class PaginaBench : UserControl
             // modo de teste automático: LINUXEXPLODE_AUTOTEST=1 (compute) ou "rt" (ray tracing)
             // abre o pop do bench, que é o caminho real do botão Testar GPU
             var auto = Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST");
-            if (!string.IsNullOrEmpty(auto) && _gpus.Count > 0)
+            if (auto == "cpu")
+                AbrirPrevia(ModalidadePrevia.Cpu);
+            else if (!string.IsNullOrEmpty(auto) && _gpus.Count > 0)
                 AbrirPrevia(auto == "rt" ? ModalidadePrevia.Rt : ModalidadePrevia.Gpu);
         };
     }

@@ -115,6 +115,7 @@ jobs:
           [ -f "$REPO/summary.idx" ] && cp "$REPO/summary.idx" /tmp/pages/
           [ -d "$REPO/summaries" ] && rsync -a "$REPO/summaries" /tmp/pages/
           touch /tmp/pages/.nojekyll
+          cp flatpak/pages/index.html /tmp/pages/index.html
 
           cd /tmp/pages
           git add -A
