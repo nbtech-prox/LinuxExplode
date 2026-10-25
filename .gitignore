@@ -24,3 +24,5 @@ SHA256SUMS
 .idea/
 .vscode/
 .DS_Store
+
+flatpak/repo-x86_64/

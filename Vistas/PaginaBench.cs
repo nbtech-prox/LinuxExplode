@@ -117,6 +117,13 @@ public sealed class PaginaBench : UserControl
             {
                 _pontuacao.Text = r.Nota;
                 _estado.Text = r.Detalhe;
+                // cada corrida concluída entra no histórico (o pop recomeça sozinho)
+                if (r.CorridaConcluida)
+                {
+                    _runs.Insert(0, $"{DateTime.Now:HH:mm}  {r.Nota} pts  ({threads}T)");
+                    if (_runs.Count > 6) _runs.RemoveAt(_runs.Count - 1);
+                    _historico.Text = string.Join("\n", _runs);
+                }
             }
             else
             {
@@ -124,16 +131,6 @@ public sealed class PaginaBench : UserControl
                 _gpuEstado.Text = (modalidade == ModalidadePrevia.Rt ? "ray tracing · " : "compute · ") + r.Detalhe;
             }
         });
-
-        if (modalidade == ModalidadePrevia.Cpu)
-        {
-            janela.Closed += (_, _) =>
-            {
-                _runs.Insert(0, $"{DateTime.Now:HH:mm}  {ultimaNota} pts  ({threads}T)");
-                if (_runs.Count > 6) _runs.RemoveAt(_runs.Count - 1);
-                _historico.Text = string.Join("\n", _runs);
-            };
-        }
 
         if (TopLevel.GetTopLevel(this) is Window dono) janela.Show(dono);
         else janela.Show();

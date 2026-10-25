@@ -89,12 +89,29 @@ cp flatpak/$APP_ID.desktop "$STAGING/"
 cp flatpak/$APP_ID.metainfo.xml "$STAGING/"
 cp Assets/logo.png "$STAGING/"
 
-echo "== 3/3  construir flatpak"
-flatpak run org.flatpak.Builder --user --install --force-clean build-dir \
-  flatpak/$APP_ID.json
+echo "== 3/3  construir flatpak e publicar num repositório local"
+# Um bundle instalado com `flatpak install ./x.flatpak` fica ligado a uma origem local sem URL:
+# o gestor de pacotes anuncia "actualização" e a actualização falha. Por isso o build é exportado
+# para um repositório OSTree do projecto, exposto como remote, e a instalação é feita a partir dele
+# — assim `flatpak update` funciona. Quando houver repositório público, muda-se só o URL do remote.
+REPO=flatpak/repo-x86_64
+REMOTE=linuxexplode
+rm -rf "$REPO"
+flatpak run org.flatpak.Builder --user --force-clean --repo="$REPO" build-dir flatpak/$APP_ID.json
+flatpak build-update-repo --title="LINUX EXPLODE (repositório local)" "$REPO"
+
+if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
+  flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+else
+  flatpak remote-add --user --no-gpg-verify --title="LINUX EXPLODE (local)" \
+    "$REMOTE" "file://$(pwd)/$REPO"
+fi
+
+flatpak install --user -y --reinstall "$REMOTE" "$APP_ID" >/dev/null
+echo "instalado a partir do remote '$REMOTE' (flatpak update passa a funcionar)"
 
 if [[ "$MODO" == "--bundle" ]]; then
-  flatpak build-bundle "$HOME/.local/share/flatpak/repo" linux-explode.flatpak "$APP_ID"
+  flatpak build-bundle "$REPO" linux-explode.flatpak "$APP_ID" stable
   echo "bundle: $(pwd)/linux-explode.flatpak"
 fi
 

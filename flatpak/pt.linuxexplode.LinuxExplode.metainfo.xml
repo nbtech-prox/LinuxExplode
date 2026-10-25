@@ -35,6 +35,12 @@
   </screenshots>
 
   <releases>
+    <release version="0.14.0" date="2026-10-25">
+      <description>
+        <p>Testes de CPU em corridas que recomeçam sozinhas, repositório Flatpak actualizável e
+        animação do pop com qualidade igual em todas as resoluções.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-23">
       <description>
         <p>Primeira versão: sistema, sensores, discos, benchmarks de CPU/memória/disco, rede e relatório.</p>

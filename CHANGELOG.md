@@ -3,6 +3,26 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.14.0] — 2026-10-25
+
+### Alterado
+
+- **Os testes de CPU correm em corridas**: cada passagem completa (1024 amostras/pixel) é um teste,
+  que termina e recomeça sozinho, com a nota da corrida e o histórico a acumular no cartão. Antes o
+  pop corria uma hora seguida e a nota era uma média que nunca "fechava".
+- O estado do pop mostra a corrida em curso (`corrida 3 · 16 thread(s) · …`).
+
+### Corrigido
+
+- **Actualização do Flatpak**: o pacote era instalado a partir de um bundle, com uma origem local
+  (`linuxexplode-origin`) sem URL, que o gestor de pacotes apresentava como actualização e depois
+  falhava. O `empacotar.sh` passa a publicar num repositório OSTree local
+  (`flatpak/repo-x86_64`) exposto como remote `linuxexplode`, e a instalar a partir dele — o
+  `flatpak update` passa a funcionar e a mostrar o que está instalado.
+- O `flatpak info` mostrava `Version: 0.1.0` porque o `metainfo.xml` não era actualizado; passa a
+  acompanhar a versão do projecto.
+- O bundle x86_64 passa a ser exportado no ramo `stable` (era `master`), igual ao ARM64.
+
 ## [0.12.0] — 2026-10-24
 
 ### Corrigido
@@ -124,6 +144,7 @@ Primeiro release público.
 - A NVIDIA não publica relógios nem potência em sysfs: essas linhas ficam indisponíveis.
 - O acesso a `/dev` dentro do Flatpak é limitado, o que afecta o S.M.A.R.T. detalhado.
 
+[0.14.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.14.0
 [0.12.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.12.0
 [0.10.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.10.0
 [0.3.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.3.0

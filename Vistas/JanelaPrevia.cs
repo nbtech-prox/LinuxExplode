@@ -14,7 +14,7 @@ namespace LinuxExplode.Vistas;
 public enum ModalidadePrevia { Cpu, Gpu, Rt }
 
 /// <summary>Resumo que a janela devolve à página do bench (nota e detalhe).</summary>
-public sealed record ResultadoPrevia(string Modalidade, string Nota, string Detalhe);
+public sealed record ResultadoPrevia(string Modalidade, string Nota, string Detalhe, bool CorridaConcluida = false);
 
 /// <summary>
 /// O "pop" do EXPLODE BENCH: abrir a partir de Testar GPU / Testar ray tracing / Multi-core /
@@ -62,6 +62,8 @@ public sealed class JanelaPrevia : Window
     private int _largura, _altura, _amostras;
     private double _ultimoFps;
     private volatile bool _fechada;
+    private long _inicioCorrida;
+    private int _corridas;
 
     public JanelaPrevia(ModalidadePrevia modalidade, int indiceGpu = 0, int threads = 0,
                         Action<ResultadoPrevia>? aoAtualizar = null)
@@ -321,7 +323,7 @@ public sealed class JanelaPrevia : Window
         _nota.Text = "—";
 
         var bench = new BenchRenderer();
-        var relogio = Stopwatch.StartNew();
+        Interlocked.Exchange(ref _inicioCorrida, Stopwatch.GetTimestamp());
 
         _vigia = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _vigia.Tick += (_, _) =>
@@ -330,22 +332,46 @@ public sealed class JanelaPrevia : Window
             CopiarDoBench(bench);
             AtualizarBarras();
 
-            double segundos = relogio.Elapsed.TotalSeconds;
+            double segundos = Desde(Interlocked.Read(ref _inicioCorrida));
             double nota = segundos > 0 ? bench.SamplesDone / segundos / 10_000.0 : 0;
+            int corrida = Volatile.Read(ref _corridas) + 1;
             _nota.Text = nota.ToString("N0");
-            string detalhe = $"{_threads} thread(s) · {bench.SamplesDone:N0} amostras em {segundos:0.0} s";
+            string detalhe = $"corrida {corrida} · {_threads} thread(s) · {bench.SamplesDone:N0} amostras em {segundos:0.0} s";
             _estado.Text = $"{detalhe} · bloco {bench.BucketsDone}/{bench.BucketsTotal} — a animar…";
             _aoAtualizar?.Invoke(new ResultadoPrevia("Cpu", nota.ToString("N0"), detalhe));
         };
         _vigia.Start();
 
+        // Uma passagem completa (1024 amostras/pixel) é uma corrida; quando acaba, recomeça.
         _ = Task.Run(() =>
         {
-            try { bench.Run(_threads, TimeSpan.FromHours(1), ct); }
+            try
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    Interlocked.Exchange(ref _inicioCorrida, Stopwatch.GetTimestamp());
+                    var resultado = bench.Run(_threads, TimeSpan.Zero, ct);
+                    if (ct.IsCancellationRequested) break;
+
+                    int n = Interlocked.Increment(ref _corridas);
+                    string nota = resultado.Score.ToString("N0");
+                    string detalhe = $"corrida {n} · {_threads} thread(s) · {resultado.Seconds:0.0} s · {resultado.Samples:N0} amostras";
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (_fechada) return;
+                        _nota.Text = nota;
+                        _estado.Text = $"{detalhe} — a recomeçar…";
+                        _aoAtualizar?.Invoke(new ResultadoPrevia("Cpu", nota, detalhe, true));
+                    });
+                }
+            }
             catch (OperationCanceledException) { }
             catch (Exception e) { Console.WriteLine("[previa] cpu falhou: " + e.Message); }
         });
     }
+
+    private static double Desde(long inicio) =>
+        (Stopwatch.GetTimestamp() - inicio) / (double)Stopwatch.Frequency;
 
     private void CopiarDoBench(BenchRenderer bench)
     {
