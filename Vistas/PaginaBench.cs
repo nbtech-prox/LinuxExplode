@@ -31,6 +31,9 @@ public sealed class PaginaBench : UserControl
     private readonly ComboBox _gpuLista = new() { Width = 560, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBlock _gpuEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _gpuPontuacao = new() { Text = "—", Classes = { "numero" } };
+    private readonly TextBlock _gpuComparacao = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _comparacao = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _historicoEstado = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<InfoGpu> _gpus = new();
 
     public PaginaBench()
@@ -44,6 +47,7 @@ public sealed class PaginaBench : UserControl
         _corpo.Children.Add(CartaoCpu());
         _corpo.Children.Add(CartaoRam());
         _corpo.Children.Add(CartaoDisco());
+        _corpo.Children.Add(CartaoHistorico());
 
         Loaded += (_, _) =>
         {
@@ -98,6 +102,7 @@ public sealed class PaginaBench : UserControl
         var linhaNota = new StackPanel { Spacing = 2 };
         linhaNota.Children.Add(UI.Texto("NOTA GPU", "rotulo"));
         linhaNota.Children.Add(_gpuPontuacao);
+        linhaNota.Children.Add(_gpuComparacao);
         conteudo.Children.Add(linhaNota);
 
         return UI.Cartao("GPU · EXPLODE BENCH (Vulkan)", conteudo);
@@ -131,6 +136,13 @@ public sealed class PaginaBench : UserControl
                 if (_resultados.TryGetValue(tipo, out var guardado) && guardado.Chave == chave) return;
 
                 _resultados[tipo] = (chave, $"{r.Nota} pts · {threads}T · {DateTime.Now:HH:mm}");
+
+                string alvoCpu = $"{threads} threads";
+                double notaCpu = Numero(r.Nota);
+                if (r.CorridaConcluida)
+                    Historico.Registar("cpu", alvoCpu, notaCpu, r.Detalhe);
+
+                _comparacao.Text = Historico.Comparacao("cpu", alvoCpu, notaCpu) ?? "primeira corrida guardada";
                 _pontuacao.Text = r.Nota;
                 _estado.Text = r.Detalhe;
                 MostrarResultados();
@@ -139,6 +151,13 @@ public sealed class PaginaBench : UserControl
             {
                 _gpuPontuacao.Text = r.Nota;
                 _gpuEstado.Text = (modalidade == ModalidadePrevia.Rt ? "ray tracing · " : "compute · ") + r.Detalhe;
+
+                string tipo = modalidade == ModalidadePrevia.Rt ? "rt" : "gpu";
+                string alvo = _gpus.Count > 0 && _gpuLista.SelectedIndex >= 0 ? _gpus[_gpuLista.SelectedIndex].Nome : "GPU";
+                double nota = Numero(r.Nota);
+
+                _gpuComparacao.Text = Historico.Comparacao(tipo, alvo, nota) ?? "primeira corrida deste alvo";
+                Historico.Registar(tipo, alvo, nota, r.Detalhe);
             }
         });
 
@@ -196,6 +215,7 @@ public sealed class PaginaBench : UserControl
         var pilha = new StackPanel { Spacing = 2 };
         pilha.Children.Add(UI.Texto("NOTA", "rotulo"));
         pilha.Children.Add(_pontuacao);
+        pilha.Children.Add(_comparacao);
         linhaNota.Children.Add(pilha);
         var hist = new StackPanel { Spacing = 4, Margin = new Avalonia.Thickness(30, 0, 0, 0) };
         hist.Children.Add(UI.Texto("HISTÓRICO", "rotulo"));
@@ -225,6 +245,13 @@ public sealed class PaginaBench : UserControl
                 _ramResultado.Children.Add(UI.Linha("Cópia", $"{r.CopiaMBs:N0} MB/s"));
                 _ramResultado.Children.Add(UI.Linha("Latência", $"{r.LatenciaNs:N1} ns", false));
                 _ramEstado.Text = $"bloco de {Util.Bytes(r.Tamanho)}";
+
+                string detalheRam = $"escrita {r.EscritaMBs:N0} MB/s · leitura {r.LeituraMBs:N0} MB/s · " +
+                                    $"cópia {r.CopiaMBs:N0} MB/s · latência {r.LatenciaNs:N1} ns";
+                Historico.Registar("ram", Util.Bytes(r.Tamanho), r.EscritaMBs, detalheRam);
+
+                _ramResultado.Children.Add(UI.Texto(
+                    "· " + (Historico.Comparacao("ram", Util.Bytes(r.Tamanho), r.EscritaMBs) ?? "primeira corrida"), "sub"));
             }
             catch (Exception ex) { _ramEstado.Text = "falhou: " + ex.Message; }
         }));
@@ -254,11 +281,102 @@ public sealed class PaginaBench : UserControl
                 _discoResultado.Children.Add(UI.Linha("4K aleatório · leitura", $"{r.RandLeituraMBs:N1} MB/s"));
                 _discoResultado.Children.Add(UI.Linha("4K aleatório · escrita", $"{r.RandEscritaMBs:N1} MB/s", false));
                 _discoEstado.Text = $"ficheiro de {Util.Bytes(r.Ficheiro)} em {pasta}";
+
+                string detalheDisco = $"seq escrita {r.SeqEscritaMBs:N0} · seq leitura {r.SeqLeituraMBs:N0} · " +
+                                      $"4K leitura {r.RandLeituraMBs:N1} · 4K escrita {r.RandEscritaMBs:N1} MB/s";
+                Historico.Registar("disco", "sequencial (escrita)", r.SeqEscritaMBs, detalheDisco);
+
+                _discoResultado.Children.Add(UI.Texto(
+                    "· " + (Historico.Comparacao("disco", "sequencial (escrita)", r.SeqEscritaMBs) ?? "primeira corrida"), "sub"));
             }
             catch (Exception ex) { _discoEstado.Text = "falhou: " + ex.Message; }
         }));
         conteudo.Children.Add(_discoEstado);
         conteudo.Children.Add(_discoResultado);
         return UI.Cartao("Disco", conteudo);
+    }
+
+    // ------------------------------------------------------------------ histórico
+
+    private Control CartaoHistorico()
+    {
+        var conteudo = new StackPanel { Spacing = 10 };
+
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        botoes.Children.Add(UI.Botao("Exportar CSV", false, () => Exportar("csv")));
+        botoes.Children.Add(UI.Botao("Exportar JSON", false, () => Exportar("json")));
+        botoes.Children.Add(UI.Botao("Importar…", false, Importar));
+
+        conteudo.Children.Add(UI.Texto(
+            "As notas ficam guardadas em ~/.local/share/linux-explode/resultados.json, com a data e a versão. " +
+            "Cada cartão mostra o melhor resultado, a mediana e a variação da última corrida. Exporta para CSV " +
+            "para comparar máquinas numa folha de cálculo, ou importa o ficheiro de outra máquina.", "sub"));
+        conteudo.Children.Add(botoes);
+        conteudo.Children.Add(UI.Texto(Historico.Caminho, "mono"));
+        conteudo.Children.Add(_historicoEstado);
+
+        _historicoEstado.Text = Historico.Todos().Count > 0
+            ? $"{Historico.Todos().Count} resultado(s) guardado(s)"
+            : "ainda sem resultados guardados — corre um teste";
+
+        return UI.Cartao("Histórico de resultados", conteudo);
+    }
+
+    private void Exportar(string formato)
+    {
+        try
+        {
+            var pasta = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "linux-explode-relatorios");
+            string ficheiro = Path.Combine(pasta, $"bench-{DateTime.Now:yyyyMMdd-HHmmss}.{formato}");
+
+            if (formato == "csv") Historico.ExportarCsv(ficheiro);
+            else Historico.ExportarJson(ficheiro);
+
+            _historicoEstado.Text = $"gravado em {ficheiro}";
+        }
+        catch (Exception ex)
+        {
+            _historicoEstado.Text = "não consegui exportar: " + ex.Message;
+        }
+    }
+
+    private async void Importar()
+    {
+        try
+        {
+            var janela = TopLevel.GetTopLevel(this);
+            if (janela is null) return;
+
+            var ficheiros = await janela.StorageProvider.OpenFilePickerAsync(
+                new Avalonia.Platform.Storage.FilePickerOpenOptions
+                {
+                    Title = "Importar resultados (JSON)",
+                    AllowMultiple = false,
+                    FileTypeFilter = new[]
+                    {
+                        new Avalonia.Platform.Storage.FilePickerFileType("Resultados JSON") { Patterns = new[] { "*.json" } }
+                    }
+                });
+
+            if (ficheiros.Count == 0) return;
+
+            int novos = Historico.Importar(ficheiros[0].Path.LocalPath);
+            _historicoEstado.Text = novos > 0
+                ? $"{novos} resultado(s) importado(s) de {ficheiros[0].Name}"
+                : "o ficheiro não tinha resultados novos";
+        }
+        catch (Exception ex)
+        {
+            _historicoEstado.Text = "não consegui importar: " + ex.Message;
+        }
+    }
+
+    /// <summary>Converte a nota formatada ("13 355 364") em número.</summary>
+    private static double Numero(string nota)
+    {
+        var digitos = new string(nota.Where(c => char.IsDigit(c) || c == '.' || c == '-').ToArray());
+        return double.TryParse(digitos, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : 0;
     }
 }

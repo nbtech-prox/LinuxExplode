@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -18,6 +19,11 @@ public partial class MainWindow : Window
         // a versão no rodapé vem do Relatorio (antes era texto fixo no .axaml e ficava desactualizada)
         if (this.FindControl<TextBlock>("RodapeVersao") is { } rodape)
             rodape.Text = "v" + Core.Relatorio.Versao;
+
+        // tema e escala guardados em ~/.config/linux-explode/config.json
+        Paleta.Aplicar(Config.Atual.Tema == "claro");
+        LigarAparencia();
+        LigarAtalhos();
 
         _ativo = this.FindControl<Button>("NavSistema");
         Navegar((Environment.GetEnvironmentVariable("LINUXEXPLODE_PAGINA") ?? "sistema").ToLowerInvariant());
@@ -94,5 +100,102 @@ public partial class MainWindow : Window
             botao.Classes.Add("ativo");
             _ativo = botao;
         }
+    }
+
+    // ------------------------------------------------------------------ aparência e atalhos
+
+    private void LigarAparencia()
+    {
+        AtualizarBotaoTema();
+
+        if (this.FindControl<Slider>("Escala") is { } escala)
+        {
+            escala.Value = Math.Clamp(Config.Atual.Escala, 0.85, 1.35);
+            AplicarEscala(escala.Value);
+
+            escala.PropertyChanged += (_, e) =>
+            {
+                if (e.Property != Avalonia.Controls.Primitives.RangeBase.ValueProperty) return;
+                AplicarEscala(escala.Value);
+            };
+        }
+    }
+
+    private void AtualizarBotaoTema()
+    {
+        if (this.FindControl<Button>("BotaoTema") is { } botao)
+            botao.Content = Paleta.Claro ? "Tema escuro" : "Tema claro";
+    }
+
+    private void AlternarTema(object? s, RoutedEventArgs e)
+    {
+        Paleta.Alternar();
+        Config.Atual.Tema = Paleta.Claro ? "claro" : "escuro";
+        Config.Atual.Guardar();
+        AtualizarBotaoTema();
+    }
+
+    private void AplicarEscala(double valor)
+    {
+        if (this.FindControl<LayoutTransformControl>("Zoom") is { } zoom)
+            zoom.LayoutTransform = new Avalonia.Media.ScaleTransform(valor, valor);
+
+        Config.Atual.Escala = Math.Clamp(valor, 0.85, 1.35);
+        Config.Atual.Guardar();
+    }
+
+    /// <summary>Ctrl+1…7 muda de página, Ctrl+= / Ctrl+- muda a escala, Ctrl+0 repõe, Ctrl+Q fecha.</summary>
+    private void LigarAtalhos()
+    {
+        KeyDown += (_, e) =>
+        {
+            if ((e.KeyModifiers & Avalonia.Input.KeyModifiers.Control) == 0) return;
+
+            string? destino = e.Key switch
+            {
+                Avalonia.Input.Key.D1 => "sistema",
+                Avalonia.Input.Key.D2 => "sensores",
+                Avalonia.Input.Key.D3 => "discos",
+                Avalonia.Input.Key.D4 => "bench",
+                Avalonia.Input.Key.D5 => "stress",
+                Avalonia.Input.Key.D6 => "rede",
+                Avalonia.Input.Key.D7 => "relatorio",
+                _ => null
+            };
+
+            if (destino is not null)
+            {
+                Navegar(destino);
+                e.Handled = true;
+                return;
+            }
+
+            switch (e.Key)
+            {
+                case Avalonia.Input.Key.OemPlus:
+                case Avalonia.Input.Key.Add:
+                    AjustarEscala(0.05);
+                    e.Handled = true;
+                    break;
+                case Avalonia.Input.Key.OemMinus:
+                case Avalonia.Input.Key.Subtract:
+                    AjustarEscala(-0.05);
+                    e.Handled = true;
+                    break;
+                case Avalonia.Input.Key.D0:
+                    AjustarEscala(0, repor: true);
+                    e.Handled = true;
+                    break;
+                case Avalonia.Input.Key.Q:
+                    Close();
+                    break;
+            }
+        };
+    }
+
+    private void AjustarEscala(double delta, bool repor = false)
+    {
+        if (this.FindControl<Slider>("Escala") is not { } escala) return;
+        escala.Value = repor ? 1.0 : Math.Clamp(escala.Value + delta, escala.Minimum, escala.Maximum);
     }
 }

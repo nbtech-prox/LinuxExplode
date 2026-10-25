@@ -23,6 +23,27 @@ public sealed class PaginaSensores : UserControl
     private TipoSensor? _filtro;
     private bool _aCarregar;
 
+    // ---- ao vivo, throttling e energia ----
+    private readonly MonitorThrottle _monitorThrottle = new();
+    private readonly MedidorEnergia _medidorEnergia = new();
+    private readonly Sparkline _gTempCpu = new() { Cor = "Bom", Limite = 90 };
+    private readonly Sparkline _gTempGpu = new() { Cor = "Bom", Limite = 90 };
+    private readonly Sparkline _gPotencia = new() { Cor = "Fg" };
+    private readonly Sparkline _gFreq = new() { Cor = "Atencao" };
+    private readonly TextBlock _vTempCpu = new() { Text = "—", Classes = { "valor" } };
+    private readonly TextBlock _vTempGpu = new() { Text = "—", Classes = { "valor" } };
+    private readonly TextBlock _vPotencia = new() { Text = "—", Classes = { "valor" } };
+    private readonly TextBlock _vFreq = new() { Text = "—", Classes = { "valor" } };
+    private readonly ProgressBar _barraThrottle = new() { Minimum = 0, Maximum = 1, Value = 0, Height = 8 };
+    private readonly TextBlock _throttleEstado = new() { Text = "a medir…", Classes = { "mono" } };
+    private readonly TextBlock _throttleDetalhe = new() { Text = "", Classes = { "sub" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _energiaTexto = new() { Text = "—", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly NumericUpDown _tarifa = new()
+    {
+        Minimum = 0, Maximum = 2, Increment = 0.01m, FormatString = "0.00",
+        Value = (decimal)Config.Atual.TarifaEurKwh, Width = 120
+    };
+
     public PaginaSensores()
     {
         var filtros = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
@@ -74,6 +95,9 @@ public sealed class PaginaSensores : UserControl
         barra.Children.Add(online);
 
         _corpo.Children.Add(barra);
+        _corpo.Children.Add(CartaoAoVivo());
+        _corpo.Children.Add(CartaoThrottle());
+        _corpo.Children.Add(CartaoEnergia());
         _corpo.Children.Add(_lista);
         Content = UI.Pagina(cabecalho, _corpo);
 
@@ -89,6 +113,11 @@ public sealed class PaginaSensores : UserControl
         try
         {
             var todos = await Task.Run(Sensores.Ler);
+
+            // leituras usadas pelos cartões novos (uma vez por segundo, não uma por cartão)
+            var potenciaAgora = await Task.Run(Potencia.Ler);
+            var throttleAgora = await Task.Run(_monitorThrottle.Amostrar);
+
             var lista = _filtro is null ? todos : todos.Where(s => s.Tipo == _filtro).ToList();
 
             // No filtro de frequência os núcleos da CPU vêm primeiro; a GPU (hwmon) vem depois.
@@ -102,10 +131,9 @@ public sealed class PaginaSensores : UserControl
             // No filtro de potência o consumo do PC (RAPL + GPUs) vem antes da lista de hwmon.
             var verPot = _filtro == TipoSensor.Energia;
             if (verPot)
-            {
-                var p = await Task.Run(Potencia.Ler);
-                AtualizarCartaoPotencia(p);
-            }
+                AtualizarCartaoPotencia(potenciaAgora);
+
+            AtualizarAoVivo(todos, potenciaAgora, throttleAgora);
 
             Ordenar(verCpu ? _cartaoCpu : null, verPot ? _cartaoPotencia : null);
 
@@ -313,5 +341,133 @@ public sealed class PaginaSensores : UserControl
         foreach (var n in nucleos)
             if (_freqNucleos.TryGetValue(n.Nucleo, out var tb))
                 tb.Text = string.Join("   ", n.Threads.Select(t => $"T{t.Cpu} {FrequenciaCpu.Ghz(t.AtualKHz)}"));
+    }
+
+    // ------------------------------------------------------------------ ao vivo / throttling / energia
+
+    private Control CartaoAoVivo()
+    {
+        var grelha = UI.Grelha(4, 12,
+            BlocoAoVivo("CPU", _vTempCpu, _gTempCpu),
+            BlocoAoVivo("GPU", _vTempGpu, _gTempGpu),
+            BlocoAoVivo("potência", _vPotencia, _gPotencia),
+            BlocoAoVivo("frequência média", _vFreq, _gFreq));
+
+        var pilha = new StackPanel { Spacing = 10 };
+        pilha.Children.Add(UI.Texto("últimos 60 s · uma amostra por segundo · temperaturas em °C, potência em W, frequência em GHz", "sub"));
+        pilha.Children.Add(grelha);
+        return UI.Cartao("Ao vivo", pilha);
+    }
+
+    private static Control BlocoAoVivo(string rotulo, TextBlock valor, Sparkline grafico)
+    {
+        var p = new StackPanel { Spacing = 4 };
+        p.Children.Add(UI.Texto(rotulo.ToUpperInvariant(), "rotulo"));
+        p.Children.Add(valor);
+        p.Children.Add(grafico);
+        return p;
+    }
+
+    private Control CartaoThrottle()
+    {
+        var pilha = new StackPanel { Spacing = 8 };
+        pilha.Children.Add(_barraThrottle);
+        pilha.Children.Add(_throttleEstado);
+        pilha.Children.Add(_throttleDetalhe);
+        return UI.Cartao("Throttling — frequência efectiva vs máxima", pilha);
+    }
+
+    private Control CartaoEnergia()
+    {
+        var pilha = new StackPanel { Spacing = 10 };
+        pilha.Children.Add(_energiaTexto);
+
+        var linha = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        linha.Children.Add(UI.Texto("tarifa (€/kWh)", "chave"));
+        linha.Children.Add(_tarifa);
+        pilha.Children.Add(linha);
+
+        _tarifa.ValueChanged += (_, e) =>
+        {
+            if (e.NewValue is not decimal v) return;
+            Config.Atual.TarifaEurKwh = (double)v;
+            Config.Atual.Guardar();
+            AtualizarEnergia();
+        };
+
+        return UI.Cartao("Energia e custo", pilha);
+    }
+
+    private void AtualizarAoVivo(List<Sensor> todos, LeituraPotencia potencia, LeituraThrottle throttle)
+    {
+        var cpu = Sensores.CpuTemperatura(todos);
+        var gpu = Sensores.GpuTemperatura(todos);
+        var watts = potencia.TotalW;
+
+        if (cpu is double c)
+        {
+            _gTempCpu.Adicionar(c);
+            _vTempCpu.Text = $"{c:0} °C";
+        }
+        else
+        {
+            _vTempCpu.Text = "sem sensor";
+        }
+
+        if (gpu is double g)
+        {
+            _gTempGpu.Adicionar(g);
+            _vTempGpu.Text = $"{g:0} °C";
+        }
+        else
+        {
+            _vTempGpu.Text = "sem sensor";
+        }
+
+        if (watts is double w)
+        {
+            _gPotencia.Adicionar(w);
+            _vPotencia.Text = $"{w:0} W";
+        }
+        else
+        {
+            _vPotencia.Text = "sem RAPL";
+        }
+
+        if (throttle.MediaMhz > 0)
+        {
+            _gFreq.Adicionar(throttle.MediaMhz);
+            _vFreq.Text = $"{throttle.MediaMhz / 1000:0.00} GHz";
+        }
+
+        _barraThrottle.Value = Math.Clamp(throttle.Percentagem / 100.0, 0, 1);
+        _throttleEstado.Text = throttle.MediaMhz <= 0
+            ? "sem leitura de cpufreq"
+            : $"{throttle.Percentagem:0} % do máximo ({throttle.MediaMhz:0} de {throttle.MaximoMhz:0} MHz) · " +
+              $"mínimo {throttle.MinimoMhz:0} MHz · carga {throttle.CargaCpu * 100:0} %";
+
+        var notas = new List<string> { throttle.Veredito };
+        if (throttle.ContadorFirmware is long fw) notas.Add($"contador de firmware {fw:N0}");
+        else notas.Add("o firmware não expõe contadores de throttle (normal em AMD)");
+        _throttleDetalhe.Text = string.Join(" · ", notas);
+
+        _medidorEnergia.Amostrar(potencia.TotalW);
+        AtualizarEnergia();
+    }
+
+    private void AtualizarEnergia()
+    {
+        var custo = _medidorEnergia.Calcular(Config.Atual.TarifaEurKwh);
+
+        if (custo.Aviso is not null && custo.EurDia is null)
+        {
+            _energiaTexto.Text = "sem leitura de potência — não é possível estimar o custo (" + custo.Aviso + ")";
+            return;
+        }
+
+        _energiaTexto.Text =
+            $"nesta sessão: {custo.Wh:0.000} Wh em {custo.Horas * 60:0} min · média {custo.MediaW:0} W\n" +
+            $"projecção a este ritmo: {custo.EurDia:0.00} €/dia · {custo.EurMes:0.00} €/mês\n" +
+            "a média é a do tempo em que a janela esteve aberta (inclui o PC parado)";
     }
 }

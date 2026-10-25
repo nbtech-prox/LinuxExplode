@@ -3,6 +3,41 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.0] — 2026-10-25
+
+### Adicionado
+
+- **Ao vivo (60 s)** na aba Sensores: quatro gráficos de linha (temperatura da CPU, da GPU, potência e
+  frequência média) com uma amostra por segundo; a linha passa a vermelho acima de 90 °C.
+- **Throttling**: compara a frequência efectiva com o máximo do processador, conta episódios de queda
+  sob carga, guarda o mínimo e o tempo total em queda. Quando o firmware não expõe contadores, o
+  cartão di-lo em vez de mostrar zero.
+- **Energia e custo**: energia da sessão (potência integrada no tempo), média em watts e projecção de
+  €/dia e €/mês com tarifa editável, guardada em `~/.config/linux-explode/config.json`.
+- **Histórico comparado** no bench: cada nota fica em `~/.local/share/linux-explode/resultados.json`
+  com data e versão; os cartões mostram melhor, mediana e variação. Medições repetidas não são
+  gravadas.
+- **Exportar/importar resultados**: CSV e JSON a partir do cartão *Histórico de resultados*.
+- **Tema claro/escuro**, **escala da interface** (85-135 %) e **atalhos** (`Ctrl+1…7`, `Ctrl+±`,
+  `Ctrl+0`, `Ctrl+Q`). As cores passaram a `DynamicResource` e a cor de destaque do sistema foi
+  substituída por um cinza da paleta.
+- **`--json`** (ou `-j`) em todos os comandos da linha de comandos, com envelope
+  `{aplicacao, versao, comando, quando, dados}`; `--cli relatorio --json` imprime o relatório completo.
+- **ROADMAP.md** com as fases seguintes, critérios de aceitação e como retomar o trabalho.
+
+### Corrigido
+
+- O cartão de frequência média ficava a zero: o padrão de pesquisa `"cpu[0-9]*"` não é válido em .NET
+  (só aceita `*` e `?`), pelo que nenhum núcleo era encontrado.
+- A "energia desde o arranque" estava errada: o `energy_uj` desta plataforma dá a volta aos ~65,5 kJ
+  (minutos a 200 W) e uma leitura única não serve. Passa a ser integrada no tempo e o rótulo diz
+  "nesta sessão".
+
+### Nota
+
+O custo de energia é uma projecção ao preço que o utilizador indicar, sobre a média medida enquanto a
+janela esteve aberta — não é uma factura. Está dito no cartão.
+
 ## [0.18.0] — 2026-10-25
 
 ### Adicionado

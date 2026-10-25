@@ -5,19 +5,19 @@
         Width="1280" Height="820"
         MinWidth="980" MinHeight="620"
         Icon="/Assets/logo.png"
-        Background="{StaticResource Fundo}"
+        Background="{DynamicResource Fundo}"
         WindowStartupLocation="CenterScreen">
 
   <Grid ColumnDefinitions="236,*">
 
     <!-- ===================== Barra lateral ===================== -->
-    <Border Grid.Column="0" Background="#0C0C0C" BorderBrush="{StaticResource Linha}" BorderThickness="0,0,1,0">
+    <Border Grid.Column="0" Background="{DynamicResource BarraLateral}" BorderBrush="{DynamicResource Linha}" BorderThickness="0,0,1,0">
       <Grid RowDefinitions="Auto,*,Auto" Margin="14,18,14,14">
 
         <StackPanel Grid.Row="0" Spacing="2" Margin="6,0,6,18">
-          <TextBlock Text="LINUX" FontSize="19" FontWeight="Bold" LetterSpacing="3" Foreground="{StaticResource Muted}" />
+          <TextBlock Text="LINUX" FontSize="19" FontWeight="Bold" LetterSpacing="3" Foreground="{DynamicResource Muted}" />
           <TextBlock Text="EXPLODE" FontSize="19" FontWeight="Bold" LetterSpacing="3" />
-          <TextBlock Text="hardware · sensores · bench" FontSize="10" Foreground="{StaticResource Faint}" Margin="0,6,0,0" />
+          <TextBlock Text="hardware · sensores · bench" FontSize="10" Foreground="{DynamicResource Faint}" Margin="0,6,0,0" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -32,14 +32,23 @@
           </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2" Spacing="4" Margin="6,14,6,0">
-          <TextBlock Name="RodapeVersao" Text="v0.1.0" FontSize="10" Foreground="{StaticResource Faint}" />
-          <TextBlock Name="RodapeEstado" Text="a ler hardware…" FontSize="10" Foreground="{StaticResource Faint}" TextWrapping="Wrap" />
+        <StackPanel Grid.Row="2" Spacing="6" Margin="6,14,6,0">
+          <Button Name="BotaoTema" Content="Tema claro" FontSize="11" HorizontalAlignment="Stretch" Click="AlternarTema" />
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Grid.Column="0" Text="A" FontSize="10" Foreground="{DynamicResource Faint}" VerticalAlignment="Center" />
+            <Slider Grid.Column="1" Name="Escala" Minimum="0.85" Maximum="1.35" TickFrequency="0.05"
+                    IsSnapToTickEnabled="True" Value="1" Margin="6,0" ToolTip.Tip="Escala da interface (Ctrl+- e Ctrl++)" />
+            <TextBlock Grid.Column="2" Text="A" FontSize="16" Foreground="{DynamicResource Faint}" VerticalAlignment="Center" />
+          </Grid>
+          <TextBlock Name="RodapeVersao" Text="v0.1.0" FontSize="10" Foreground="{DynamicResource Faint}" />
+          <TextBlock Name="RodapeEstado" Text="a ler hardware…" FontSize="10" Foreground="{DynamicResource Faint}" TextWrapping="Wrap" />
         </StackPanel>
       </Grid>
     </Border>
 
     <!-- ===================== Conteúdo ===================== -->
-    <ContentControl Grid.Column="1" Name="Conteudo" />
+    <LayoutTransformControl Grid.Column="1" Name="Zoom">
+      <ContentControl Name="Conteudo" />
+    </LayoutTransformControl>
   </Grid>
 </Window>

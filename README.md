@@ -7,6 +7,8 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 ![estado](https://img.shields.io/badge/estado-funcional-9BE8A8)
 [![CI](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml/badge.svg)](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml)
 
+O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](ROADMAP.md)**.
+
 ## Descarregar e actualizar
 
 Última versão: **[v0.16.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
@@ -187,6 +189,23 @@ printf 'options nct6683 force=1\n' | sudo tee /etc/modprobe.d/nct6683.conf
 Sem isto sobram 14 temperaturas e 1 ventoinha (a do GPU); com isto passam a 44 leituras,
 incluindo 6 temperaturas da placa, as ventoinhas do CPU/bomba/caixa e 14 tensões.
 
+### Ao vivo, throttling e energia
+
+No topo da aba **Sensores** há três cartões que respondem às perguntas do dia-a-dia:
+
+- **Ao vivo** — quatro gráficos de 60 s (temperatura da CPU, da GPU, potência e frequência média),
+  com uma amostra por segundo. A linha da temperatura passa a vermelho a partir dos 90 °C.
+- **Throttling** — frequência efectiva contra o máximo do processador (`scaling_cur_freq` vs
+  `cpuinfo_max_freq`). Conta **episódios** de queda (frequência 15 % abaixo do máximo com o CPU
+  ocupado), guarda o mínimo visto e mostra o tempo total em queda. Em AMD o firmware não expõe
+  contadores de throttle e o cartão di-lo em vez de inventar um número.
+- **Energia e custo** — energia da sessão (integrada a partir do RAPL), média em watts e projecção de
+  custo a partir da tarifa que escreveres (€/kWh, guardada em `~/.config/linux-explode/config.json`).
+
+O contador `energy_uj` desta plataforma dá a volta aos ~65,5 kJ (poucos minutos a 200 W), por isso a
+energia é **integrada no tempo** pela aplicação e não copiada de uma leitura única — o rótulo diz
+"nesta sessão" porque é isso que está medido.
+
 ### Linha de comandos
 
 Útil para scripts e servidores (não abre janela):
@@ -207,6 +226,29 @@ LinuxExplode --cli bench rt                # path tracer com ray tracing por har
 LinuxExplode --cli bench rt 2              # ray tracing na GPU integrada
 LinuxExplode --cli relatorio html          # grava o relatório no home
 ```
+
+Todos os comandos aceitam **`--json`** (ou `-j`), que devolve um envelope com `aplicacao`, `versao`,
+`comando`, `quando` e `dados` — nada de texto solto no stdout:
+
+```bash
+LinuxExplode --cli potencia --json | jq .dados.TotalW
+LinuxExplode --cli bench multi --json | jq .dados.resultado.Score
+LinuxExplode --cli sensores --json | jq '[.dados[] | select(.Tipo=="Temperatura")] | length'
+LinuxExplode --cli stress cpu 60 --json > ~/stress.json
+LinuxExplode --cli relatorio --json       # o relatório completo, em JSON
+```
+
+## Interface — tema, escala e atalhos
+
+- **Tema claro/escuro** no botão da barra lateral; a escolha fica guardada em
+  `~/.config/linux-explode/config.json`. As cores vivem em recursos (`DynamicResource`), por isso a
+  troca é imediata, sem reiniciar. A cor de destaque do sistema (azul do Fluent) é substituída por um
+  cinza da paleta para a interface continuar monocromática.
+- **Escala da interface** no cursor da barra lateral (85 % a 135 %). Aplica-se ao conteúdo com
+  `LayoutTransformControl`, por isso o texto e os gráficos escalam juntos e as barras de deslocamento
+  continuam certas.
+- **Atalhos**: `Ctrl+1`…`Ctrl+7` mudam de página (Sistema, Sensores, Discos, Bench, Stress, Rede,
+  Relatório), `Ctrl+=` / `Ctrl+-` mudam a escala, `Ctrl+0` repõe e `Ctrl+Q` fecha.
 
 ## O que mudou em relação à versão Windows
 
@@ -266,6 +308,20 @@ Um número fixo de amostras por pixel fazia o contrário: 4K ficava com 4 spp (g
 com 32 spp ampliadas 3× (grão ainda mais visível) — só o 1280×720 calhava bem, que era o ponto onde
 a escala do ecrã e o orçamento coincidiam. A semente do ruído é fixa durante a animação, para o grão
 não "ferver" de fotograma para fotograma.
+
+### Histórico comparado — melhor, mediana e variação
+
+Cada nota fica guardada em `~/.local/share/linux-explode/resultados.json` com a data e a versão do
+programa. Por baixo da nota, o cartão mostra o melhor resultado, a mediana e a variação da última
+corrida em relação à mediana:
+
+```
+melhor 13 355 364 · mediana 13 090 807 · esta −1,2 % (mediana de 7 corrida(s))
+```
+
+Uma medição igual à última não é gravada (o histórico não engorda com repetições). O cartão
+**Histórico de resultados** exporta tudo para CSV ou JSON e importa ficheiros de outra máquina — é
+assim que se comparam dois PCs sem base de dados central.
 
 ### A nota e a resolução
 

@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LinuxExplode.Core;
 
@@ -9,6 +11,11 @@ public static class Cli
     public static int Executar(string[] args)
     {
         var cmd = args.Length > 1 ? args[1] : "info";
+
+        // Saída para scripts: --cli <comando> --json devolve um envelope JSON e nada mais.
+        if (args.Any(a => a is "--json" or "-j"))
+            return JsonCli(cmd, args);
+
         switch (cmd)
         {
             case "info":
@@ -309,6 +316,217 @@ public static class Cli
         foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
         Console.WriteLine($"picos: CPU {resultado.PicoCpuC:0} °C · GPU {resultado.PicoGpuC:0} °C · energia {resultado.EnergiaKwh * 1000:0.0} Wh");
         return resultado.Completo ? 0 : 1;
+    }
+
+
+    private static readonly JsonSerializerOptions OpcoesJson = new()
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    /// <summary>
+    /// <c>--cli &lt;comando&gt; --json</c>: o mesmo que o comando normal, mas em JSON — para scripts,
+    /// cron e monitorização. Nada de texto solto no stdout.
+    /// </summary>
+    private static int JsonCli(string cmd, string[] args)
+    {
+        try
+        {
+            switch (cmd)
+            {
+                case "info":
+                    return EmitirJson("info", Sistema.Recolher());
+
+                case "freq":
+                    return EmitirJson("freq", FrequenciaCpu.Recolher());
+
+                case "sensores":
+                    return EmitirJson("sensores", Sensores.Ler());
+
+                case "potencia":
+                    // a potência sai de uma diferença entre duas leituras do contador RAPL: a primeira
+                    // serve só para ter referência, o valor vem da segunda
+                    Potencia.Ler();
+                    Thread.Sleep(900);
+                    return EmitirJson("potencia", Potencia.Ler());
+
+                case "discos":
+                    return EmitirJson("discos", new
+                    {
+                        discos = Discos.Ler(),
+                        particoes = Util.Espaco().Select(p => new
+                        {
+                            nome = p.Key,
+                            total = p.Value.Total,
+                            livre = p.Value.Livre,
+                            montagem = Util.Montagens().TryGetValue(p.Key, out var m) ? m.Montagem : null,
+                            fs = Util.Montagens().TryGetValue(p.Key, out var m2) ? m2.Fs : null
+                        })
+                    });
+
+                case "fps":
+                    {
+                        var ficheiros = FpsMangohud.Listar(10);
+                        var sessoes = ficheiros.Select(f => FpsMangohud.Analisar(f)).ToList();
+                        return EmitirJson("fps", new
+                        {
+                            pastas = FpsMangohud.Pastas(),
+                            sessoes
+                        });
+                    }
+
+                case "rede":
+                    return EmitirJson("rede", Core.Rede.Correr().GetAwaiter().GetResult());
+
+                case "relatorio":
+                    {
+                        // o relatório já é JSON: imprime-se tal e qual (sem envelope) para poder ser
+                        // redireccionado para um ficheiro
+                        var sis = Sistema.Recolher();
+                        Console.WriteLine(Relatorio.GerarJson(sis, Sensores.Ler(), Discos.Ler()));
+                        return 0;
+                    }
+
+                case "bench":
+                    return BenchJson(args);
+
+                case "stress":
+                    return StressJson(args);
+
+                default:
+                    Console.Error.WriteLine(
+                        "uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|stress|relatorio] --json");
+                    return 2;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"erro: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static int BenchJson(string[] args)
+    {
+        var alvo = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "multi";
+
+        switch (alvo)
+        {
+            case "gpu":
+                {
+                    var gpus = BenchGpu.Dispositivos();
+                    var r = BenchGpu.Correr(0);
+                    return EmitirJson("bench", new { modo = "gpu", gpus, resultado = r });
+                }
+
+            case "rt":
+                {
+                    var gpus = BenchGpu.Dispositivos();
+                    var r = BenchRt.Correr(0);
+                    return EmitirJson("bench", new { modo = "rt", gpus, resultado = r });
+                }
+
+            case "ram":
+                return EmitirJson("bench", new { modo = "ram", resultado = BenchRam.Correr() });
+
+            case "disco":
+                {
+                    var pasta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        ".cache", "linuxexplode");
+                    return EmitirJson("bench", new { modo = "disco", resultado = BenchDisco.Correr(pasta, 256) });
+                }
+
+            default:
+                {
+                    int threads = alvo switch
+                    {
+                        "single" => 1,
+                        "multi" => Environment.ProcessorCount,
+                        _ => int.TryParse(alvo, out int n) ? n : Environment.ProcessorCount
+                    };
+
+                    var renderizador = new BenchRenderer();
+                    var r = renderizador.Run(threads, TimeSpan.Zero, CancellationToken.None);
+                    return EmitirJson("bench", new { modo = "cpu", resultado = r });
+                }
+        }
+    }
+
+    private static int StressJson(string[] args)
+    {
+        string alvoTexto = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "cpu";
+
+        var alvo = alvoTexto switch
+        {
+            "cpu" => AlvoStress.Cpu,
+            "ram" or "memoria" => AlvoStress.Ram,
+            "gpu" => AlvoStress.Gpu,
+            "disco" => AlvoStress.Disco,
+            "tudo" => AlvoStress.Tudo,
+            _ => (AlvoStress?)null
+        };
+
+        if (alvo is null)
+        {
+            Console.Error.WriteLine("uso: LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] --json");
+            return 2;
+        }
+
+        double segundos = 10;
+        int threads = 0;
+        double limite = 0;
+
+        for (int i = 3; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--threads" when i + 1 < args.Length: int.TryParse(args[++i], out threads); break;
+                case "--limite" when i + 1 < args.Length:
+                    double.TryParse(args[++i], NumberStyles.Float, CultureInfo.InvariantCulture, out limite);
+                    break;
+                default:
+                    if (double.TryParse(args[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double s))
+                        segundos = Math.Clamp(s, 1, 3600);
+                    break;
+            }
+        }
+
+        if (limite > 0) { GuardaTermica.LimiteCpu = limite; GuardaTermica.LimiteGpu = limite; }
+
+        using var sessao = new SessaoStress(alvo.Value, TimeSpan.FromSeconds(segundos),
+            threads <= 0 ? Environment.ProcessorCount : threads);
+
+        var fim = new ManualResetEventSlim(false);
+        ResultadoStress? resultado = null;
+        sessao.Terminou += r => { resultado = r; fim.Set(); };
+        sessao.Iniciar();
+
+        if (!fim.Wait(TimeSpan.FromSeconds(segundos + 180))) sessao.Parar();
+        fim.Wait(TimeSpan.FromSeconds(30));
+
+        if (resultado is null)
+        {
+            Console.Error.WriteLine("a sessão de stress não terminou");
+            return 1;
+        }
+
+        EmitirJson("stress", resultado);
+        return resultado.Completo ? 0 : 1;
+    }
+
+    private static int EmitirJson(string comando, object? dados)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            aplicacao = "LINUX EXPLODE",
+            versao = Relatorio.Versao,
+            comando,
+            quando = DateTime.Now.ToString("yyyy-MM-dd'T'HH:mm:sszzz"),
+            dados
+        }, OpcoesJson));
+        return 0;
     }
 
     private static int Bench(string[] args)

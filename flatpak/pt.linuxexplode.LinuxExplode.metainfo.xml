@@ -40,11 +40,16 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.0" date="2026-10-25">
+      <description>
+        <p>Gráficos ao vivo de 60 s, deteccao de throttling, energia e custo por kWh, historico de
+        resultados comparado e --json na linha de comandos.</p>
+        <p>Tema claro, escala da interface e atalhos de teclado.</p>
+      </description>
+    </release>
     <release version="0.18.0" date="2026-10-25">
       <description>
-        <p>O histórico mostra um resultado por tipo de teste (multi-core e single-core), substituído
-        só quando muda, e a aplicação actualiza pelo gestor de pacotes.</p>
-        <p>Testes de CPU em corridas que fecham e recomeçam, com o quadro completo 2,5 s à vista.</p>
+        <p>Aba STRESS: CPU, RAM, GPU e disco, isolados ou em paralelo, com guarda termica.</p>
       </description>
     </release>
     <release version="0.14.0" date="2026-10-25">

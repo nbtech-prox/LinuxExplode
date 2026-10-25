@@ -4,6 +4,14 @@
   <Styles.Resources>
     <!-- Paleta monocromática, igual à linguagem visual do EXPLODE -->
     <SolidColorBrush x:Key="Fundo" Color="#0A0A0A" />
+    <SolidColorBrush x:Key="BarraLateral" Color="#0C0C0C" />
+    <SolidColorBrush x:Key="Botao" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="BotaoHover" Color="#242424" />
+    <SolidColorBrush x:Key="BotaoFg" Color="#0A0A0A" />
+    <SolidColorBrush x:Key="PrimarioHover" Color="#D8D8D8" />
+    <SolidColorBrush x:Key="NavHover" Color="#161616" />
+    <SolidColorBrush x:Key="NavAtivo" Color="#1C1C1C" />
+    <SolidColorBrush x:Key="Trilho" Color="#1E1E1E" />
     <SolidColorBrush x:Key="Cartao" Color="#111111" />
     <SolidColorBrush x:Key="Cartao2" Color="#151515" />
     <SolidColorBrush x:Key="Linha" Color="#202020" />
@@ -20,8 +28,8 @@
 
   <!-- ===================== Tipografia ===================== -->
   <Style Selector="TextBlock">
-    <Setter Property="FontFamily" Value="{StaticResource Texto}" />
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Texto}" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
   </Style>
 
   <Style Selector="TextBlock.titulo">
@@ -32,94 +40,94 @@
 
   <Style Selector="TextBlock.sub">
     <Setter Property="FontSize" Value="13" />
-    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
   </Style>
 
   <Style Selector="TextBlock.rotulo">
     <Setter Property="FontSize" Value="11" />
-    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
     <Setter Property="LetterSpacing" Value="1.2" />
   </Style>
 
   <Style Selector="TextBlock.valor">
-    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Mono}" />
     <Setter Property="FontSize" Value="14" />
   </Style>
 
   <Style Selector="TextBlock.numero">
-    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Mono}" />
     <Setter Property="FontSize" Value="30" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
   <Style Selector="TextBlock.chave">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
   </Style>
 
   <Style Selector="TextBlock.mono">
-    <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Mono}" />
     <Setter Property="FontSize" Value="12" />
   </Style>
 
   <!-- ===================== Cartões ===================== -->
   <Style Selector="Border.cartao">
-    <Setter Property="Background" Value="{StaticResource Cartao}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="Background" Value="{DynamicResource Cartao}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Linha}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="18" />
   </Style>
 
   <Style Selector="Border.cartao2">
-    <Setter Property="Background" Value="{StaticResource Cartao2}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="Background" Value="{DynamicResource Cartao2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Linha}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="14" />
   </Style>
 
   <Style Selector="Border.linha">
-    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Linha}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="Padding" Value="0,9" />
   </Style>
 
   <!-- ===================== Botões ===================== -->
   <Style Selector="Button">
-    <Setter Property="FontFamily" Value="{StaticResource Texto}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Texto}" />
     <Setter Property="FontSize" Value="13" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="16,9" />
   </Style>
 
   <Style Selector="Button.primario">
-    <Setter Property="Background" Value="{StaticResource Fg}" />
-    <Setter Property="Foreground" Value="#0A0A0A" />
+    <Setter Property="Background" Value="{DynamicResource Fg}" />
+    <Setter Property="Foreground" Value="{DynamicResource BotaoFg}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.primario:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="#D8D8D8" />
+    <Setter Property="Background" Value="{DynamicResource PrimarioHover}" />
   </Style>
   <Style Selector="Button.primario:pointerover">
-    <Setter Property="Foreground" Value="#0A0A0A" />
+    <Setter Property="Foreground" Value="{DynamicResource BotaoFg}" />
   </Style>
 
   <Style Selector="Button.secundario">
-    <Setter Property="Background" Value="#1A1A1A" />
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="Background" Value="{DynamicResource Botao}" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Linha}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Button.secundario:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="#242424" />
+    <Setter Property="Background" Value="{DynamicResource BotaoHover}" />
   </Style>
 
   <!-- Navegação lateral -->
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -128,25 +136,25 @@
     <Setter Property="FontSize" Value="13" />
   </Style>
   <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="#161616" />
+    <Setter Property="Background" Value="{DynamicResource NavHover}" />
   </Style>
   <Style Selector="Button.nav:pointerover">
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
   </Style>
   <Style Selector="Button.nav.ativo">
-    <Setter Property="Background" Value="#1C1C1C" />
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
+    <Setter Property="Background" Value="{DynamicResource NavAtivo}" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.nav.ativo /template/ ContentPresenter">
-    <Setter Property="Background" Value="#1C1C1C" />
+    <Setter Property="Background" Value="{DynamicResource NavAtivo}" />
   </Style>
 
   <!-- ===================== Diversos ===================== -->
   <Style Selector="ProgressBar">
     <Setter Property="Height" Value="6" />
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
-    <Setter Property="Background" Value="#1E1E1E" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
+    <Setter Property="Background" Value="{DynamicResource Trilho}" />
     <Setter Property="CornerRadius" Value="3" />
   </Style>
 
@@ -155,9 +163,9 @@
   </Style>
 
   <Style Selector="ToolTip">
-    <Setter Property="Background" Value="#1C1C1C" />
-    <Setter Property="Foreground" Value="{StaticResource Fg}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Linha}" />
+    <Setter Property="Background" Value="{DynamicResource NavAtivo}" />
+    <Setter Property="Foreground" Value="{DynamicResource Fg}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Linha}" />
   </Style>
 
 </Styles>
