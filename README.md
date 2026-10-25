@@ -9,13 +9,13 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 
 ## Descarregar
 
-Última versão: **[v0.10.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.12.0](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 | Ficheiro | Para quê |
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.10.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.12.0-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 As versões anteriores continuam publicadas com os seus próprios ficheiros e checksums —
@@ -227,20 +227,37 @@ renderiza ao vivo, com a câmara a orbitar (uma volta a cada ~18 s), e medem ao 
 botões de prévia à parte: o teste é o pop.
 
 - **GPU e ray tracing** — um seletor de resolução vai de **320×180 a 3840×2160 (4K)**. A medição
-  mantém as 64 amostras por pixel do costume, repetidas até 1,5 s; a animação usa a resolução
-  escolhida com as amostras ajustadas por fotograma (4 a 32), para o movimento não parar.
+  mantém as 64 amostras por pixel do costume, repetidas até 1,5 s.
 - **CPU** — a imagem constrói-se bloco a bloco, com uma thread por core (`Multi-core`) ou uma só
   (`Single-core`), e há uma barra por core com a ocupação real lida de `/proc/stat`.
 
-A nota aparece no pop-up e volta para o cartão da página. A nota da GPU não depende da resolução
-escolhida: 12,96 M pts a 1280×720 e 13,2 M pts a 4K nesta máquina (RX 6700 XT).
+### Qualidade da animação: orçamento de amostras, não spp fixas
 
-| Modalidade | Resolução | Amostras/pixel na animação | Ritmo medido |
-|---|---|---|---|
-| GPU compute | 1280×720 (padrão) | 32 | ~55-60 fps |
-| GPU compute | 3840×2160 (4K) | 4 | ~10 fps |
-| Ray tracing | 1920×1080 | 16 | ~23 fps |
-| CPU (16 threads) | 960×540 | 1024 por passagem | blocos em contínuo |
+A janela mostra o quadro a ~1000 px de largura, por isso o que conta é o número de **amostras por
+fotograma** — e esse é constante (265 M no compute, 130 M no ray tracing). Daí saem as amostras por
+pixel de cada resolução:
+
+| Resolução | Amostras/pixel | Fotogramas/s medidos |
+|---|---|---|
+| 320×180 | 256 | ~195 |
+| 640×360 | 256 | ~87 |
+| 1280×720 (padrão) | 256 | ~29 |
+| 1920×1080 | 128 | ~18 |
+| 2560×1440 | 72 | ~13 |
+| 3840×2160 (4K) | 32 | ~10 |
+| Ray tracing 1920×1080 | 63 | ~15 |
+
+Um número fixo de amostras por pixel fazia o contrário: 4K ficava com 4 spp (grão grosso) e 320×180
+com 32 spp ampliadas 3× (grão ainda mais visível) — só o 1280×720 calhava bem, que era o ponto onde
+a escala do ecrã e o orçamento coincidiam. A semente do ruído é fixa durante a animação, para o grão
+não "ferver" de fotograma para fotograma.
+
+### A nota e a resolução
+
+A nota do GPU é milhares de amostras por segundo: **8,59 M** a 320×180, **12,96 M** a 1280×720 e
+**13,36 M** a 4K nesta máquina (RX 6700 XT). No extremo pequeno cai porque o custo de cada passagem
+(dispatch e sincronização) pesa mais do que os 57 mil píxeis a desenhar; a partir de 720p estabiliza.
+Na CPU a nota não depende da resolução (o teste é sempre 960×540).
 
 Ganchos de teste (abrem o pop directamente, sem clicar):
 
