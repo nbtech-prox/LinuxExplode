@@ -10,7 +10,11 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 - **Os testes de CPU correm em corridas**: cada passagem completa (1024 amostras/pixel) é um teste,
   que termina e recomeça sozinho, com a nota da corrida e o histórico a acumular no cartão. Antes o
   pop corria uma hora seguida e a nota era uma média que nunca "fechava".
-- O estado do pop mostra a corrida em curso (`corrida 3 · 16 thread(s) · …`).
+- Ao fim de cada corrida o quadro **completo** fica 2,5 s à vista, com a nota final e uma contagem
+  decrescente (`concluída; a recomeçar em 2.0 s`) — antes a imagem era limpa no instante seguinte e
+  parecia um ciclo que nunca acabava.
+- Durante a corrida o estado mostra o progresso (`corrida 2 em curso · 16 thread(s) · 58% · 6.1 s`) e
+  a nota grande só muda quando uma corrida fecha, em vez de tremer com valores parciais.
 
 ### Corrigido
 
@@ -22,6 +26,9 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 - O `flatpak info` mostrava `Version: 0.1.0` porque o `metainfo.xml` não era actualizado; passa a
   acompanhar a versão do projecto.
 - O bundle x86_64 passa a ser exportado no ramo `stable` (era `master`), igual ao ARM64.
+- `--cli relatorio` rebentava com uma excepção quando o argumento não era `html`/`json` (gerava um
+  caminho absurdo a partir do argumento); passa a validar o formato, a aceitar um ficheiro de saída
+  opcional e a criar as pastas que faltarem.
 
 ## [0.12.0] — 2026-10-24
 

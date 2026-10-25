@@ -31,8 +31,7 @@ public static class Cli
             case "rede":
                 return Rede().GetAwaiter().GetResult();
             case "relatorio":
-                RelatorioCli(args.Length > 2 ? args[2] : "html");
-                return 0;
+                return RelatorioCli(args);
             case "bench":
                 return Bench(args);
             default:
@@ -183,14 +182,29 @@ public static class Cli
         return 0;
     }
 
-    private static void RelatorioCli(string formato)
+    private static int RelatorioCli(string[] args)
     {
+        var formato = args.Length > 2 ? args[2].ToLowerInvariant() : "html";
+        if (formato is not ("html" or "json"))
+        {
+            Console.Error.WriteLine("uso: --cli relatorio [html|json] [ficheiro de saída]");
+            return 2;
+        }
+
         var (s, sensores, discos) = (Sistema.Recolher(), Sensores.Ler(), Discos.Ler());
         var texto = formato == "json" ? Relatorio.GerarJson(s, sensores, discos) : Relatorio.GerarHtml(s, sensores, discos);
-        var caminho = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            $"linux-explode-{DateTime.Now:yyyyMMdd-HHmmss}.{formato}");
+
+        var caminho = args.Length > 3
+            ? Path.GetFullPath(args[3])
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                $"linux-explode-{DateTime.Now:yyyyMMdd-HHmmss}.{formato}");
+
+        var pasta = Path.GetDirectoryName(caminho);
+        if (!string.IsNullOrEmpty(pasta)) Directory.CreateDirectory(pasta);
+
         File.WriteAllText(caminho, texto);
         Console.WriteLine("gravado: " + caminho);
+        return 0;
     }
 
     private static int Bench(string[] args)

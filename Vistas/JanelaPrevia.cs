@@ -64,6 +64,9 @@ public sealed class JanelaPrevia : Window
     private volatile bool _fechada;
     private long _inicioCorrida;
     private int _corridas;
+    private volatile bool _emCorrida;
+    private long _reinicioAte;
+    private string _ultimaNotaCpu = "—";
 
     public JanelaPrevia(ModalidadePrevia modalidade, int indiceGpu = 0, int threads = 0,
                         Action<ResultadoPrevia>? aoAtualizar = null)
@@ -325,6 +328,8 @@ public sealed class JanelaPrevia : Window
         var bench = new BenchRenderer();
         Interlocked.Exchange(ref _inicioCorrida, Stopwatch.GetTimestamp());
 
+        // A nota grande só muda quando uma corrida FECHA; durante a corrida o estado mostra o
+        // progresso. Assim o número não fica a tremer e vê-se o fim de cada teste.
         _vigia = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _vigia.Tick += (_, _) =>
         {
@@ -332,17 +337,25 @@ public sealed class JanelaPrevia : Window
             CopiarDoBench(bench);
             AtualizarBarras();
 
+            if (!_emCorrida)
+            {
+                long ate = Interlocked.Read(ref _reinicioAte);
+                if (ate == 0) return;
+                double falta = Math.Max(0, (ate - Stopwatch.GetTimestamp()) / (double)Stopwatch.Frequency);
+                _estado.Text = $"corrida {Volatile.Read(ref _corridas)} · {_ultimaNotaCpu} pts — concluída; " +
+                               $"a recomeçar em {falta:0.0} s";
+                return;
+            }
+
             double segundos = Desde(Interlocked.Read(ref _inicioCorrida));
-            double nota = segundos > 0 ? bench.SamplesDone / segundos / 10_000.0 : 0;
-            int corrida = Volatile.Read(ref _corridas) + 1;
-            _nota.Text = nota.ToString("N0");
-            string detalhe = $"corrida {corrida} · {_threads} thread(s) · {bench.SamplesDone:N0} amostras em {segundos:0.0} s";
-            _estado.Text = $"{detalhe} · bloco {bench.BucketsDone}/{bench.BucketsTotal} — a animar…";
-            _aoAtualizar?.Invoke(new ResultadoPrevia("Cpu", nota.ToString("N0"), detalhe));
+            double pct = bench.BucketsTotal > 0 ? 100.0 * bench.BucketsDone / bench.BucketsTotal : 0;
+            _estado.Text = $"corrida {Volatile.Read(ref _corridas) + 1} em curso · {_threads} thread(s) · " +
+                           $"{pct:0}% · {segundos:0.0} s · {bench.SamplesDone:N0} amostras";
         };
         _vigia.Start();
 
-        // Uma passagem completa (1024 amostras/pixel) é uma corrida; quando acaba, recomeça.
+        // Uma passagem completa é uma corrida. No fim, o quadro completo fica à vista uns segundos
+        // e só depois recomeça — antes o ecrã limpava logo e parecia um ciclo que nunca acabava.
         _ = Task.Run(() =>
         {
             try
@@ -350,19 +363,28 @@ public sealed class JanelaPrevia : Window
                 while (!ct.IsCancellationRequested)
                 {
                     Interlocked.Exchange(ref _inicioCorrida, Stopwatch.GetTimestamp());
+                    Interlocked.Exchange(ref _reinicioAte, 0);
+                    _emCorrida = true;
                     var resultado = bench.Run(_threads, TimeSpan.Zero, ct);
+                    _emCorrida = false;
                     if (ct.IsCancellationRequested) break;
 
                     int n = Interlocked.Increment(ref _corridas);
+                    Console.WriteLine($"[previa] cpu corrida {n}: {resultado.Score:N0} pts em {resultado.Seconds:0.0} s ({resultado.Samples:N0} amostras, {_threads} thread(s))");
                     string nota = resultado.Score.ToString("N0");
                     string detalhe = $"corrida {n} · {_threads} thread(s) · {resultado.Seconds:0.0} s · {resultado.Samples:N0} amostras";
                     Dispatcher.UIThread.Post(() =>
                     {
                         if (_fechada) return;
+                        _ultimaNotaCpu = nota;
                         _nota.Text = nota;
-                        _estado.Text = $"{detalhe} — a recomeçar…";
+                        _estado.Text = $"{detalhe} — concluída; a recomeçar em 2.5 s";
+                        Interlocked.Exchange(ref _reinicioAte, Stopwatch.GetTimestamp() + (long)(2.5 * Stopwatch.Frequency));
                         _aoAtualizar?.Invoke(new ResultadoPrevia("Cpu", nota, detalhe, true));
                     });
+
+                    try { Task.Delay(TimeSpan.FromSeconds(2.5), ct).Wait(ct); }
+                    catch (OperationCanceledException) { break; }
                 }
             }
             catch (OperationCanceledException) { }
