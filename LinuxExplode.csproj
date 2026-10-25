@@ -9,7 +9,7 @@
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>LinuxExplode</AssemblyName>
     <Product>LINUX EXPLODE</Product>
-    <Version>0.20.1</Version>
+    <Version>0.20.3</Version>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- O EXPLODE BENCH mede desempenho real: JIT otimizado mesmo em Debug -->
@@ -19,7 +19,7 @@
          .flatpak-builder, publish*) que não devem entrar nos globs `**/*.axaml` do Avalonia
          nem na enumeração de ficheiros do MSBuild — foi o que fez falhar o publish arm64 no CI
          com "Could not find file .../**/*.axaml". -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);build-dir/**;.flatpak-builder/**;flatpak/staging/**;flatpak/build-arm64/**;flatpak/repo-arm64/**;publish/**;publish-arm64/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);build-dir/**;.flatpak-builder/**;flatpak/staging/**;flatpak/build-arm64/**;flatpak/repo-arm64/**;publish/**;publish-arm64/**;tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

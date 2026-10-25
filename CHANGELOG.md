@@ -3,6 +3,29 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.3] — 2026-10-25
+
+### Adicionado
+
+- **Cartão Alertas** na aba Sensores: CPU/GPU acima do limite, todas as ventoinhas a 0 RPM com a CPU
+  quente e partições reais (ext4/xfs/btrfs/…) com menos de X GB livres. Limites editáveis no cartão e
+  guardados em `~/.config/linux-explode/config.json`.
+- **Notificações do sistema** opcionais (`notify-send`), com um aviso por regra a cada 15 minutos.
+  Onde o `notify-send` não existe (Flatpak), a opção é desactivada e o cartão explica porquê — nada
+  falha em silêncio.
+- `--cli alertas` e `--cli alertas --json`.
+- **Projecto de testes** `tests/LinuxExplode.Tests` (xUnit, 17 testes): histórico sem repetições,
+  mediana e variação, exportar/importar sem duplicar, configuração persistida, medição de energia,
+  regras de alerta e cargas de CPU. Passa a correr no CI a cada push.
+- **4 capturas reais** em `docs/` referenciadas no metainfo (Sensores, Bench, Stress e tema claro).
+
+### Corrigido
+
+- Os alertas de disco não encontravam partições: `Util.Montagens()` está indexado por dispositivo e
+  `Util.Espaco()` por ponto de montagem — o cruzamento passou a ser explícito.
+- Os alertas de espaço ignoram agora `tmpfs`, `efivarfs`, `/run` e partições pequenas (`/boot`), que
+  enchiam o cartão de ruído.
+
 ## [0.20.1] — 2026-10-25
 
 ### Adicionado

@@ -11,7 +11,7 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.1](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.20.3](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -32,7 +32,7 @@ O repositório não está assinado com GPG (daí `--no-gpg-verify`).
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.1-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.20.3-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
@@ -188,6 +188,29 @@ printf 'options nct6683 force=1\n' | sudo tee /etc/modprobe.d/nct6683.conf
 
 Sem isto sobram 14 temperaturas e 1 ventoinha (a do GPU); com isto passam a 44 leituras,
 incluindo 6 temperaturas da placa, as ventoinhas do CPU/bomba/caixa e 14 tensões.
+
+### Alertas
+
+No topo da aba Sensores, o cartão **Alertas** diz o que está fora dos limites — e não só quando alguém
+está a olhar:
+
+| Regra | Dispara quando | Limite (editável) |
+|---|---|---|
+| CPU quente | temperatura do pacote ≥ limite | 90 °C |
+| GPU quente | temperatura da GPU ≥ limite | 90 °C |
+| Ventoinhas a zero | todas as ventoinhas a 0 RPM com a CPU a ≥ 65 °C | — |
+| Pouco espaço | partição real (ext4/xfs/btrfs/…) com menos de X GB livres | 10 GB |
+
+As notificações do ambiente (`notify-send`) são opcionais e têm um aviso por regra a cada 15 minutos.
+Dentro do Flatpak o `notify-send` normalmente não existe: o cartão desactiva a opção e di-lo, em vez de
+falhar em silêncio.
+
+Os limites ficam em `~/.config/linux-explode/config.json` e há o mesmo resultado na linha de comandos:
+
+```bash
+LinuxExplode --cli alertas
+LinuxExplode --cli alertas --json
+```
 
 ### Ao vivo, throttling e energia
 
@@ -475,7 +498,7 @@ linux-explode --cli stress cpu 30 --limite 80           # guarda térmica mais a
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.1-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.3-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -498,6 +521,16 @@ O que **não** é portável:
 - **S.M.A.R.T.**: precisa de root em qualquer máquina; a regra sudoers é por máquina.
 - **Super I/O da placa**: depende do chip (nesta é `nct6683`, noutra pode ser `it87`, `nct6775`,
   `f71882fg` ou não existir, como nos portáteis). A app mostra o que o kernel expuser — não carrega módulos.
+
+## Testes
+
+`tests/LinuxExplode.Tests` (xUnit) cobre as regras que a aplicação promete: histórico sem repetições,
+mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um reinício, medição
+de energia, alertas e as cargas de CPU do stress. Os testes correm no CI a cada push:
+
+```bash
+dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
+```
 
 ## Integração contínua
 
@@ -569,14 +602,14 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.1-linux-arm64.tar.gz  38 MB  instalador sem root
+#   linux-explode-0.20.3-linux-arm64.tar.gz  38 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.20.1-linux-arm64.tar.gz
+tar -xzf linux-explode-0.20.3-linux-arm64.tar.gz
 cd linux-explode-0.14.0-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh

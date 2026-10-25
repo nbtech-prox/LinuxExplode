@@ -43,6 +43,8 @@ public static class Cli
                 return Bench(args);
             case "stress":
                 return Stress(args);
+            case "alertas":
+                return AlertasCli();
             default:
                 Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|stress|relatorio] [html|json]\n" +
                               "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]\n" +
@@ -222,6 +224,26 @@ public static class Cli
     /// <c>--cli stress [cpu|ram|gpu|disco|tudo] [segundos]</c>: corre a mesma sessão da interface, sem
     /// janela, e imprime o resultado. Serve para verificar o stress em script/CI.
     /// </summary>
+
+    /// <summary><c>--cli alertas</c>: os mesmos avisos do cartão de sensores, em texto.</summary>
+    private static int AlertasCli()
+    {
+        var alertas = Alertas.Avaliar();
+
+        if (alertas.Count == 0)
+        {
+            Console.WriteLine("sem alertas — temperaturas, ventoinhas e espaço dentro dos limites");
+            return 0;
+        }
+
+        foreach (var a in alertas)
+            Console.WriteLine($"  [{(a.Grave ? "grave" : "aviso")}] {a.Titulo} — {a.Detalhe}");
+
+        Console.WriteLine($"limites: CPU {Config.Atual.LimiteCpuAviso:0} °C · GPU {Config.Atual.LimiteGpuAviso:0} °C · " +
+                          $"disco {Config.Atual.EspacoMinimoGb:0} GB · notificações {(Config.Atual.Notificacoes ? "ligadas" : "desligadas")}");
+        return 0;
+    }
+
     private static int Stress(string[] args)
     {
         string alvoTexto = args.Length > 2 ? args[2].ToLowerInvariant() : "cpu";
@@ -394,6 +416,9 @@ public static class Cli
 
                 case "stress":
                     return StressJson(args);
+
+                case "alertas":
+                    return EmitirJson("alertas", Alertas.Avaliar());
 
                 default:
                     Console.Error.WriteLine(

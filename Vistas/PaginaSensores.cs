@@ -38,6 +38,12 @@ public sealed class PaginaSensores : UserControl
     private readonly TextBlock _throttleEstado = new() { Text = "a medir…", Classes = { "mono" } };
     private readonly TextBlock _throttleDetalhe = new() { Text = "", Classes = { "sub" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBlock _energiaTexto = new() { Text = "—", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly StackPanel _alertasLista = new() { Spacing = 6 };
+    private readonly TextBlock _alertasEstado = new() { Text = "sem alertas", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly CheckBox _notificacoes = new() { Content = "Notificações do sistema" };
+    private readonly NumericUpDown _limiteCpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
+    private readonly NumericUpDown _limiteGpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
+    private readonly NumericUpDown _espacoMin = new() { Minimum = 1, Maximum = 200, Increment = 1, Width = 118, FormatString = "0" };
     private readonly NumericUpDown _tarifa = new()
     {
         Minimum = 0, Maximum = 2, Increment = 0.01m, FormatString = "0.00",
@@ -95,6 +101,7 @@ public sealed class PaginaSensores : UserControl
         barra.Children.Add(online);
 
         _corpo.Children.Add(barra);
+        _corpo.Children.Add(CartaoAlertas());
         _corpo.Children.Add(CartaoAoVivo());
         _corpo.Children.Add(CartaoThrottle());
         _corpo.Children.Add(CartaoEnergia());
@@ -134,6 +141,7 @@ public sealed class PaginaSensores : UserControl
                 AtualizarCartaoPotencia(potenciaAgora);
 
             AtualizarAoVivo(todos, potenciaAgora, throttleAgora);
+            AtualizarAlertas(todos);
 
             Ordenar(verCpu ? _cartaoCpu : null, verPot ? _cartaoPotencia : null);
 
@@ -465,9 +473,93 @@ public sealed class PaginaSensores : UserControl
             return;
         }
 
+        string tempo = custo.Horas >= 1 / 60.0
+            ? $"{custo.Horas * 60:0} min"
+            : $"{custo.Horas * 3600:0} s";
+
         _energiaTexto.Text =
-            $"nesta sessão: {custo.Wh:0.000} Wh em {custo.Horas * 60:0} min · média {custo.MediaW:0} W\n" +
+            $"nesta sessão: {custo.Wh:0.000} Wh em {tempo} · média {custo.MediaW:0} W\n" +
             $"projecção a este ritmo: {custo.EurDia:0.00} €/dia · {custo.EurMes:0.00} €/mês\n" +
             "a média é a do tempo em que a janela esteve aberta (inclui o PC parado)";
+    }
+
+    // ------------------------------------------------------------------ alertas
+
+    private Control CartaoAlertas()
+    {
+        _notificacoes.IsChecked = Config.Atual.Notificacoes;
+        _notificacoes.IsEnabled = Notificacoes.Disponivel;
+        Avalonia.Controls.ToolTip.SetTip(_notificacoes, Notificacoes.Disponivel
+            ? "Avisa com notify-send quando um limite é passado (no máximo um aviso por regra a cada 15 min)"
+            : "notify-send não existe nesta instalação (o Flatpak não o traz) — os alertas continuam na interface");
+
+        _notificacoes.IsCheckedChanged += (_, _) =>
+        {
+            Config.Atual.Notificacoes = _notificacoes.IsChecked == true;
+            Config.Atual.Guardar();
+        };
+
+        _limiteCpu.Value = (decimal)Config.Atual.LimiteCpuAviso;
+        _limiteGpu.Value = (decimal)Config.Atual.LimiteGpuAviso;
+        _espacoMin.Value = (decimal)Config.Atual.EspacoMinimoGb;
+
+        void Guardar(string campo, decimal? valor)
+        {
+            if (valor is not decimal v) return;
+            switch (campo)
+            {
+                case "cpu": Config.Atual.LimiteCpuAviso = (double)v; break;
+                case "gpu": Config.Atual.LimiteGpuAviso = (double)v; break;
+                default: Config.Atual.EspacoMinimoGb = (double)v; break;
+            }
+            Config.Atual.Guardar();
+        }
+
+        _limiteCpu.ValueChanged += (_, e) => Guardar("cpu", e.NewValue);
+        _limiteGpu.ValueChanged += (_, e) => Guardar("gpu", e.NewValue);
+        _espacoMin.ValueChanged += (_, e) => Guardar("disco", e.NewValue);
+
+        var limites = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        limites.Children.Add(UI.Texto("CPU °C", "chave"));
+        limites.Children.Add(_limiteCpu);
+        limites.Children.Add(UI.Texto("GPU °C", "chave"));
+        limites.Children.Add(_limiteGpu);
+        limites.Children.Add(UI.Texto("disco GB", "chave"));
+        limites.Children.Add(_espacoMin);
+        limites.Children.Add(_notificacoes);
+
+        var pilha = new StackPanel { Spacing = 10 };
+        pilha.Children.Add(_alertasEstado);
+        pilha.Children.Add(_alertasLista);
+        pilha.Children.Add(limites);
+        return UI.Cartao("Alertas", pilha);
+    }
+
+    private string _alertasChave = "";
+
+    private void AtualizarAlertas(List<Sensor> sensores)
+    {
+        var alertas = Alertas.Avaliar(sensores);
+        Notificacoes.AvisarAlertas(alertas);
+
+        _alertasEstado.Text = alertas.Count == 0
+            ? "sem alertas — temperaturas, ventoinhas e espaço dentro dos limites"
+            : $"{alertas.Count} alerta(s) activo(s)";
+
+        string chave = string.Join("|", alertas.Select(a => a.Chave));
+        if (chave == _alertasChave) return;
+        _alertasChave = chave;
+
+        _alertasLista.Children.Clear();
+        foreach (var a in alertas)
+        {
+            var linha = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            linha.Children.Add(UI.Pilula(a.Grave ? "grave" : "aviso", a.Grave ? "Mau" : "Atencao"));
+            var texto = new StackPanel { Spacing = 2 };
+            texto.Children.Add(UI.Texto(a.Titulo, "valor"));
+            texto.Children.Add(UI.Texto(a.Detalhe, "sub"));
+            linha.Children.Add(texto);
+            _alertasLista.Children.Add(linha);
+        }
     }
 }

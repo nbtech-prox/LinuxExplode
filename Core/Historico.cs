@@ -21,8 +21,10 @@ public static class Historico
 {
     private static readonly object Cadeado = new();
 
-    public static string Pasta => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "linux-explode");
+    public static string Pasta =>
+        Environment.GetEnvironmentVariable("LINUXEXPLODE_DADOS") is { Length: > 0 } forcar
+            ? forcar
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "linux-explode");
 
     public static string Caminho => Path.Combine(Pasta, "resultados.json");
 

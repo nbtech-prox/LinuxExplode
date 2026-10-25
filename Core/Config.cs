@@ -12,12 +12,23 @@ public sealed class Config
     public string Tema { get; set; } = "escuro";
     public double Escala { get; set; } = 1.0;
 
+    // alertas
+    public double LimiteCpuAviso { get; set; } = 90;
+    public double LimiteGpuAviso { get; set; } = 90;
+    public double EspacoMinimoGb { get; set; } = 10;
+    public bool Notificacoes { get; set; }
+
     private static Config? _atual;
 
     public static Config Atual => _atual ??= Carregar();
 
-    public static string Pasta => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "linux-explode");
+    /// <summary>Relê o ficheiro (usado pelos testes e quando o utilizador muda de pasta).</summary>
+    public static void Recarregar() => _atual = Carregar();
+
+    public static string Pasta =>
+        Environment.GetEnvironmentVariable("LINUXEXPLODE_CONFIG") is { Length: > 0 } forcar
+            ? forcar
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "linux-explode");
 
     public static string Caminho => Path.Combine(Pasta, "config.json");
 

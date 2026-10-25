@@ -4,8 +4,8 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.1 (aba STRESS, gráficos ao vivo, throttling, energia, histórico comparado,
-  temas, `--json`).
+- **Estado actual:** 0.20.3 (aba STRESS, gráficos ao vivo, throttling, energia, histórico comparado,
+  temas, `--json`, alertas, notificações e testes automáticos).
 - **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
 - **Idioma:** interface, documentação e notas em pt-PT.
 
@@ -28,16 +28,16 @@ CHANGELOG; `--json` validado com `json.load` em todos os comandos.
 
 ---
 
-## Fase 2 — 0.20.3 · Alertas e confiança nos dados
+## Fase 2 — 0.20.3 · Alertas e confiança nos dados (feito)
 
 Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o utilizador olhe.
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
-| 3 | Alertas por sensor (ventoinha parada, tensão fora da faixa, temperatura acima do limite) | Um sensor avariado só se nota a olhar | Limite configurável por sensor; estado na interface sem notificações do sistema | S |
-| 24 | Notificações do sistema para limites (temperatura, disco cheio, SMART) | Avisa mesmo com a janela escondida | `notify-send`/libnotify detectado; nada é enviado sem estar ligado nas definições | S |
-| 28 | `appstreamcli validate` sem avisos + capturas reais por página | É o que o gestor de aplicações mostra | Validador limpo; 4+ capturas em `docs/` referenciadas no metainfo | S |
-| 26 | Testes automatizados (xUnit) dos motores | Hoje o CI só compila | Testes de `ChaveDoResultado`, `Historico`, `MonitorThrottle`, `StressCpu` (durações curtas) no CI | M |
+| 3 ✅ | Alertas por sensor (CPU/GPU quentes, ventoinhas a zero, pouco espaço) | Um sensor avariado só se nota a olhar | Limites na interface, valores reais dos sensores, `--cli alertas` | S |
+| 24 ✅ | Notificações do sistema para limites | Avisa mesmo com a janela escondida | `notify-send` detectado, 1 aviso por regra a cada 15 min, desligado por omissão | S |
+| 28 ✅ | `appstreamcli validate` limpo + 4 capturas reais | É o que o gestor de aplicações mostra | Validador sem avisos; capturas em `docs/` no metainfo | S |
+| 26 ✅ | Testes automatizados (xUnit) | Antes o CI só compilava | 17 testes de `Historico`, `Config`, energia, alertas e `StressCpu`, a correr no CI | M |
 
 ---
 

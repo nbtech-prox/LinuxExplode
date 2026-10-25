@@ -34,12 +34,30 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>Visão geral do sistema</caption>
+      <caption>Sensores ao vivo: gráficos de 60 s, throttling e energia</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-sensores.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>EXPLODE BENCH: nota, histórico comparado e detalhe por GPU</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-bench.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>STRESS: CPU, RAM, GPU e disco com guarda térmica</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-stress.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Tema claro com os mesmos dados</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-tema-claro.png</image>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="0.20.3" date="2026-10-25">
+      <description>
+        <p>Alertas de temperatura, ventoinhas e espaço em disco, com notificacoes opcionais.</p>
+        <p>Projecto de testes unitarios (17 testes) a correr no CI e capturas reais no metainfo.</p>
+      </description>
+    </release>
     <release version="0.20.1" date="2026-10-25">
       <description>
         <p>Gráficos ao vivo de 60 s, deteccao de throttling, energia e custo por kWh, historico de

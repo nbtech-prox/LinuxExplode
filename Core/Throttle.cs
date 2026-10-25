@@ -161,7 +161,7 @@ public sealed class MedidorEnergia
             return new CustoEnergia(0, 0, horas, null, null, "sem leitura de potência (RAPL)");
 
         double segundos = horas * 3600;
-        double media = segundos > 1 ? _joules / segundos : 0;
+        double media = segundos > 0.1 ? _joules / segundos : 0;
         double wh = _joules / 3600;
         double dia = media * 24 / 1000.0 * tarifaEurKwh;
 
