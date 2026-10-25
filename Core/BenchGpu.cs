@@ -395,7 +395,7 @@ public static unsafe class BenchGpu
                     var pars = new Parametros
                     {
                         Largura = (uint)largura, Altura = (uint)altura, Amostras = (uint)amostras,
-                        Semente = (uint)(7 + n), Angulo = AnguloDaVez(limite)
+                        Semente = 7, Angulo = AnguloDaVez(limite)
                     };
                     Despachar(cmd, cerca, conjunto, pars);
                     vk.WaitForFences(dispositivo, 1, &cerca, true, ulong.MaxValue);

@@ -294,13 +294,20 @@ public sealed class JanelaPrevia : Window
         }
     }
 
-    /// <summary>Amostras por pixel na animação: ~60 M amostras por fotograma, potência de 2, 4 a 32.</summary>
-    private static int SppAnimacao(int largura, int altura)
+    /// <summary>
+    /// Amostras por pixel na animação. O que interessa é a qualidade na janela, e a janela mostra
+    /// o quadro em ~1000 px de largura: por isso o orçamento é de AMOSTRAS POR FOTOGRAMA (constante),
+    /// não um número fixo de amostras por pixel. Assim 320×180 leva 256 spp (upescalado continua
+    /// limpo) e 4K leva 32 spp (o downscale para a janela média 16 px e também limpa o ruído);
+    /// um spp fixo fazia o contrário — grão grosso no pequeno e ruído forte no 4K, com o 1280×720
+    /// a ser o único ponto onde calhava bem.
+    /// </summary>
+    private int SppAnimacao(int largura, int altura)
     {
-        double porFotograma = 60_000_000.0 / Math.Max(1, largura * altura);
-        int spp = 4;
-        while (spp < 32 && spp * 2 <= porFotograma) spp *= 2;
-        return Math.Clamp(spp, 4, 32);
+        // G samples por fotograma: o compute faz ~13 G/s, o ray tracing ~4 G/s nesta máquina
+        double alvo = _modalidade == ModalidadePrevia.Rt ? 130_000_000.0 : 265_000_000.0;
+        int spp = (int)Math.Round(alvo / Math.Max(1, largura * altura));
+        return Math.Clamp(spp, 16, 256);
     }
 
     // ------------------------------------------------------------------ CPU
@@ -454,7 +461,7 @@ public sealed class JanelaPrevia : Window
             _relogio.Restart();
         }
 
-        _estado.Text = $"{_largura}×{_altura} · {_amostras} amostras/pixel · {_ultimoFps:0} fotogramas/s · " +
-                       "câmara em órbita";
+        string ritmo = _ultimoFps >= 0.5 ? $"{_ultimoFps:0} fotogramas/s" : "a contar fotogramas…";
+        _estado.Text = $"{_largura}×{_altura} · {_amostras} amostras/pixel · {ritmo} · câmara em órbita";
     }
 }

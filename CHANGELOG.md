@@ -3,6 +3,22 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.12.0] — 2026-10-24
+
+### Corrigido
+
+- **A qualidade da animação já não depende da resolução**: o orçamento passou a ser de amostras por
+  fotograma (265 M no compute, 130 M no ray tracing), em vez de um máximo de 32 spp por pixel. Antes,
+  4K levava 4 spp (grão grosso) e 320×180 levava 32 spp ampliadas 3× (grão ainda mais visível) — só o
+  1280×720 calhava bem. Agora: 256 spp a 720p e abaixo, 128 a 1080p, 96 a 1440p, 32 a 4K.
+- A semente do ruído é fixa durante a animação: o grão deixa de "ferver" de fotograma para fotograma.
+- O estado do pop mostrava `0 fotogramas/s` no primeiro meio segundo; passa a `a contar fotogramas…`.
+
+### Documentado
+
+- A nota do GPU varia com a resolução (8,59 M a 320×180, 12,96 M a 1280×720, 13,36 M a 4K): no
+  extremo pequeno o custo fixo de cada passagem pesa mais do que os píxeis desenhados.
+
 ## [0.10.0] — 2026-10-24
 
 A numeração passa a subir de **2 em 2** na parte menor: 0.10.0, 0.12.0, 0.14.0, …
@@ -108,6 +124,7 @@ Primeiro release público.
 - A NVIDIA não publica relógios nem potência em sysfs: essas linhas ficam indisponíveis.
 - O acesso a `/dev` dentro do Flatpak é limitado, o que afecta o S.M.A.R.T. detalhado.
 
+[0.12.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.12.0
 [0.10.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.10.0
 [0.3.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nbtech-prox/LinuxExplode/releases/tag/v0.2.0

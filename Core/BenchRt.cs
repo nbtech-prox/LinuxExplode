@@ -872,7 +872,7 @@ public static unsafe class BenchRt
                     var pv = new Parametros
                     {
                         Largura = (uint)largura, Altura = (uint)altura, Amostras = (uint)amostras,
-                        Semente = (uint)(11 + fotogramaN), Total = (uint)total, TrisPorEsfera = (uint)trisPorEsfera,
+                        Semente = 11, Total = (uint)total, TrisPorEsfera = (uint)trisPorEsfera,
                         Angulo = AnguloDaVez(limite)
                     };
                     Despachar(cmd, cerca, conjunto, pv);
