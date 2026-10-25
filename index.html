@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<title>LINUX EXPLODE — repositório Flatpak</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0e12; color: #e7ecf3;
+         font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1 { font-size: 2rem; letter-spacing: .04em; margin: 0 0 8px; }
+  p.sub { color: #93a1b1; margin: 0 0 32px; }
+  h2 { font-size: 1.1rem; margin: 32px 0 12px; color: #9fd0ff; }
+  pre { background: #121821; border: 1px solid #1f2937; border-radius: 8px;
+        padding: 14px 16px; overflow-x: auto; font-size: .9rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: #9fd0ff; }
+  .nota { color: #93a1b1; font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>LINUX EXPLODE</h1>
+  <p class="sub">Repositório Flatpak (x86_64 e ARM64) — hardware, sensores e EXPLODE BENCH.</p>
+
+  <h2>Adicionar o repositório</h2>
+  <pre><code>flatpak remote-add --user --no-gpg-verify linuxexplode https://nbtech-prox.github.io/LinuxExplode/
+flatpak install --user linuxexplode pt.linuxexplode.LinuxExplode</code></pre>
+
+  <h2>Actualizar</h2>
+  <pre><code>flatpak update --user</code></pre>
+  <p class="nota">O gestor de aplicações do sistema passa a mostrar as actualizações deste repositório.</p>
+
+  <h2>Ficheiros</h2>
+  <p>Instaladores e checksums em
+  <a href="https://github.com/nbtech-prox/LinuxExplode/releases">github.com/nbtech-prox/LinuxExplode/releases</a>.</p>
+
+  <p class="nota">O repositório não está assinado com GPG: usa <code>--no-gpg-verify</code>.</p>
+</main>
+</body>
+</html>
