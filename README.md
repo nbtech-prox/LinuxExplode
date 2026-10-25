@@ -342,6 +342,78 @@ o que serve de prova visual de que o trabalho foi mesmo feito na GPU.
 Requisitos: driver Vulkan (`vulkan-radeon` no Arch/CachyOS). Sem ele a app diz que não
 encontrou GPU em vez de inventar uma nota.
 
+## STRESS — até onde a máquina aguenta
+
+A aba **STRESS** aquece tudo o que se pode aquecer num PC e mostra o que está a acontecer em tempo
+real (temperaturas, potência, ritmo) com uma guarda térmica que corta o teste antes de ser tarde.
+
+| Alvo | O que faz | O que mede |
+|---|---|---|
+| **CPU** | 16 threads (ou o número que escolheres) com quatro cargas: FMA vetorial (SIMD), inteiro, vírgula flutuante e tráfego de memória | unidades/s, GFLOP/s, GB/s de tráfego, temperatura, potência |
+| **RAM** | Enche 25/50/75 % da memória, escreve um padrão, relê e **verifica cada palavra** em passagens contínuas | GB/s de escrita e leitura, palavras verificadas, erros |
+| **GPU** | Path tracer Vulkan em ciclo (o mesmo shader do benchmark) | milhões de pontos/s, temperatura e potência da GPU |
+| **Disco** | Escreve e relê a verificar (sequencial) e escreve blocos de 4 KB aleatórios | MB/s de escrita e leitura, IOPS, bytes diferentes na releitura |
+| **Tudo** | Os quatro em paralelo — o teste de estabilidade a sério | tudo o que está acima, mais os picos de temperatura |
+
+### Guarda térmica
+
+Lê a CPU (k10temp) e a GPU (amdgpu) **quatro vezes por segundo** e pára tudo quando um limite é
+passado (85, 90, 95 ou 100 °C, à escolha). O resultado diz qual sensor disparou e a que temperatura
+(`parado — guarda térmica: CPU a 96 °C (limite 95 °C)`), e os picos ficam registados na mesma.
+
+### Valores medidos nesta máquina (Ryzen 7 9700X, RX 6700 XT, NVMe PCIe 4)
+
+| Teste | Duração | Resultado |
+|---|---|---|
+| CPU · FMA vetorial · 16 threads | 15 s | 82 GFLOP/s (5 126 M FMA/s) |
+| CPU · inteiro · 8 threads | 6 s | 6 255 M/s |
+| CPU · vírgula flutuante · 8 threads | 6 s | 604 M/s (sin + cos + sqrt) |
+| CPU · memória · 8 threads | 6 s | 5 241 M/s · 83,8 GB/s de tráfego |
+| RAM · 50 % (30,2 GB) | 12 s | escrita 25,1 GB/s · leitura 25,4 GB/s · 0 erros em 16,2 G palavras |
+| Disco · 512 MB por passagem | 12 s | escrita 1 082 MB/s · leitura 1 109 MB/s · 4 KB 20 096 IOPS |
+| GPU · compute 640×360×128 spp | 12 s | 7,9 M pontos/s |
+| Tudo (burn-in) | 20 s | 68,5 GFLOP/s + 19,4 GB × 4 de RAM + disco a 735 MB/s · pico CPU 68 °C |
+
+O teste "Tudo" é o mais duro: as temperaturas sobem 10-20 °C acima do teste isolado e a potência da
+plataforma passa dos 200 W. Serve para validar overclock, pasta térmica e estabilidade de memória.
+Num teste de 20 s o CPU rende menos do que isolado (68 em vez de 82 GFLOP/s) — é o que acontece
+quando a RAM, o disco e a GPU lhe roubam largura de banda. Esse é o resultado honesto.
+
+### Segurança
+
+- O ficheiro do teste de disco é criado em `~/.cache/linux-explode/stress/` e **apagado no fim**.
+- A RAM deixa sempre 1 GB livre; se não houver memória suficiente, o teste recusa arrancar em vez de
+  provocar o OOM killer.
+- Sair da aba pára o teste (não fica a máquina a arder noutra página).
+- Não há escrita em discos do sistema nem alteração de definições — é só carga.
+
+### Registo e relatório
+
+O cartão **Registo** guarda as últimas 12 entradas (início, fim, paragens, relatório). O botão
+**Guardar relatório** escreve um JSON em `~/linux-explode-relatorios/stress-<data>.json` com a
+configuração, as linhas do resultado, os picos e a energia medida.
+
+### Linha de comandos
+
+```bash
+linux-explode --cli stress cpu 60                      # 1 minuto, todos os cores, FMA vetorial
+linux-explode --cli stress cpu 120 --threads 4 --carga inteiro
+linux-explode --cli stress ram 60
+linux-explode --cli stress disco 120
+linux-explode --cli stress gpu 60
+linux-explode --cli stress tudo 300                     # burn-in de 5 minutos
+linux-explode --cli stress cpu 30 --limite 80           # guarda térmica mais apertada
+```
+
+### Limitações (honestas)
+
+- O stress de GPU usa o path tracer do projecto; não substitui ferramentas dedicadas (gpu-burn,
+  Furmark) nem testa a VRAM até à falha.
+- O stress de disco corre num ficheiro dentro do teu home — não testa o disco inteiro nem SMART
+  durante a carga (a temperatura do disco aparece na aba Discos).
+- A carga de CPU é sintética: aquece e mede, mas não prevê o desempenho de um jogo ou de uma
+  compilação específicos.
+
 ## Portabilidade (outro Linux, outro hardware)
 
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado

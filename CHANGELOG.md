@@ -3,6 +3,41 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.18.0] — 2026-10-25
+
+### Adicionado
+
+- **Aba STRESS**: aquece CPU, RAM, GPU e disco, isoladamente ou tudo em paralelo (burn-in), durante
+  o tempo escolhido (1 a 30 minutos), com leitura ao vivo de temperatura, potência e ritmo.
+  - CPU com quatro cargas: FMA vetorial (SIMD), inteiro, vírgula flutuante e tráfego de memória, com
+    progresso incremental e resultado em unidades/s, GFLOP/s e GB/s.
+  - RAM: enche 25/50/75 % da memória, escreve um padrão, relê e **verifica cada palavra**, em
+    passagens contínuas, com as taxas de escrita e leitura medidas.
+  - GPU: path tracer Vulkan em ciclo, com pontos por segundo.
+  - Disco: escreve e relê a verificar (sequencial) e blocos de 4 KB aleatórios, com IOPS e contagem
+    de bytes diferentes na releitura.
+  - **Guarda térmica** (85/90/95/100 °C) lida quatro vezes por segundo; quando dispara, o teste pára
+    e o resultado diz qual sensor e a que temperatura.
+- **Registo** das últimas entradas e **Guardar relatório** em JSON (`~/linux-explode-relatorios/`).
+- `--cli stress cpu|ram|gpu|disco|tudo [segundos] [--threads N] [--carga …] [--limite N]`.
+
+### Corrigido
+
+- O progresso da carga de CPU só aparecia no fim (as threads somavam o contador ao terminar); passa a
+  publicar por lotes, com taxa em M/s calculada entre amostras.
+- A carga vetorial gerava infinito ao fim de poucos lotes e a thread saía antes do tempo pedido; a
+  cadeia FMA passou a ser estável e o acumulador é consumido (`GC.KeepAlive`) para o JIT não poder
+  eliminar as contas. Ver nota abaixo.
+- Chegar ao fim do tempo pedido conta como conclusão normal; só a paragem manual e a guarda térmica
+  marcam o teste como interrompido.
+
+### Nota sobre números
+
+Os 207 GFLOP/s que esta carga mostrava antes eram falsos: o laço de FMA era eliminado pelo JIT (o
+acumulador nunca era consumido) e o contador somava iterações que não aconteceram. O valor real é
+**~82 GFLOP/s** (5 126 M FMA vetoriais/s, 16 threads). Números que se apresentam como medição têm de
+ser medidos — foi corrigido.
+
 ## [0.16.0] — 2026-10-25
 
 ### Alterado

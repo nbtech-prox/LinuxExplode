@@ -34,9 +34,12 @@ public static class Cli
                 return RelatorioCli(args);
             case "bench":
                 return Bench(args);
+            case "stress":
+                return Stress(args);
             default:
-                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|relatorio] [html|json]\n" +
-                              "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]");
+                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|stress|relatorio] [html|json]\n" +
+                              "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]\n" +
+                              "     LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]");
                 return 2;
         }
     }
@@ -205,6 +208,107 @@ public static class Cli
         File.WriteAllText(caminho, texto);
         Console.WriteLine("gravado: " + caminho);
         return 0;
+    }
+
+
+    /// <summary>
+    /// <c>--cli stress [cpu|ram|gpu|disco|tudo] [segundos]</c>: corre a mesma sessão da interface, sem
+    /// janela, e imprime o resultado. Serve para verificar o stress em script/CI.
+    /// </summary>
+    private static int Stress(string[] args)
+    {
+        string alvoTexto = args.Length > 2 ? args[2].ToLowerInvariant() : "cpu";
+
+        var alvo = alvoTexto switch
+        {
+            "cpu" => AlvoStress.Cpu,
+            "ram" or "memoria" => AlvoStress.Ram,
+            "gpu" => AlvoStress.Gpu,
+            "disco" => AlvoStress.Disco,
+            "tudo" => AlvoStress.Tudo,
+            _ => (AlvoStress?)null
+        };
+
+        if (alvo is null)
+        {
+            Console.WriteLine("uso: LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]");
+            return 2;
+        }
+
+        double segundos = 10;
+        int threads = 0;
+        var carga = CargaCpu.Vector;
+
+        for (int i = 3; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--threads" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out threads);
+                    break;
+                case "--limite" when i + 1 < args.Length:
+                    if (double.TryParse(args[++i], NumberStyles.Float, CultureInfo.InvariantCulture, out double limite))
+                    {
+                        GuardaTermica.LimiteCpu = limite;
+                        GuardaTermica.LimiteGpu = limite;
+                    }
+                    break;
+                case "--carga" when i + 1 < args.Length:
+                    carga = args[++i].ToLowerInvariant() switch
+                    {
+                        "inteiro" => CargaCpu.Inteiro,
+                        "flutuante" => CargaCpu.Flutuante,
+                        "memoria" or "memória" => CargaCpu.Memoria,
+                        _ => CargaCpu.Vector
+                    };
+                    break;
+                default:
+                    if (double.TryParse(args[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double s))
+                        segundos = Math.Clamp(s, 1, 3600);
+                    break;
+            }
+        }
+
+        threads = threads <= 0 ? Environment.ProcessorCount : threads;
+        Console.WriteLine($"stress: {alvoTexto} · {segundos:0} s · CPU {threads} thread(s) · carga {carga}");
+        Console.WriteLine($"limites: CPU {GuardaTermica.LimiteCpu:0} °C · GPU {GuardaTermica.LimiteGpu:0} °C");
+
+        using var sessao = new SessaoStress(alvo.Value, TimeSpan.FromSeconds(segundos), threads, carga);
+        var fim = new ManualResetEventSlim(false);
+        ResultadoStress? resultado = null;
+        DateTime inicio = DateTime.Now;
+        string ultima = "";
+
+        sessao.Progresso += p =>
+        {
+            string ritmo = string.IsNullOrEmpty(p.Ritmo) ? "" : $" · {p.Ritmo}";
+            string linha = $"  [{p.Segundos,5:0.0} s] {p.Fase}{ritmo} · {p.Detalhe}";
+            if (linha != ultima && DateTime.Now - inicio > TimeSpan.FromSeconds(2))
+            {
+                ultima = linha;
+                Console.WriteLine(linha);
+            }
+        };
+
+        sessao.Terminou += r => { resultado = r; fim.Set(); };
+        sessao.Iniciar();
+
+        // o tempo máximo é o da sessão + folga para o encerramento
+        if (!fim.Wait(TimeSpan.FromSeconds(segundos + 180)))
+            sessao.Parar();
+        fim.Wait(TimeSpan.FromSeconds(30));
+
+        if (resultado is null)
+        {
+            Console.WriteLine("stress: sem resultado (a sessão não terminou)");
+            return 1;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"resultado: {(resultado.Completo ? "completo" : "parado")} — {resultado.Resumo}");
+        foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
+        Console.WriteLine($"picos: CPU {resultado.PicoCpuC:0} °C · GPU {resultado.PicoGpuC:0} °C · energia {resultado.EnergiaKwh * 1000:0.0} Wh");
+        return resultado.Completo ? 0 : 1;
     }
 
     private static int Bench(string[] args)

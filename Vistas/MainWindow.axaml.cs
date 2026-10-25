@@ -61,6 +61,7 @@ public partial class MainWindow : Window
     private void IrSensores(object? s, RoutedEventArgs e) => Navegar("sensores");
     private void IrDiscos(object? s, RoutedEventArgs e) => Navegar("discos");
     private void IrBench(object? s, RoutedEventArgs e) => Navegar("bench");
+    private void IrStress(object? s, RoutedEventArgs e) => Navegar("stress");
     private void IrRede(object? s, RoutedEventArgs e) => Navegar("rede");
     private void IrRelatorio(object? s, RoutedEventArgs e) => Navegar("relatorio");
 
@@ -76,6 +77,7 @@ public partial class MainWindow : Window
                 "sensores" => new PaginaSensores(),
                 "discos" => new PaginaDiscos(),
                 "bench" => new PaginaBench(),
+                "stress" => new PaginaStress(),
                 "rede" => new PaginaRede(),
                 "relatorio" => new PaginaRelatorio(),
                 _ => new PaginaSistema()
