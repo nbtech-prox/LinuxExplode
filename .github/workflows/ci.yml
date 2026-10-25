@@ -42,12 +42,15 @@ jobs:
           $BIN --cli potencia
           $BIN --cli freq | head -10
           # dispositivos: no runner há /sys (pci/usb) e não há placas de som — a app degrada e di-lo
-          $BIN --cli placa | head -10
-          $BIN --cli usb | head -5
-          $BIN --cli audio | head -5
+          # sem `| head` directo: com pipefail o SIGPIPE do head mata o processo (exit 141) e o passo falha
+          $BIN --cli placa > /tmp/placa.txt && head -10 /tmp/placa.txt
+          $BIN --cli usb   > /tmp/usb.txt   && head -5  /tmp/usb.txt
+          $BIN --cli audio > /tmp/audio.txt && head -5  /tmp/audio.txt
           $BIN --cli placa --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["comando"]=="placa", d'
           $BIN --cli usb --json   | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d["dados"],list), d'
           $BIN --cli audio --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "Nos" in d["dados"], d'
+          $BIN --cli ranking > /tmp/ranking.txt
+          $BIN --cli gravar 2 --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["dados"]["amostras"] == 2, d'
 
       - name: Testes unitários
         run: dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release --nologo

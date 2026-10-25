@@ -3,6 +3,40 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.7] — 2026-10-25
+
+### Adicionado
+
+- **Ranking local** no EXPLODE BENCH: por cada alvo do histórico, a **mediana das últimas 3 corridas**,
+  a variação entre elas e a diferença da última em relação à mediana. Quando a variação passa dos **3 %**
+  o cartão avisa que a máquina não estava estável e que o número vale pouco — a nota de uma corrida
+  isolada com turbo a arrefecer não é comparável com nada.
+  - `--cli ranking` (texto e `--json`) e `--cli bench multi --repeticoes 3`, que corre o teste três
+    vezes, devolve a mediana e a variação, e regista só a mediana no histórico.
+- **Curva de latência de memória** (4 KB → 256 MB), com *pointer chasing* sobre uma permutação de
+  blocos de 64 B: mostra os patamares L1/L2/L3 e o degrau da RAM, em nanossegundos por acesso.
+  Gráfico com eixo X logarítmico desenhado à mão; `--cli bench latmem` dá a mesma série em texto/JSON.
+  Nesta máquina (build Release): L1 1,1 ns · L2 2,9 ns · L3 9,0–9,4 ns · RAM 77–79 ns
+  (256 MB: 88–89 ns).
+- **Tarefa do mundo real** — descomprimir 48 MB com o resultado verificado por **SHA-256** e compilar
+  um ficheiro C com 1 500 funções (fonte gerado, entra por stdin, compilador `cc`/`gcc`/`clang` do
+  sistema, com `flatpak-spawn --host` dentro do sandbox). Sem rede e sem ficheiros temporários.
+  `--cli bench real` devolve MB/s da descompressão e kB/s da compilação.
+  Nesta máquina: **1 432 MB/s** dentro do Flatpak instalado e **515 MB/s** com o `zlib` do anfitrião —
+  o número acompanha o binário que corre, não é uma constante da máquina; a compilação foi 3,69 s
+  (102 kB/s de fonte).
+- **Sessão gravada**: grava CPU, GPU, potência e frequência uma vez por segundo em
+  `~/.local/share/linux-explode/sessoes/sessao-AAAAMMDD-HHMMSS.csv`, com escrita incremental, e no fim
+  mostra o resumo (média, mínimo e máximo) e o gráfico da sessão inteira. `--cli gravar [segundos]`.
+
+### Nota
+
+- O CSV usa `;` e ponto decimal (`InvariantCulture`): é um ficheiro de dados, não a interface. Uma
+  leitura que não exista fica com a célula **vazia**, nunca a zero — a primeira amostra de potência
+  vem vazia porque o RAPL precisa de duas leituras.
+- A compilação só entra na nota se houver compilador; sem ele o cartão diz porquê em vez de mostrar
+  um tempo inventado.
+
 ## [0.20.5] — 2026-10-25
 
 ### Adicionado

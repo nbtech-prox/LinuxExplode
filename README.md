@@ -48,7 +48,7 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 | **Sensores** | temperatura, ventoinhas, potência, tensão, corrente e frequência, ao vivo (1 s), com filtro por tipo — no filtro **Frequência** os núcleos da CPU vêm primeiro e a GPU depois; no filtro **Potência** abre com o cartão **Consumo do PC** (RAPL + GPUs) antes da lista de hwmon | `/sys/class/hwmon`, `/sys/devices/system/cpu`, `/sys/class/powercap` (RAPL) |
 
 | **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. | `/sys/block`, `/proc/mounts`, `smartctl` |
-| **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT` |
+| **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
 | **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload | sockets + Cloudflare |
 | **Relatório** | exporta tudo em HTML (com a marca EXPLODE) ou JSON | — |
@@ -246,6 +246,11 @@ LinuxExplode --cli usb                     # dispositivos USB, velocidade negoci
 LinuxExplode --cli audio                   # placas de som, fluxos PCM e xruns do PipeWire
 LinuxExplode --cli rede                    # teste de rede (~15 s)
 LinuxExplode --cli bench multi ram disco   # benchmark de CPU + RAM + disco
+LinuxExplode --cli bench multi --repeticoes 3   # 3 corridas: mediana e variação
+LinuxExplode --cli bench latmem            # latência de memória de 4 KB a 256 MB
+LinuxExplode --cli bench real              # descomprimir 48 MB + compilar 1 500 funções C
+LinuxExplode --cli ranking                 # mediana das últimas 3 corridas, por alvo
+LinuxExplode --cli gravar 60               # grava uma sessão de 60 s em CSV
 LinuxExplode --cli bench single            # uma thread
 LinuxExplode --cli bench gpu               # path tracer Vulkan (GPU dedicada)
 LinuxExplode --cli bench gpu 1             # escolhe a GPU pelo índice listado
@@ -366,6 +371,82 @@ Ganchos de teste (abrem o pop directamente, sem clicar):
 LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=gpu LINUXEXPLODE_RESOLUCAO=3840x2160 ./LinuxExplode
 LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=cpu LINUXEXPLODE_THREADS=1 ./LinuxExplode
 ```
+
+## Benchmarks com mais sinal — ranking, latência, tarefa real e sessões
+
+Quatro adições da 0.20.7, todas com a mesma regra: um número sozinho não é um resultado.
+
+### Ranking local (mediana de 3 corridas)
+
+Cada alvo do histórico passa a ter uma linha com a **mediana das últimas 3 corridas**, a **variação**
+entre elas e a diferença da última face à mediana:
+
+```
+CPU · 16 threads
+mediana 12 981 000 · últimas 3 variam 1,2 % · última +0,4 %
+```
+
+- A variação é a **amplitude relativa** (`(máx − mín) / máx`). Acima de **3 %** o cartão avisa que a
+  máquina não estava estável e que a nota vale pouco — é diferente de "o teste correu mal".
+- O aviso só existe a partir de 3 corridas: com duas não há como distinguir ruído de um problema.
+- `--cli bench multi --repeticoes 3` corre o teste três vezes, mostra cada nota, e regista **só a
+  mediana** no histórico (senão o ficheiro enchia-se de quase-repetições).
+- `--cli ranking` (texto e `--json`) dá a mesma informação sem abrir a janela.
+
+### Latência de memória por tamanho de bloco
+
+4 KB a 256 MB, em nanossegundos por acesso, com *pointer chasing* sobre uma permutação de blocos de
+64 B (uma linha de cache) com semente fixa:
+
+| Conjunto de trabalho | Fase esperada | Medido nesta máquina |
+|---|---|---|
+| 4 KB – 16 KB | L1 | 1,1 ns |
+| 64 KB – 1 MB | L2 | 2,9 ns (1 MB: 5,3–5,6 ns) |
+| 4 MB – 16 MB | L3 | 9,0–9,4 ns |
+| 64 MB – 256 MB | RAM | 77–79 ns (256 MB: 88–89 ns) |
+
+Duas decisões que fazem a diferença entre medir latência e medir nada:
+
+- **O percurso é aleatório.** Um acesso sequencial deixa o pré-buscador esconder a latência e o valor
+  sai a banda, não o tempo de resposta.
+- **16 M de acessos por tamanho, com aquecimento.** Com poucos acessos os tamanhos pequenos mediam
+  ruído de arranque e a curva saía não-monótona (4 KB mais lento do que a RAM) — o teste
+  `A_latencia_cresce_com_o_conjunto_de_trabalho` existe para isso não voltar a passar despercebido.
+
+A curva é desenhada com eixo X logarítmico (`Vistas/CurvaLatencia.cs`), sem bibliotecas; `--cli bench
+latmem` devolve os nove pontos em texto ou JSON.
+
+### Tarefa do mundo real — descomprimir e compilar
+
+Duas tarefas fixas, repetíveis e **sem rede**:
+
+1. **Descomprimir 48 MB** de dados pseudo-aleatórios determinísticos e **verificar o SHA-256** do que
+   saiu. Se o resultado não for igual ao original, o número é descartado em vez de reportado.
+2. **Compilar um ficheiro C com 1 500 funções**, gerado na hora, entregue ao compilador por *stdin*
+   (`cc -O2 -S -o /dev/stdout -xc -`) — sem ficheiros temporários e sem caminhos que o sandbox não vê.
+   Dentro do Flatpak usa o compilador do anfitrião por `flatpak-spawn --host`.
+
+Nesta máquina: descompressão **1 432 MB/s** dentro do Flatpak instalado e **515 MB/s** com o `zlib` do
+anfitrião — a diferença é o binário que corre, e é por isso que o número aparece sempre ao lado do
+compilador usado; compilação **3,69 s** (102 kB/s de fonte), 4,18 s no total.
+Sem `cc`/`gcc`/`clang` o cartão diz "a tarefa de compilação fica de fora" em vez de inventar um tempo.
+
+### Sessões de monitorização gravadas
+
+O cartão *Sessão gravada* (aba Sensores) grava **uma amostra por segundo** — CPU, GPU, potência e
+frequência média — em `~/.local/share/linux-explode/sessoes/sessao-AAAAMMDD-HHMMSS.csv`:
+
+```
+quando;cpu_c;gpu_c;watts;freq_mhz
+2026-10-25 13:30:19;49.875;39;;2123.225
+2026-10-25 13:30:20;48.75;40;19.621;1984.118
+```
+
+- **Escrita incremental**: fechar a aplicação a meio não perde o que já foi medido.
+- **Célula vazia ≠ zero**: a primeira amostra de potência vem vazia porque o RAPL precisa de duas
+  leituras. Um zero ali seria uma mentira.
+- No fim aparecem o resumo (média, mínimo e máximo por série) e quatro gráficos da sessão inteira.
+- `--cli gravar [segundos]` faz o mesmo sem interface, com `--json` para o resumo.
 
 ## Dispositivos — PCI Express, USB e áudio
 
@@ -623,13 +704,15 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **73 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **99 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
 finais vs pontes, códigos de classe PCI, nomes de fabricante, velocidades e classes USB, bytes por
 amostra de cada formato ALSA, latência de período/buffer, o parser do `pw-top` e a leitura de
-`/proc/asound` a partir de uma árvore temporária. Os testes correm no CI a cada push:
+`/proc/asound` a partir de uma árvore temporária; na 0.20.7 juntaram-se a mediana/variância do
+ranking, a curva de latência (monótona, L1 muito abaixo da RAM), a fonte C determinística da tarefa
+real, o CSV da sessão (célula vazia em vez de zero) e o resumo por série. Os testes correm no CI a cada push:
 
 ```bash
 dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
@@ -751,6 +834,9 @@ LinuxExplode/
 │   ├── Sensores.cs       # hwmon
 │   ├── Potencia.cs       # potência da CPU (contadores RAPL) + power1_* das GPUs
 │   ├── Discos.cs         # /sys/block + smartctl
+│   ├── BenchMemoria.cs   # latência por tamanho de bloco (pointer chasing, 4 KB → 256 MB)
+│   ├── TarefaReal.cs     # descomprimir (SHA-256) + compilar C, sem rede
+│   ├── GravadorSessao.cs # sessão de monitorização em CSV, com resumo e gráfico
 │   ├── Placa.cs          # links PCIe (/sys/bus/pci) e temperaturas de chipset/memória/rede
 │   ├── Usb.cs            # dispositivos USB: velocidade negociada, classes, drivers
 │   ├── Audio.cs          # /proc/asound + xruns (pw-top) e quantum (pw-metadata)
@@ -763,12 +849,13 @@ LinuxExplode/
 │   └── Util.cs
 ├── Vistas/               # UI Avalonia
 │   ├── MainWindow.axaml  # barra lateral + área de conteúdo
+│   ├── CurvaLatencia.cs  # gráfico da curva de latência (eixo X logarítmico)
 │   ├── Pagina*.cs        # uma classe por página
 │   ├── Bandeja.cs        # ícone na bandeja (StatusNotifierItem) e menu
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (73 testes, correm no CI)
+├── tests/                # xUnit (99 testes, correm no CI)
 ├── docs/                 # capturas reais usadas no metainfo
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
@@ -806,6 +893,13 @@ LinuxExplode/
   (sandbox sem socket do PipeWire e sem `flatpak-spawn`), o cartão diz "xruns não medidos".
 - **Ícone na bandeja** precisa de `StatusNotifierItem`/AppIndicator no ambiente (KDE, niri+noctalia,
   GNOME com extensão). Sem isso a aplicação arranca normalmente, só não há ícone.
+- **Tarefa real**: a parte de compilação precisa de um compilador C no sistema (ou no anfitrião, dentro
+  do Flatpak). Sem ele a nota da descompressão continua a valer e o motivo é dito.
+- **Tarefa real / descompressão**: o valor depende do `zlib` ligado ao binário (o do sistema anfitrião
+  ou o do runtime do Flatpak) — compare corridas do mesmo binário, não uma do `--cli` com outra da app.
+- **Latência de memória** mede o que a máquina faz naquele momento: turbo, afinidade de threads e
+  outras cargas mudam o valor. Para comparar, corre com a máquina em repouso e usa a mediana.
+- **Sessões** têm resolução de 1 s: picos mais curtos do que isso não aparecem no CSV.
 
 ## Licença
 

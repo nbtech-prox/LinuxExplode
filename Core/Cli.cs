@@ -41,6 +41,10 @@ public static class Cli
                 return RelatorioCli(args);
             case "bench":
                 return Bench(args);
+            case "ranking":
+                return RankingCli();
+            case "gravar":
+                return GravarCli(args);
             case "stress":
                 return Stress(args);
             case "alertas":
@@ -52,8 +56,9 @@ public static class Cli
             case "audio" or "áudio":
                 return AudioCli();
             default:
-                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|stress|relatorio] [html|json]\n" +
-                              "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]\n" +
+                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|ranking|gravar|stress|relatorio] [html|json]\n" +
+                              "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]|latmem|real] [ram] [disco] [--repeticoes N]\n" +
+                              "     LinuxExplode --cli gravar [segundos]     (grava uma sessão de monitorização em CSV)\n" +
                               "     LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]");
                 return 2;
         }
@@ -302,8 +307,10 @@ public static class Cli
         var todos = Usb.Listar();
         if (todos.Count == 0)
         {
+            // Não é erro: num contentor ou num runner não há /sys/bus/usb enumerável. A mensagem diz
+            // porquê e o código de saída fica 0 para o comando ser utilizável em pipelines e no CI.
             Console.WriteLine("sem dispositivos USB legíveis em /sys/bus/usb/devices");
-            return 1;
+            return 0;
         }
 
         var dispositivos = todos.Where(d => !d.Hub).ToList();
@@ -527,6 +534,12 @@ public static class Cli
                         return 0;
                     }
 
+                case "ranking":
+                    return EmitirJson("ranking", Historico.Rankings());
+
+                case "gravar":
+                    return EmitirJson("gravar", GravarJson(args));
+
                 case "bench":
                     return BenchJson(args);
 
@@ -557,7 +570,7 @@ public static class Cli
 
                 default:
                     Console.Error.WriteLine(
-                        "uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|stress|relatorio] --json");
+                        "uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|ranking|gravar|stress|relatorio] --json");
                     return 2;
             }
         }
@@ -591,6 +604,24 @@ public static class Cli
             case "ram":
                 return EmitirJson("bench", new { modo = "ram", resultado = BenchRam.Correr() });
 
+            case "latmem":
+            case "latencia":
+                {
+                    var curva = BenchMemoria.Curva();
+                    return EmitirJson("bench", new
+                    {
+                        modo = "latmem",
+                        resumo = BenchMemoria.Resumo(curva),
+                        pontos = curva.Select(p => new { bytes = p.Bytes, tamanho = p.Tamanho, fase = p.Fase, ns = Math.Round(p.Ns, 2) })
+                    });
+                }
+
+            case "real":
+                {
+                    var r = TarefaReal.Correr();
+                    return EmitirJson("bench", new { modo = "real", resultado = r });
+                }
+
             case "disco":
                 {
                     var pasta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -607,9 +638,31 @@ public static class Cli
                         _ => int.TryParse(alvo, out int n) ? n : Environment.ProcessorCount
                     };
 
-                    var renderizador = new BenchRenderer();
-                    var r = renderizador.Run(threads, TimeSpan.Zero, CancellationToken.None);
-                    return EmitirJson("bench", new { modo = "cpu", resultado = r });
+                    int repeticoes = LerInteiro(args, "--repeticoes", 1, 1, 9);
+                    var corridas = new List<BenchResult>();
+                    for (int i = 0; i < repeticoes; i++)
+                        corridas.Add(new BenchRenderer().Run(threads, TimeSpan.Zero, CancellationToken.None));
+
+                    var notas = corridas.Select(c => c.Score).ToList();
+                    double mediana = Historico.Mediana(notas) ?? 0;
+                    double variacao = Historico.Variacao(notas);
+
+                    if (repeticoes > 1)
+                        Historico.Registar("cpu", $"{threads} threads", mediana, $"mediana de {repeticoes} corridas");
+
+                    return EmitirJson("bench", new
+                    {
+                        modo = "cpu",
+                        threads,
+                        repeticoes,
+                        notas,
+                        mediana,
+                        variacao_pct = Math.Round(variacao, 2),
+                        aviso = repeticoes >= Historico.CorridasRanking && variacao > RankingLocal.ToleranciaPct
+                            ? $"variação {variacao:0.0} % acima dos {RankingLocal.ToleranciaPct:0} % — máquina instável"
+                            : null,
+                        resultado = corridas[^1]
+                    });
                 }
         }
     }
@@ -694,6 +747,8 @@ public static class Cli
         var alvo = args.Length > 2 ? args[2] : "multi";
         if (alvo == "gpu") return BenchGpuCli(args.Length > 3 ? args[3] : null);
         if (alvo == "rt") return BenchRtCli(args.Length > 3 ? args[3] : null);
+        if (alvo is "latmem" or "latencia" or "latência") return BenchLatenciaCli();
+        if (alvo == "real") return BenchRealCli();
 
         // 2.º argumento opcional: threads ("multi" ou um número)
         int threads = Environment.ProcessorCount;
@@ -705,30 +760,40 @@ public static class Cli
                 _ => int.TryParse(args[2], out var n) ? n : Environment.ProcessorCount
             };
 
-        Console.WriteLine($"EXPLODE BENCH — CPU com {threads} thread(s), {BenchRenderer.Width}x{BenchRenderer.Height}, {BenchRenderer.Spp} spp");
-        var bench = new BenchRenderer();
-        var ultimo = 0;
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var cts = new CancellationTokenSource();
-        var progresso = new Thread(() =>
-        {
-            while (!cts.IsCancellationRequested)
-            {
-                int feito = bench.BucketsDone;
-                if (feito != ultimo && feito % 20 == 0)
-                {
-                    Console.Write($"\r  {feito}/{bench.BucketsTotal} blocos…");
-                    ultimo = feito;
-                }
-                Thread.Sleep(400);
-            }
-        }) { IsBackground = true };
-        progresso.Start();
+        // --repeticoes N: corre o mesmo teste N vezes e reporta a mediana (o ROADMAP pede 3). Uma
+        // corrida isolada pode apanhar turbo a arrefecer ou outro programa a disputar o CPU; a mediana
+        // de 3 é o que se pode comparar, e a variação diz se a máquina estava estável.
+        int repeticoes = LerInteiro(args, "--repeticoes", 1, 1, 9);
 
-        var res = bench.Run(threads, TimeSpan.Zero, CancellationToken.None);
-        cts.Cancel();
-        sw.Stop();
-        Console.WriteLine($"\r  nota: {res.Score:N0} pts   ({res.Threads}T, {res.Seconds:0.00}s, {res.Samples:N0} amostras)");
+        Console.WriteLine($"EXPLODE BENCH — CPU com {threads} thread(s), {BenchRenderer.Width}x{BenchRenderer.Height}, {BenchRenderer.Spp} spp" +
+                          (repeticoes > 1 ? $" · {repeticoes} corridas" : ""));
+
+        var notas = new List<double>();
+        BenchResult? ultimo = null;
+
+        for (int i = 0; i < repeticoes; i++)
+        {
+            if (repeticoes > 1) Console.WriteLine($"  corrida {i + 1}/{repeticoes}…");
+            ultimo = CorrerCpu(threads, comProgresso: repeticoes == 1);
+            notas.Add(ultimo.Score);
+            if (repeticoes > 1) Console.WriteLine($"    nota: {ultimo.Score:N0} pts   ({ultimo.Seconds:0.00}s)");
+        }
+
+        if (repeticoes > 1)
+        {
+            double mediana = Historico.Mediana(notas) ?? 0;
+            double variacao = Historico.Variacao(notas);
+            Console.WriteLine($"  mediana de {repeticoes}: {mediana:N0} pts   (variação {variacao:0.0} %)");
+            if (variacao > RankingLocal.ToleranciaPct)
+                Console.WriteLine($"  aviso: variação acima dos {RankingLocal.ToleranciaPct:0} % — a máquina não está estável; vale a mediana.");
+
+            Historico.Registar("cpu", $"{threads} threads", mediana, $"mediana de {repeticoes} corridas");
+        }
+        else if (ultimo is not null)
+        {
+            Console.WriteLine($"\r  nota: {ultimo.Score:N0} pts   ({ultimo.Threads}T, {ultimo.Seconds:0.00}s, {ultimo.Samples:N0} amostras)");
+            Historico.Registar("cpu", $"{threads} threads", ultimo.Score, ultimo.Seconds.ToString("0.00") + " s");
+        }
 
         if (args.Length > 3)
         {
@@ -749,6 +814,163 @@ public static class Cli
             }
         }
         return 0;
+    }
+
+    /// <summary>Uma corrida de CPU, com o contador de blocos no stdout quando há terminal para isso.</summary>
+    private static BenchResult CorrerCpu(int threads, bool comProgresso)
+    {
+        var bench = new BenchRenderer();
+        if (!comProgresso) return bench.Run(threads, TimeSpan.Zero, CancellationToken.None);
+
+        var ultimo = 0;
+        using var cts = new CancellationTokenSource();
+        var progresso = new Thread(() =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                int feito = bench.BucketsDone;
+                if (feito != ultimo && feito % 20 == 0)
+                {
+                    Console.Write($"\r  {feito}/{bench.BucketsTotal} blocos…");
+                    ultimo = feito;
+                }
+                Thread.Sleep(400);
+            }
+        }) { IsBackground = true };
+        progresso.Start();
+
+        var res = bench.Run(threads, TimeSpan.Zero, CancellationToken.None);
+        cts.Cancel();
+        return res;
+    }
+
+    /// <summary>Lê <c>--nome N</c> de uma lista de argumentos, com limites. Devolve o valor por omissão.</summary>
+    private static int LerInteiro(string[] args, string nome, int porOmissao, int min, int max)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == nome && int.TryParse(args[i + 1], out int v))
+                return Math.Clamp(v, min, max);
+        return porOmissao;
+    }
+
+    /// <summary>Ranking local: mediana das últimas corridas por tipo/alvo, com aviso de variação.</summary>
+    private static int RankingCli()
+    {
+        var linhas = Historico.Rankings();
+
+        if (linhas.Count == 0)
+        {
+            Console.WriteLine("ranking local: ainda não há corridas guardadas — corre `--cli bench` primeiro");
+            return 0;
+        }
+
+        Console.WriteLine($"RANKING LOCAL — mediana das últimas {Historico.CorridasRanking} corridas de cada alvo");
+        foreach (var l in linhas)
+        {
+            Console.WriteLine($"  {l.Tipo,-8} {l.Alvo,-22} {l.Linha}   ({l.Corridas} corrida(s), melhor {l.Melhor:N0})");
+            if (l.Aviso is not null) Console.WriteLine($"           ! {l.Aviso}");
+        }
+        return 0;
+    }
+
+    /// <summary>Curva de latência de memória por tamanho de bloco (4 KB → 256 MB).</summary>
+    private static int BenchLatenciaCli()
+    {
+        Console.WriteLine("EXPLODE BENCH — latência de memória por tamanho de bloco (4 KB → 256 MB)");
+        var curva = BenchMemoria.Curva(t => Console.Write($"\r  {t,-58}"));
+
+        Console.WriteLine("\r  tamanho   fase   latência");
+        foreach (var p in curva)
+            Console.WriteLine($"  {p.Tamanho,7}   {p.Fase,-4}   {p.Ns,6:0.0} ns   ({p.Bytes:N0} B)");
+
+        Console.WriteLine($"  resumo: {BenchMemoria.Resumo(curva)}");
+        return 0;
+    }
+
+    /// <summary>Carga "do mundo real": descomprimir um bloco fixo e compilar C, sem rede.</summary>
+    private static int BenchRealCli()
+    {
+        Console.WriteLine($"EXPLODE BENCH — tarefa real: descomprimir {TarefaReal.BytesPayload / (1024 * 1024)} MB e compilar {TarefaReal.FuncoesC} funções C");
+        var r = TarefaReal.Correr(t => Console.Write($"\r  {t,-58}"));
+
+        Console.WriteLine($"\r  descompressão  {r.DescompressaoMBs,8:N0} MB/s   (SHA-256 {r.Sha256[..16]}… verificado)");
+        if (r.CompilacaoSegundos is double s)
+            Console.WriteLine($"  compilação     {r.CompilacaoKBs,8:N0} kB/s   ({s:0.00} s, {r.Compilador})");
+        else
+            Console.WriteLine($"  compilação     —          {r.CompilacaoMotivo}");
+
+        Console.WriteLine($"  total          {r.TotalSegundos:0.00} s");
+        Historico.Registar("real", $"gzip {TarefaReal.BytesPayload / (1024 * 1024)} MB", r.DescompressaoMBs, "MB/s");
+        if (r.CompilacaoKBs is double kbs)
+            Historico.Registar("real", $"compilar {TarefaReal.FuncoesC} funções", kbs, "kB/s de fonte");
+        return 0;
+    }
+
+    /// <summary>Grava uma sessão de monitorização em CSV, uma amostra por segundo.</summary>
+    private static int GravarCli(string[] args)
+    {
+        int segundos = 10;
+        for (int i = 2; i < args.Length; i++)
+            if (int.TryParse(args[i], out int v)) segundos = Math.Clamp(v, 1, 3600);
+
+        using var gravador = new GravadorSessao();
+        string caminho = gravador.Iniciar();
+        Console.WriteLine($"a gravar {segundos} s em {caminho}");
+
+        for (int i = 0; i < segundos; i++)
+        {
+            var a = gravador.Amostrar();
+            Console.Write($"\r  {i + 1}/{segundos}  CPU {(a.CpuC is double c ? $"{c:0} °C" : "—"),-7}" +
+                          $"GPU {(a.GpuC is double g ? $"{g:0} °C" : "—"),-7}" +
+                          $"{(a.Watts is double w ? $"{w:0.0} W" : "—")}");
+            Thread.Sleep(1000);
+        }
+
+        var (amostras, resumo) = gravador.Parar();
+        Console.WriteLine($"\r  {amostras.Count} amostras em {resumo.Duracao.TotalSeconds:0} s");
+
+        static string S((double? Min, double? Max, double? Media) t, string unidade) =>
+            t.Media is double m ? $"média {m:0.0} {unidade} · min {t.Min:0.0} · max {t.Max:0.0}" : "sem leitura";
+
+        Console.WriteLine($"  CPU   {S(resumo.Cpu, "°C")}");
+        Console.WriteLine($"  GPU   {S(resumo.Gpu, "°C")}");
+        Console.WriteLine($"  watts {S(resumo.Watts, "W")}");
+        Console.WriteLine($"  freq  {S(resumo.Freq, "MHz")}");
+        if (gravador.FalhouEscrita) Console.WriteLine("  aviso: o CSV não pôde ser escrito (permissões/disco) — as amostras ficaram só em memória");
+        Console.WriteLine($"  ficheiro: {caminho}");
+        return 0;
+    }
+
+    /// <summary>Versão JSON da gravação: nada é impresso além do envelope.</summary>
+    private static object GravarJson(string[] args)
+    {
+        // args[2] é o número de segundos (o --json é o envelope, não um argumento da gravação); o
+        // varrimento tem de começar em 2 ou `--cli gravar 3 --json` gravava os 10 s por omissão.
+        int segundos = 10;
+        for (int i = 2; i < args.Length; i++)
+            if (int.TryParse(args[i], out int v)) segundos = Math.Clamp(v, 1, 3600);
+
+        using var gravador = new GravadorSessao();
+        string caminho = gravador.Iniciar();
+
+        for (int i = 0; i < segundos; i++)
+        {
+            gravador.Amostrar();
+            Thread.Sleep(1000);
+        }
+
+        var (amostras, resumo) = gravador.Parar();
+        return new
+        {
+            caminho,
+            duracao_s = Math.Round(resumo.Duracao.TotalSeconds, 1),
+            amostras = amostras.Count,
+            falhou_escrita = gravador.FalhouEscrita,
+            cpu = new { min = resumo.Cpu.Min, max = resumo.Cpu.Max, media = resumo.Cpu.Media },
+            gpu = new { min = resumo.Gpu.Min, max = resumo.Gpu.Max, media = resumo.Gpu.Media },
+            watts = new { min = resumo.Watts.Min, max = resumo.Watts.Max, media = resumo.Watts.Media },
+            freq_mhz = new { min = resumo.Freq.Min, max = resumo.Freq.Max, media = resumo.Freq.Media }
+        };
     }
 
     private static int BenchRtCli(string? indice)

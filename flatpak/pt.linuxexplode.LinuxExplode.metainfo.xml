@@ -49,6 +49,18 @@
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-stress.png</image>
     </screenshot>
     <screenshot>
+      <caption>Latência de memória de 4 KB a 256 MB: os patamares das caches e o degrau da RAM</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-latencia.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Tarefa do mundo real: descomprimir 48 MB (SHA-256 verificado) e compilar 1 500 funções C</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-tarefa-real.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Sessão gravada: uma amostra por segundo em CSV, com resumo e gráficos no fim</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-sessao.png</image>
+    </screenshot>
+    <screenshot>
       <caption>Dispositivos: PCI Express, USB e áudio com os xruns do PipeWire</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-dispositivos.png</image>
     </screenshot>
@@ -63,6 +75,13 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.7" date="2026-10-25">
+      <description>
+        <p>Benchmarks com mais sinal: ranking local com mediana de 3 corridas e aviso de variância,
+        curva de latencia de memoria de 4 KB a 256 MB, tarefa do mundo real (descomprimir e compilar)
+        e sessoes de monitorizacao gravadas em CSV com grafico no fim. 99 testes.</p>
+      </description>
+    </release>
     <release version="0.20.5" date="2026-10-25">
       <description>
         <p>Nova aba Dispositivos: links PCI Express (velocidade e largura em uso vs máximo anunciado),

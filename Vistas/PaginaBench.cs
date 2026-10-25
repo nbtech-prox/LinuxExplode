@@ -36,29 +36,53 @@ public sealed class PaginaBench : UserControl
     private readonly TextBlock _historicoEstado = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<InfoGpu> _gpus = new();
 
+    // Latência de memória (0.20.7)
+    private readonly CurvaLatencia _curva = new();
+    private readonly TextBlock _latEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _latResumo = new() { Text = "sem medições", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+
+    // Tarefa do mundo real (0.20.7)
+    private readonly TextBlock _realEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _realResultado = new() { Spacing = 2 };
+
+    // Ranking local (0.20.7)
+    private readonly StackPanel _rankingLista = new() { Spacing = 4 };
+    private readonly TextBlock _rankingEstado = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+
     public PaginaBench()
     {
         Content = UI.Pagina(
             UI.Cabecalho("EXPLODE BENCH", "Path tracing de CPU e GPU · banda de memória · disco"),
             _corpo);
 
-        _corpo.Children.Add(CartaoGpu());
-        _corpo.Children.Add(new CartaoFps());
-        _corpo.Children.Add(CartaoCpu());
-        _corpo.Children.Add(CartaoRam());
-        _corpo.Children.Add(CartaoDisco());
-        _corpo.Children.Add(CartaoHistorico());
+        // gancho de captura: LINUXEXPLODE_SECAO=latencia|real|ranking|cpu|ram|gpu|disco deixa só esse
+        // cartão na página, para o poder fotografar no topo da janela (não há scroll fiável).
+        var secao = (Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "").ToLowerInvariant();
+        bool Quer(string nome) => secao.Length == 0 || secao == nome;
+
+        if (Quer("gpu")) _corpo.Children.Add(CartaoGpu());
+        if (Quer("fps")) _corpo.Children.Add(new CartaoFps());
+        if (Quer("cpu")) _corpo.Children.Add(CartaoCpu());
+        if (Quer("ram")) _corpo.Children.Add(CartaoRam());
+        if (Quer("latencia") || Quer("latência")) _corpo.Children.Add(CartaoLatencia());
+        if (Quer("real")) _corpo.Children.Add(CartaoReal());
+        if (Quer("disco")) _corpo.Children.Add(CartaoDisco());
+        if (Quer("ranking")) _corpo.Children.Add(CartaoRanking());
+        if (Quer("historico") || Quer("histórico")) _corpo.Children.Add(CartaoHistorico());
 
         Loaded += (_, _) =>
         {
             CarregarGpus();
+            ActualizarRanking();
+
             // modo de teste automático: LINUXEXPLODE_AUTOTEST=1 (compute) ou "rt" (ray tracing)
             // abre o pop do bench, que é o caminho real do botão Testar GPU
             var auto = Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST");
+            bool tratadoNoCartao = auto is "latmem" or "real";   // cada cartão tem o seu próprio gancho
             if (auto == "cpu")
                 AbrirPrevia(ModalidadePrevia.Cpu, int.TryParse(
                     Environment.GetEnvironmentVariable("LINUXEXPLODE_THREADS"), out int t) && t > 0 ? t : 0);
-            else if (!string.IsNullOrEmpty(auto) && _gpus.Count > 0)
+            else if (!tratadoNoCartao && !string.IsNullOrEmpty(auto) && _gpus.Count > 0)
                 AbrirPrevia(auto == "rt" ? ModalidadePrevia.Rt : ModalidadePrevia.Gpu);
         };
     }
@@ -146,6 +170,7 @@ public sealed class PaginaBench : UserControl
                 _pontuacao.Text = r.Nota;
                 _estado.Text = r.Detalhe;
                 MostrarResultados();
+                ActualizarRanking();
             }
             else
             {
@@ -158,6 +183,7 @@ public sealed class PaginaBench : UserControl
 
                 _gpuComparacao.Text = Historico.Comparacao(tipo, alvo, nota) ?? "primeira corrida deste alvo";
                 Historico.Registar(tipo, alvo, nota, r.Detalhe);
+                ActualizarRanking();
             }
         });
 
@@ -261,6 +287,166 @@ public sealed class PaginaBench : UserControl
     }
 
     // ------------------------------------------------------------------ DISCO
+
+    /// <summary>
+    /// Latência por tamanho de bloco (item 11): a curva mostra os patamares das caches e o salto para a
+    /// RAM. O percurso é aleatório de propósito — um acesso sequencial media a banda do pré-buscador,
+    /// não a latência.
+    /// </summary>
+    private Control CartaoLatencia()
+    {
+        var conteudo = new StackPanel { Spacing = 12 };
+        conteudo.Children.Add(UI.Texto(
+            "Pointer chasing sobre blocos de 64 B (uma linha de cache), de 4 KB a 256 MB: nanossegundos por " +
+            "acesso. Cada patamar é um nível — L1, L2, L3 — e o degrau final é a RAM. " +
+            "O percurso é uma permutação aleatória com semente fixa, por isso duas corridas visitam os mesmos endereços.", "sub"));
+
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        botoes.Children.Add(UI.Botao("Medir latência", true, () => _ = MedirLatencia()));
+        conteudo.Children.Add(botoes);
+        conteudo.Children.Add(_latEstado);
+        conteudo.Children.Add(_curva);
+        conteudo.Children.Add(_latResumo);
+
+        // hook de verificação sem clicar: LINUXEXPLODE_AUTOTEST=latmem
+        if (Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST") == "latmem")
+            Loaded += (_, _) => _ = MedirLatencia();
+
+        return UI.Cartao("Memória · latência por tamanho de bloco", conteudo);
+    }
+
+    private async Task MedirLatencia()
+    {
+        _latEstado.Text = "a medir 4 KB → 256 MB (alguns segundos)…";
+        _curva.Definir(Array.Empty<LatenciaBloco>());
+
+        try
+        {
+            var pontos = await Task.Run(() => BenchMemoria.Curva(
+                t => Dispatcher.UIThread.Post(() => _latEstado.Text = t)));
+
+            _curva.Definir(pontos);
+            _latResumo.Text = $"{BenchMemoria.Resumo(pontos)}\n" +
+                              string.Join(" · ", pontos.Select(p => $"{p.Tamanho} {p.Ns:0.0} ns"));
+            _latEstado.Text = $"{pontos.Count} pontos medidos";
+        }
+        catch (Exception ex)
+        {
+            _latEstado.Text = $"falhou: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Carga "do mundo real" (item 12): descomprimir 48 MB verificando o SHA-256 e compilar 1 500 funções
+    /// C. Sem rede e sem ficheiros temporários; se não houver compilador, isso é dito em vez de escondido.
+    /// </summary>
+    private Control CartaoReal()
+    {
+        var conteudo = new StackPanel { Spacing = 12 };
+        conteudo.Children.Add(UI.Texto(
+            $"Duas tarefas fixas e repetíveis: descomprimir {TarefaReal.BytesPayload / (1024 * 1024)} MB " +
+            "(o resultado é conferido por SHA-256) e compilar um ficheiro C com " +
+            $"{TarefaReal.FuncoesC} funções, com o compilador do sistema. " +
+            "Não usa a rede nem o disco além do próprio trabalho — é o que um utilizador faz a compilar ou a instalar.", "sub"));
+
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        botoes.Children.Add(UI.Botao("Correr tarefa real", true, () => _ = CorrerTarefaReal()));
+        conteudo.Children.Add(botoes);
+        conteudo.Children.Add(_realEstado);
+        conteudo.Children.Add(_realResultado);
+
+        if (Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST") == "real")
+            Loaded += (_, _) => _ = CorrerTarefaReal();
+
+        return UI.Cartao("Tarefa do mundo real · descomprimir + compilar", conteudo);
+    }
+
+    private async Task CorrerTarefaReal()
+    {
+        _realEstado.Text = "a correr (descomprimir + compilar)…";
+        _realResultado.Children.Clear();
+
+        try
+        {
+            var r = await Task.Run(() => TarefaReal.Correr(
+                t => Dispatcher.UIThread.Post(() => _realEstado.Text = t)));
+
+            _realResultado.Children.Add(UI.Texto($"descompressão   {r.DescompressaoMBs:N0} MB/s", "mono"));
+            _realResultado.Children.Add(UI.Texto(
+                r.CompilacaoSegundos is double s
+                    ? $"compilação      {r.CompilacaoKBs:N0} kB/s   ({s:0.00} s, {r.Compilador})"
+                    : $"compilação      —   {r.CompilacaoMotivo}", "mono"));
+            _realResultado.Children.Add(UI.Texto($"total           {r.TotalSegundos:0.00} s", "mono"));
+
+            _realEstado.Text = r.CompilacaoSegundos is null
+                ? $"descompressão verificada (SHA-256 {r.Sha256[..12]}…); a compilação não correu"
+                : $"concluído · SHA-256 {r.Sha256[..12]}… igual ao original";
+
+            Historico.Registar("real", $"gzip {TarefaReal.BytesPayload / (1024 * 1024)} MB", r.DescompressaoMBs, "MB/s");
+            if (r.CompilacaoKBs is double kbs)
+                Historico.Registar("real", $"compilar {TarefaReal.FuncoesC} funções", kbs, "kB/s de fonte");
+
+            ActualizarRanking();
+        }
+        catch (Exception ex)
+        {
+            _realEstado.Text = $"falhou: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Ranking local (item 9): por alvo, a mediana das últimas 3 corridas e a variação entre elas. Quando
+    /// a variação passa dos 3 %, o cartão avisa que a nota não é comparável — máquina instável, não teste mau.
+    /// </summary>
+    private Control CartaoRanking()
+    {
+        var conteudo = new StackPanel { Spacing = 10 };
+        conteudo.Children.Add(UI.Texto(
+            $"Mediana das últimas {Historico.CorridasRanking} corridas de cada alvo, com a variação entre elas. " +
+            $"Acima de {RankingLocal.ToleranciaPct:0} % de variação a máquina não estava estável e o número vale pouco — " +
+            "o aviso aparece na linha. Para a mediana ser de 3, corre `--cli bench multi --repeticoes 3`.", "sub"));
+
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        botoes.Children.Add(UI.Botao("Actualizar", false, ActualizarRanking));
+        conteudo.Children.Add(botoes);
+        conteudo.Children.Add(_rankingEstado);
+        conteudo.Children.Add(_rankingLista);
+
+        return UI.Cartao("Ranking local · mediana de 3 corridas", conteudo);
+    }
+
+    /// <summary>Relê o histórico e redesenha o ranking (chamado ao entrar na página e depois de cada teste).</summary>
+    private void ActualizarRanking()
+    {
+        _rankingLista.Children.Clear();
+
+        var linhas = Historico.Rankings();
+        if (linhas.Count == 0)
+        {
+            _rankingEstado.Text = "sem corridas guardadas — corre um teste para começar o ranking";
+            return;
+        }
+
+        _rankingEstado.Text = $"{linhas.Count} alvo(s) no histórico";
+
+        foreach (var l in linhas)
+        {
+            var bloco = new StackPanel { Spacing = 1 };
+            bloco.Children.Add(UI.Texto($"{l.Tipo.ToUpperInvariant()} · {l.Alvo}", "rotulo"));
+            bloco.Children.Add(UI.Texto(l.Linha, "mono"));
+
+            if (l.Aviso is not null)
+                bloco.Children.Add(new TextBlock
+                {
+                    Text = "! " + l.Aviso,
+                    Classes = { "sub" },
+                    Foreground = UI.Cor("Mau"),
+                    TextWrapping = TextWrapping.Wrap
+                });
+
+            _rankingLista.Children.Add(bloco);
+        }
+    }
 
     private Control CartaoDisco()
     {

@@ -4,9 +4,9 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.5 (aba Dispositivos — PCIe, USB e áudio —, cartão da placa-mãe, ícone na
-  bandeja, para além de STRESS, gráficos ao vivo, throttling, energia, histórico comparado, temas,
-  `--json`, alertas, notificações e 73 testes automáticos).
+- **Estado actual:** 0.20.7 (ranking local com mediana de 3 corridas, curva de latência de memória,
+  tarefa do mundo real e sessões gravadas em CSV, para além da aba Dispositivos, cartão da placa-mãe,
+  bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`, alertas e 99 testes).
 - **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
 - **Idioma:** interface, documentação e notas em pt-PT.
 
@@ -55,18 +55,19 @@ capturas reais em `docs/captura-dispositivos.png` e `docs/captura-placa.png`, e 
 
 ---
 
-## Fase 4 — 0.20.7 · Benchmarks com mais sinal
+## Fase 4 — 0.20.7 · Benchmarks com mais sinal (feito)
 
-| # | Item | Porquê | Aceitação | Esforço |
-|---|---|---|---|---|
-| 9 | Ranking local com mediana de 3 corridas e aviso de variância | Uma corrida isolada engana | 3 corridas, mediana, desvio; aviso quando a variância > 3 % | S |
-| 11 | Latência de memória por tamanho de bloco (curvas) | Mostra o efeito das caches | Série de 4 KB a 256 MB, ns por acesso, gráfico | M |
-| 12 | Carga "do mundo real" (descomprimir + compilar) | Aproxima o bench do uso diário | Tempo de uma tarefa fixa, repetível, sem rede | M |
-| 18 | Sessão de monitorização gravada em CSV com gráfico no fim | Ver o que aconteceu durante um jogo ou uma compilação | Botão gravar/parar; CSV com todas as amostras; gráfico no fim | M |
+| # | Item | Aceitação | Como foi verificado |
+|---|---|---|---|
+| 9 ✅ | Ranking local com mediana de 3 corridas e aviso de variância | 3 corridas, mediana, desvio; aviso quando a variância > 3 % | cartão *Ranking local* + `--cli ranking` com a mediana das últimas 3 e a variação de cada alvo; `--cli bench multi --repeticoes 3` corre três vezes e regista a mediana. O aviso só aparece a partir de 3 corridas, senão seria ruído |
+| 11 ✅ | Latência de memória por tamanho de bloco (curvas) | Série de 4 KB a 256 MB, ns por acesso, gráfico | 9 pontos em ~4 s: **L1 1,1 ns · L2 2,9 ns · L3 9,0–9,4 ns · RAM 77–79 ns** (256 MB 88–89 ns), monótona; gráfico com eixo X logarítmico e `--cli bench latmem` |
+| 12 ✅ | Carga "do mundo real" (descomprimir + compilar) | Tempo de uma tarefa fixa, repetível, sem rede | 48 MB descomprimidos (**1 432 MB/s** no Flatpak, 515 MB/s no anfitrião) com SHA-256 igual ao original; 1 500 funções C compiladas com `cc` em **3,69 s** (102 kB/s de fonte). Sem compilador, o cartão diz o motivo |
+| 9 ✅ | (verificação) mediana de 3 corridas | A mediana é o número que conta | `--cli bench multi --repeticoes 3`: 5 699 / 5 809 / 5 812 pts → **mediana 5 809, variação 1,9 %**; o alvo "compilar 1 500 funções" mostrou o aviso com 5,0 % de variação, como deve |
+| 18 ✅ | Sessão de monitorização gravada em CSV com gráfico no fim | Botão gravar/parar; CSV com todas as amostras; gráfico no fim | cartão *Sessão gravada* em Sensores e `--cli gravar 6`: 6 amostras, CSV com cabeçalho e célula vazia onde não houve leitura, resumo (média/min/max) e quatro gráficos da sessão inteira |
 
 ---
 
-## Fase 5 — 0.20.9 · Stress e discos
+## Fase 5 — 0.20.9 · Stress e discos (próxima)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
@@ -105,7 +106,7 @@ capturas reais em `docs/captura-dispositivos.png` e `docs/captura-placa.png`, e 
 1. `git log --oneline -5` e `git status -sb` — ver o que está commitado e por publicar.
 2. Ler a secção da fase actual neste documento e o CHANGELOG da última versão.
 3. `dotnet build -c Release` e `--cli info` devem dizer a versão do topo do CHANGELOG;
-   `dotnet test tests/LinuxExplode.Tests -c Release` tem de passar (73 testes na 0.20.5).
+   `dotnet test tests/LinuxExplode.Tests -c Release` tem de passar (99 testes na 0.20.7).
 4. Verificar o que está instalado: `flatpak info pt.linuxexplode.LinuxExplode` e
    `flatpak --user remote-info linuxexplode pt.linuxexplode.LinuxExplode`.
 5. Antes de publicar: `dotnet build`, `--cli bench`, `--cli stress … --json`, e o pop a abrir; depois

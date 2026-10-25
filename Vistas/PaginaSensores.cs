@@ -46,6 +46,13 @@ public sealed class PaginaSensores : UserControl
     private readonly TextBlock _energiaTexto = new() { Text = "—", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly StackPanel _alertasLista = new() { Spacing = 6 };
     private readonly TextBlock _alertasEstado = new() { Text = "sem alertas", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    // Sessão gravada (0.20.7)
+    private readonly GravadorSessao _gravador = new();
+    private readonly Button _botaoGravar = new();
+    private readonly TextBlock _sessaoEstado = new() { Text = "sem gravação", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly StackPanel _sessaoGraficos = new() { Spacing = 6 };
+    private readonly TextBlock _sessaoResumo = new() { Text = "", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private DateTime? _sessaoFimPedido;
     private readonly CheckBox _notificacoes = new() { Content = "Notificações do sistema" };
     private readonly NumericUpDown _limiteCpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
     private readonly NumericUpDown _limiteGpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
@@ -108,20 +115,35 @@ public sealed class PaginaSensores : UserControl
 
         _corpo.Children.Add(barra);
 
-        // gancho de teste/depuração: LINUXEXPLODE_SECAO=placa mostra só o cartão da placa-mãe
-        if ((Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "").ToLowerInvariant() != "placa")
+        // ganchos de teste/depuração: LINUXEXPLODE_SECAO=placa mostra só o cartão da placa-mãe,
+        // =sessao mostra só o cartão da sessão gravada (para os poder fotografar no topo da janela).
+        var secao = (Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "").ToLowerInvariant();
+        bool soPlaca = secao == "placa";
+        bool soSessao = secao == "sessao";
+
+        if (!soPlaca && !soSessao)
         {
             _corpo.Children.Add(CartaoAlertas());
             _corpo.Children.Add(CartaoAoVivo());
             _corpo.Children.Add(CartaoThrottle());
             _corpo.Children.Add(CartaoEnergia());
+            _corpo.Children.Add(CartaoSessao());
         }
-        _corpo.Children.Add(_lista);
+        else if (soSessao)
+        {
+            _corpo.Children.Add(CartaoSessao());
+        }
+
+        if (!soSessao) _corpo.Children.Add(_lista);
         Content = UI.Pagina(cabecalho, _corpo);
 
         _timer.Tick += async (_, _) => await Atualizar();
         Loaded += async (_, _) => { _timer.Start(); await Atualizar(); };
-        Unloaded += (_, _) => _timer.Stop();
+        Unloaded += (_, _) =>
+        {
+            _timer.Stop();
+            if (_gravador.A_Gravar) PararSessao();   // sair da página fecha o CSV em vez de o deixar a meio
+        };
     }
 
     private async Task Atualizar()
@@ -152,6 +174,7 @@ public sealed class PaginaSensores : UserControl
                 AtualizarCartaoPotencia(potenciaAgora);
 
             AtualizarAoVivo(todos, potenciaAgora, throttleAgora);
+            AmostrarSessao();
             AtualizarAlertas(todos);
             AtualizarCartaoPlaca(todos);
 
@@ -561,6 +584,121 @@ public sealed class PaginaSensores : UserControl
         pilha.Children.Add(conteudo);
         pilha.Children.Add(_placaNota);
         return pilha;
+    }
+
+    /// <summary>
+    /// Sessão de monitorização gravada (item 18): uma amostra por segundo para CSV e, no fim, o resumo e o
+    /// gráfico do que aconteceu. Serve para ver o que se passou durante um jogo ou uma compilação sem
+    /// estar a olhar para os números. As linhas são escritas à medida que são lidas, por isso fechar a
+    /// aplicação a meio não perde o que já foi medido.
+    /// </summary>
+    private Control CartaoSessao()
+    {
+        var conteudo = new StackPanel { Spacing = 12 };
+        conteudo.Children.Add(UI.Texto(
+            "Grava CPU, GPU, potência e frequência uma vez por segundo em " +
+            "~/.local/share/linux-explode/sessoes. No fim ficam aqui o resumo e o gráfico da sessão inteira.", "sub"));
+
+        _botaoGravar.Content = "Gravar sessão";
+        _botaoGravar.Classes.Add("primario");
+        _botaoGravar.Click += (_, _) =>
+        {
+            if (_gravador.A_Gravar) PararSessao();
+            else IniciarSessao();
+        };
+
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        botoes.Children.Add(_botaoGravar);
+        conteudo.Children.Add(botoes);
+        conteudo.Children.Add(_sessaoEstado);
+        conteudo.Children.Add(_sessaoGraficos);
+        conteudo.Children.Add(_sessaoResumo);
+
+        // gancho de verificação: LINUXEXPLODE_GRAVAR=<segundos> grava sozinho ao entrar na página
+        if (int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_GRAVAR"), out int segs) && segs > 0)
+            Loaded += (_, _) =>
+            {
+                IniciarSessao();
+                _sessaoFimPedido = DateTime.Now.AddSeconds(segs);
+            };
+
+        return UI.Cartao("Sessão gravada · monitorização em CSV", conteudo);
+    }
+
+    private void IniciarSessao()
+    {
+        string caminho = _gravador.Iniciar();
+        _sessaoGraficos.Children.Clear();
+        _sessaoResumo.Text = "";
+
+        _botaoGravar.Content = "Parar e ver";
+        _sessaoEstado.Text = _gravador.FalhouEscrita
+            ? $"a gravar mas o CSV não pôde ser escrito — amostras só em memória ({caminho})"
+            : $"a gravar · 0 amostras · {caminho}";
+    }
+
+    private void PararSessao()
+    {
+        var (amostras, resumo) = _gravador.Parar();
+        _botaoGravar.Content = "Gravar sessão";
+
+        _sessaoEstado.Text = $"{amostras.Count} amostras em {resumo.Duracao.TotalSeconds:0} s · {_gravador.Caminho}";
+        if (resumo.Amostras == 0)
+        {
+            _sessaoResumo.Text = "nada gravado";
+            return;
+        }
+
+        // Uma sparkline por série, alimentada com a sessão inteira (o controlo guarda as últimas N).
+        _sessaoGraficos.Children.Clear();
+        AdicionarSerie("CPU", amostras.Select(a => a.CpuC), "°C", "Bom", 90, resumo.Cpu);
+        AdicionarSerie("GPU", amostras.Select(a => a.GpuC), "°C", "Bom", 90, resumo.Gpu);
+        AdicionarSerie("potência", amostras.Select(a => a.Watts), "W", "Fg", 0, resumo.Watts);
+        AdicionarSerie("frequência", amostras.Select(a => a.FreqMhz), "MHz", "Atencao", 0, resumo.Freq);
+
+        _sessaoResumo.Text = $"CPU {TextoResumo(resumo.Cpu, "°C")} · GPU {TextoResumo(resumo.Gpu, "°C")}\n" +
+                             $"potência {TextoResumo(resumo.Watts, "W")} · frequência {TextoResumo(resumo.Freq, "MHz")}";
+
+        static string TextoResumo((double? Min, double? Max, double? Media) t, string unidade) =>
+            t.Media is double m ? $"{m:0.0} {unidade} (min {t.Min:0.0}, max {t.Max:0.0})" : "sem leitura";
+    }
+
+    private void AdicionarSerie(string nome, IEnumerable<double?> valores, string unidade, string cor,
+        double limite, (double? Min, double? Max, double? Media) resumo)
+    {
+        var serie = valores.Where(v => v is not null).Select(v => v!.Value).ToList();
+        if (serie.Count < 2) return;
+
+        var cabecalho = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        cabecalho.Children.Add(UI.Texto(nome, "rotulo"));
+        cabecalho.Children.Add(UI.Texto($"{resumo.Media:0.0} {unidade}", "mono"));
+        _sessaoGraficos.Children.Add(cabecalho);
+
+        // capacidade = amostras (até 600): uma sessão de 10 s ocupa a largura toda em vez de ficar
+        // espremida no primeiro sexto do gráfico. Acima de 600 mostra-se o fim da sessão.
+        var grafico = new Sparkline(Math.Clamp(serie.Count, 2, 600)) { Cor = cor, Limite = limite };
+        foreach (double v in serie) grafico.Adicionar(v);
+        _sessaoGraficos.Children.Add(grafico);
+    }
+
+    /// <summary>Chamado no ciclo de 1 s: guarda a amostra se houver gravação em curso (ou se o gancho já pediu o fim).</summary>
+    private void AmostrarSessao()
+    {
+        if (!_gravador.A_Gravar) return;
+
+        _gravador.Amostrar();
+
+        if (_sessaoFimPedido is DateTime fim && DateTime.Now >= fim)
+        {
+            PararSessao();
+            _sessaoFimPedido = null;
+            return;
+        }
+
+        if (!_gravador.FalhouEscrita)
+            _sessaoEstado.Text = $"a gravar · {_gravador.Amostras} amostras · {_gravador.Caminho}";
+        else
+            _sessaoEstado.Text = $"a gravar (falha ao escrever o CSV) · {_gravador.Amostras} amostras em memória";
     }
 
     private Control CartaoAlertas()
