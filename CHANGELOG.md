@@ -29,6 +29,14 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
   `~/.local/share/linux-explode/sessoes/sessao-AAAAMMDD-HHMMSS.csv`, com escrita incremental, e no fim
   mostra o resumo (média, mínimo e máximo) e o gráfico da sessão inteira. `--cli gravar [segundos]`.
 
+### Corrigido
+
+- `--cli gravar 3 --json` gravava os 10 s por omissão: o envelope JSON muda o índice dos argumentos e
+  o varrimento começava depois do número de segundos.
+- `--cli usb` devolvia código 1 quando não havia dispositivos legíveis (num contentor ou runner não há
+  `/sys/bus/usb` enumerável). Passou a devolver 0 — "sem dispositivos" é uma resposta, não uma falha —
+  e o smoke test do CI deixa de usar `| head` directo, que com `pipefail` matava o processo por SIGPIPE.
+
 ### Nota
 
 - O CSV usa `;` e ponto decimal (`InvariantCulture`): é um ficheiro de dados, não a interface. Uma

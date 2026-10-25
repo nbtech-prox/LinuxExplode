@@ -486,7 +486,8 @@ Cada dispositivo em `/sys/bus/usb/devices/*/idVendor` aparece com fabricante, pr
 **velocidade negociada** (1,5 Mbps, 12, 480, 5 Gbps, 10 Gbps, 20 Gbps), classes das interfaces
 (`áudio`, `vídeo`, `HID`, `hub`, `sem fios`…), driver (`snd-usb-audio`, `uvcvideo`, `usbhid`, `btusb`)
 e a potência que pede (`bMaxPower`). A velocidade é a que o kernel reporta em `speed` — **não é um
-teste de débito** e está dito no cartão.
+teste de débito** e está dito no cartão. Sem nada legível (`/sys` não enumerável, contentor), o
+comando imprime "sem dispositivos USB legíveis" e sai com 0: é uma resposta, não uma falha.
 
 Dispositivos sem descritores de texto (acontece em dongles baratos) não ficam "Desconhecido": o nome é
 deduzido do driver — `btusb` → *Adaptador Bluetooth*, `usbhid` → *Dispositivo HID*.
