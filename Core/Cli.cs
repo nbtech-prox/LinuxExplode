@@ -45,8 +45,14 @@ public static class Cli
                 return Stress(args);
             case "alertas":
                 return AlertasCli();
+            case "placa":
+                return PlacaCli();
+            case "usb":
+                return UsbCli();
+            case "audio" or "áudio":
+                return AudioCli();
             default:
-                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|stress|relatorio] [html|json]\n" +
+                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|stress|relatorio] [html|json]\n" +
                               "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]] [ram] [disco]\n" +
                               "     LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]");
                 return 2;
@@ -244,6 +250,116 @@ public static class Cli
         return 0;
     }
 
+    /// <summary><c>--cli placa</c>: links PCI Express e temperaturas de chipset/memória/rede/Wi-Fi.</summary>
+    private static int PlacaCli()
+    {
+        var links = Placa.Links();
+        var finais = links.Where(l => !l.Ponte).ToList();
+        var pontes = links.Where(l => l.Ponte).ToList();
+        var reduzidos = finais.Where(l => l.Reduzido).ToList();
+
+        Console.WriteLine($"dispositivos PCI Express: {finais.Count} finais e {pontes.Count} pontes" +
+                          (reduzidos.Count > 0
+                              ? $"  — {reduzidos.Count} a correr abaixo do máximo anunciado"
+                              : "  — todos os dispositivos finais negociaram o máximo que anunciam"));
+
+        foreach (var l in finais)
+        {
+            var banda = l.BandaTeoricaGbS is double g ? $"  ≈ {Placa.Numero(g)} GB/s úteis (teórico)" : "";
+            Console.WriteLine($"  {l.Endereco,-10} {l.TextoLink,-14} {l.Classe,-22} {l.Nome}{banda}");
+            if (l.Reduzido)
+                Console.WriteLine($"      anuncia {l.TextoMaximo} — o link em uso é mais estreito/lento" +
+                                  " (slot, riser, ou poupança de energia do driver)");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("pontes (o valor é o link que estão a servir):");
+        foreach (var p in pontes)
+            Console.WriteLine($"  {p.Endereco,-10} {p.TextoLink,-14} {p.Nome}");
+
+        var temps = Placa.Temperaturas();
+        Console.WriteLine();
+        if (temps.Count == 0)
+        {
+            Console.WriteLine("temperaturas da placa: nenhum sensor fora da CPU e da GPU");
+        }
+        else
+        {
+            Console.WriteLine("temperaturas da placa (fora da CPU e da GPU):");
+            foreach (var t in temps)
+                Console.WriteLine($"  {t.Fonte,-10} {t.Chip,-28} {t.Nome,-22} {t.Texto}");
+        }
+
+        var faltas = Placa.SemSensor(temps);
+        if (faltas.Count > 0)
+            Console.WriteLine($"sem sensor nesta máquina: {string.Join(", ", faltas)} — a aplicação não inventa valores");
+        return 0;
+    }
+
+    /// <summary><c>--cli usb</c>: dispositivos ligados, velocidade negociada e drivers.</summary>
+    private static int UsbCli()
+    {
+        var todos = Usb.Listar();
+        if (todos.Count == 0)
+        {
+            Console.WriteLine("sem dispositivos USB legíveis em /sys/bus/usb/devices");
+            return 1;
+        }
+
+        var dispositivos = todos.Where(d => !d.Hub).ToList();
+        var hubs = todos.Where(d => d.Hub || d.Id.StartsWith("usb", StringComparison.Ordinal)).ToList();
+
+        Console.WriteLine($"USB: {dispositivos.Count} dispositivo(s) e {hubs.Count} concentrador(es)/controlador(es)");
+        foreach (var d in dispositivos)
+            Console.WriteLine("  " + Usb.Linha(d));
+        if (hubs.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("concentradores e controladores:");
+            foreach (var h in hubs)
+                Console.WriteLine("  " + Usb.Linha(h));
+        }
+        return 0;
+    }
+
+    /// <summary><c>--cli audio</c>: placas ALSA, fluxos e xruns do PipeWire.</summary>
+    private static int AudioCli()
+    {
+        var a = Core.Audio.Ler();
+        Console.WriteLine(Core.Audio.Resumo(a));
+
+        if (a.Placas.Count == 0)
+        {
+            Console.WriteLine("nenhuma placa de som em /proc/asound/cards");
+        }
+        else
+        {
+            Console.WriteLine();
+            foreach (var p in a.Placas)
+                Console.WriteLine($"  card{p.Indice}  {p.Id,-14} {p.Nome}  [{p.Driver}]" +
+                                  (p.Barramento is { Length: > 0 } b ? $"  {b}" : ""));
+        }
+
+        var activos = a.Activos;
+        Console.WriteLine();
+        if (activos.Count == 0)
+            Console.WriteLine("fluxos PCM: nenhum aberto agora (tudo \"closed\" em /proc/asound)");
+        else
+            foreach (var f in activos) Console.WriteLine("  " + f.Texto);
+
+        if (a.Nos.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"PipeWire: {a.Nos.Count} nó(s) · {a.Xruns} xrun(s) acumulado(s) no servidor" +
+                              (a.LatenciaPadraoMs is double l ? $" · quantum {l:0.00} ms" : ""));
+            foreach (var n in a.Nos.Where(n => n.Xruns > 0).Take(8))
+                Console.WriteLine($"  {n.Xruns,6} xrun(s)  {n.Nome}  ({n.Quantum} frames @ {n.Taxa} Hz)");
+        }
+
+        if (a.Aviso is not null) Console.WriteLine("nota: " + a.Aviso);
+        return 0;
+    }
+
     private static int Stress(string[] args)
     {
         string alvoTexto = args.Length > 2 ? args[2].ToLowerInvariant() : "cpu";
@@ -420,9 +536,28 @@ public static class Cli
                 case "alertas":
                     return EmitirJson("alertas", Alertas.Avaliar());
 
+                case "placa":
+                    {
+                        var links = Placa.Links();
+                        var temps = Placa.Temperaturas();
+                        return EmitirJson("placa", new
+                        {
+                            pci = links,
+                            reduzidos = links.Count(l => l.Reduzido),
+                            temperaturas = temps,
+                            sem_sensor = Placa.SemSensor(temps)
+                        });
+                    }
+
+                case "usb":
+                    return EmitirJson("usb", Usb.Listar());
+
+                case "audio" or "áudio":
+                    return EmitirJson("audio", Core.Audio.Ler());
+
                 default:
                     Console.Error.WriteLine(
-                        "uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|bench|stress|relatorio] --json");
+                        "uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|stress|relatorio] --json");
                     return 2;
             }
         }

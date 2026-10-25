@@ -3,6 +3,46 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.5] — 2026-10-25
+
+### Adicionado
+
+- **Aba Dispositivos** (`Ctrl+7`; o Relatório passou para `Ctrl+8`), com três secções lidas do kernel:
+  - **PCI Express** — velocidade e largura negociadas agora (`current_link_speed`/`current_link_width`)
+    contra o máximo que o próprio dispositivo anuncia, geração (2,5 GT/s = 1.0 … 64 GT/s = 6.0) e
+    débito útil teórico com a codificação certa (8b/10b até à geração 2, 128b/130b da 3 em diante).
+    Só os dispositivos finais são avaliados: numa ponte o valor actual é o link que ela serve, e é
+    normal não coincidir com o máximo — as pontes ficam escondidas atrás de uma opção.
+  - **USB** — dispositivos com fabricante, produto, ID, versão, velocidade negociada (1,5 Mbps a
+    20 Gbps), classes de interface, driver, potência pedida e porta. Sem descritores de texto, o nome
+    é deduzido do driver (`btusb` → adaptador Bluetooth) em vez de ficar "Desconhecido".
+  - **Áudio** — placas de som de `/proc/asound/cards`, fluxos PCM com estado, taxa, canais, formato,
+    período e buffer (em ms), e os **xruns** da coluna `ERR` do `pw-top`, mais o quantum do servidor
+    (`pw-metadata`) em milissegundos.
+- **Cartão "Placa-mãe, chipset e memória"** na aba Sensores: temperatura do chipset, dos módulos de
+  memória (SPD5118), do NVMe, da NIC e do Wi-Fi, com a origem identificada. O que não tem sensor
+  (VRM/fases de alimentação) é dito por extenso em vez de aparecer a zero.
+- **Ícone na bandeja** (`StatusNotifierItem`): tooltip com CPU, GPU e potência medidos, menu com
+  *Abrir janela*, *Sensores*, *Dispositivos*, *Parar todo o stress*, *Fechar para a bandeja* e *Sair*.
+  Fechar a janela passa a esconder para a bandeja; `Ctrl+Q` e *Sair* fecham de vez. Sem bandeja no
+  ambiente, a aplicação arranca exactamente como antes.
+- `--cli placa`, `--cli usb` e `--cli audio`, todos com `--json`.
+- **2 capturas reais** novas em `docs/` (Dispositivos e placa-mãe) referenciadas no metainfo.
+
+### Corrigido
+
+- As temperaturas do chipset apareciam como se fossem da CPU: a lista de hwmon é a mesma, mas agora
+  cada chip é atribuído à fonte certa (`prom21` → chipset, `spd5118` → memória, `r8169` → rede,
+  `ath12k` → Wi-Fi) e a CPU/GPU ficam de fora do cartão da placa.
+- `current_link_speed` é texto (`"16.0 GT/s PCIe"`), não um número: a leitura passou a extrair a taxa
+  antes do `GT/s`, senão o cartão dizia "0 links".
+
+### Nota
+
+Os xruns são o contador acumulado do servidor PipeWire desde que cada nó arrancou — reiniciar o
+PipeWire ou a aplicação cliente volta a zero. Numa ponte PCIe o "actual" não é comparável com o
+máximo; por isso não é classificado como redução.
+
 ## [0.20.3] — 2026-10-25
 
 ### Adicionado

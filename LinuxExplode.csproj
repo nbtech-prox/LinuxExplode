@@ -9,7 +9,7 @@
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>LinuxExplode</AssemblyName>
     <Product>LINUX EXPLODE</Product>
-    <Version>0.20.3</Version>
+    <Version>0.20.5</Version>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- O EXPLODE BENCH mede desempenho real: JIT otimizado mesmo em Debug -->

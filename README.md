@@ -49,6 +49,7 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 
 | **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. | `/sys/block`, `/proc/mounts`, `smartctl` |
 | **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT` |
+| **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
 | **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload | sockets + Cloudflare |
 | **Relatório** | exporta tudo em HTML (com a marca EXPLODE) ou JSON | — |
 
@@ -240,6 +241,9 @@ LinuxExplode --cli sensores                # todos os sensores hwmon
 LinuxExplode --cli potencia                # consumo do PC: CPU (RAPL) + GPUs, total estimado
 LinuxExplode --cli fps [ficheiro]          # sessão do MangoHud: FPS médio, 1% e 0,1% low
 LinuxExplode --cli discos                  # discos, partições e SMART
+LinuxExplode --cli placa                   # links PCIe + temperaturas de chipset/memória/rede
+LinuxExplode --cli usb                     # dispositivos USB, velocidade negociada e drivers
+LinuxExplode --cli audio                   # placas de som, fluxos PCM e xruns do PipeWire
 LinuxExplode --cli rede                    # teste de rede (~15 s)
 LinuxExplode --cli bench multi ram disco   # benchmark de CPU + RAM + disco
 LinuxExplode --cli bench single            # uma thread
@@ -257,6 +261,9 @@ Todos os comandos aceitam **`--json`** (ou `-j`), que devolve um envelope com `a
 LinuxExplode --cli potencia --json | jq .dados.TotalW
 LinuxExplode --cli bench multi --json | jq .dados.resultado.Score
 LinuxExplode --cli sensores --json | jq '[.dados[] | select(.Tipo=="Temperatura")] | length'
+LinuxExplode --cli placa --json | jq '.dados.reduzidos'          # links abaixo do máximo anunciado
+LinuxExplode --cli usb --json | jq '[.dados[] | select(.TemAudio)]'
+LinuxExplode --cli audio --json | jq '.dados.Xruns'
 LinuxExplode --cli stress cpu 60 --json > ~/stress.json
 LinuxExplode --cli relatorio --json       # o relatório completo, em JSON
 ```
@@ -359,6 +366,98 @@ Ganchos de teste (abrem o pop directamente, sem clicar):
 LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=gpu LINUXEXPLODE_RESOLUCAO=3840x2160 ./LinuxExplode
 LINUXEXPLODE_PAGINA=bench LINUXEXPLODE_PREVIA=cpu LINUXEXPLODE_THREADS=1 ./LinuxExplode
 ```
+
+## Dispositivos — PCI Express, USB e áudio
+
+A aba **Dispositivos** (`Ctrl+7`) responde a três perguntas que antes só se respondiam com `lspci`,
+`lsusb` e uma ida ao terminal: *o link desta placa está a correr no máximo?*, *a que velocidade é que
+este periférico negociou?* e *o áudio está a falhar em algum lado?* Tudo lido do kernel, sem root e
+sem ferramentas externas — o que importa porque dentro do Flatpak não há `lspci` nem `lsusb`.
+
+### PCI Express
+
+Para cada dispositivo em `/sys/bus/pci/devices` a aplicação lê `current_link_speed`,
+`current_link_width`, `max_link_speed` e `max_link_width` (o `LnkSta`/`LnkCap` do kernel):
+
+| Coluna | De onde vem | Nota |
+|---|---|---|
+| Endereço | nome do directório (`0000:03:00.0` → `03:00.0`) | — |
+| Link em uso | `current_link_speed` + `current_link_width` | `16.0 GT/s` = PCIe 4.0; `x16` = 16 lanes |
+| Classe | `class` (0x03…, 0x01…, 0x0c…) | traduzida em pt-PT |
+| Nome | `vendor`+`device` no `pci.ids` | prefixo do fabricante encurtado (`AMD/ATI`, `Phison`) |
+| Débito útil | GT/s × lanes × codificação ÷ 8 | 8b/10b nas gerações 1–2, 128b/130b da 3 em diante |
+
+Nesta máquina: GPU `03:00.0` a **PCIe 4.0 x16 ≈ 31,5 GB/s**, NVMe `04:00.0` a **PCIe 3.0 x4 ≈ 3,9 GB/s**,
+NIC a **3.0 x1**, Wi-Fi a **3.0 x2**. Nenhum dispositivo final abaixo do máximo que anuncia.
+
+Duas decisões que evitam mentira:
+
+- **Pontes não são avaliadas.** Numa ponte (`class` 0x0604) o "actual" é o link que ela está a servir,
+  não uma capacidade: compará-lo com o máximo dava 12 "reduções" falsas nesta placa. Ficam escondidas
+  atrás da opção *Mostrar as pontes*.
+- **O máximo é o do dispositivo**, não o do slot (é o que o kernel expõe). Quando um dispositivo final
+  negocia menos do que anuncia, a linha é assinalada com o valor que ele suportava — a causa habitual
+  é o slot/riser ou a poupança de energia do driver, e é isso que o texto diz.
+
+### USB
+
+Cada dispositivo em `/sys/bus/usb/devices/*/idVendor` aparece com fabricante, produto, ID, versão,
+**velocidade negociada** (1,5 Mbps, 12, 480, 5 Gbps, 10 Gbps, 20 Gbps), classes das interfaces
+(`áudio`, `vídeo`, `HID`, `hub`, `sem fios`…), driver (`snd-usb-audio`, `uvcvideo`, `usbhid`, `btusb`)
+e a potência que pede (`bMaxPower`). A velocidade é a que o kernel reporta em `speed` — **não é um
+teste de débito** e está dito no cartão.
+
+Dispositivos sem descritores de texto (acontece em dongles baratos) não ficam "Desconhecido": o nome é
+deduzido do driver — `btusb` → *Adaptador Bluetooth*, `usbhid` → *Dispositivo HID*.
+
+### Áudio
+
+- **Placas** de `/proc/asound/cards` (índice, id, nome, driver e o barramento PCI/USB).
+- **Fluxos PCM** de `/proc/asound/card*/pcm*/sub*/status` + `hw_params`: estado (`running`/`closed`),
+  taxa, canais, formato, **período** e **buffer** convertidos em milissegundos. Com um PCM aberto, o
+  cartão mostra por exemplo `Portal · pcm0p (USB Audio) — reprodução, 48000 Hz, 2 canais, S16_LE ·
+  período 2,67 ms · buffer 170,7 ms`.
+- **Xruns** da coluna `ERR` do `pw-top`, por nó do PipeWire. É um contador do servidor: acumula desde
+  que o nó arrancou e volta a zero quando o PipeWire (ou o cliente) reinicia.
+- **Quantum** do servidor via `pw-metadata -n settings` (1024 frames a 48 kHz = **21,3 ms** nesta
+  máquina) quando não há nó activo para o `pw-top` mostrar.
+
+Se o PipeWire não responder, o cartão diz "xruns não medidos" em vez de mostrar 0 — a diferença entre
+"não há xruns" e "não consegui perguntar" é a diferença entre informação e ruído.
+
+### Linha de comandos
+
+```bash
+LinuxExplode --cli placa      # link de cada dispositivo + temperaturas da placa
+LinuxExplode --cli usb        # dispositivos e concentradores, com a velocidade negociada
+LinuxExplode --cli audio      # placas, fluxos e xruns (corre o pw-top: ~2 s)
+LinuxExplode --cli placa --json | jq '.dados.reduzidos'
+```
+
+## Ícone na bandeja
+
+Com `StatusNotifierItem`/AppIndicator disponível (KDE, niri+noctalia, GNOME com a extensão), a
+aplicação mostra um ícone com as temperaturas da CPU e da GPU e a potência medida no tooltip, e um
+menu com **Abrir janela**, **Sensores**, **Dispositivos**, **Parar todo o stress**, **Fechar para a
+bandeja** e **Sair**.
+
+- Fechar a janela esconde para a bandeja (é o comportamento normal de um monitor); `Ctrl+Q` e *Sair*
+  fecham de vez. A opção *Fechar para a bandeja* guarda a escolha em `~/.config/linux-explode/config.json`.
+- **Parar todo o stress** usa o registo de sessões abertas (`SessaoStress.PararTodas()`): pára todas as
+  sessões em curso, mesmo as que ficaram por trás de outra aba. Só está activo quando há alguma a correr.
+- Sem bandeja no ambiente, a aplicação arranca como antes: o ícone é criado dentro de `try/catch` e a
+  falha não impede a janela de abrir. `LINUXEXPLODE_SEM_BANDEJA=1` força o arranque sem ícone.
+- **Dentro do Flatpak** o ícone precisa de três `finish-args` (já no manifest): falar com o
+  `org.kde.StatusNotifierWatcher` e poder possuir o nome do item. O sandbox põe a aplicação no pid 2,
+  por isso o nome é sempre `org.kde.StatusNotifierItem-2-0` — e é esse (mais `-2-1`) que está
+  autorizado; `--own-name` não aceita wildcards. Verificado dentro do sandbox: o item aparece em
+  `RegisteredStatusNotifierItems` e o tooltip lido por DBus traz valores medidos.
+
+Verificação feita nesta máquina: `org.kde.StatusNotifierItem-<pid>-0` registado no
+`org.kde.StatusNotifierWatcher`, tooltip lido por DBus `LINUX EXPLODE · CPU 43 °C · GPU 38 °C · 24 W`
+e menu exposto em `com.canonical.dbusmenu` com os itens acima. Fechar a janela foi testado por
+programa (`LINUXEXPLODE_TESTE_BANDEJA=1`): depois do `Close()` a janela fica invisível e o processo
+continua vivo; `MostrarEm()` volta a mostrá-la; `Sair()` termina o processo.
 
 ## FPS por aplicação — cartão do MangoHud
 
@@ -524,9 +623,13 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit) cobre as regras que a aplicação promete: histórico sem repetições,
-mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um reinício, medição
-de energia, alertas e as cargas de CPU do stress. Os testes correm no CI a cada push:
+`tests/LinuxExplode.Tests` (xUnit, **73 testes**) cobre as regras que a aplicação promete: histórico
+sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
+reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
+dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
+finais vs pontes, códigos de classe PCI, nomes de fabricante, velocidades e classes USB, bytes por
+amostra de cada formato ALSA, latência de período/buffer, o parser do `pw-top` e a leitura de
+`/proc/asound` a partir de uma árvore temporária. Os testes correm no CI a cada push:
 
 ```bash
 dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
@@ -648,6 +751,10 @@ LinuxExplode/
 │   ├── Sensores.cs       # hwmon
 │   ├── Potencia.cs       # potência da CPU (contadores RAPL) + power1_* das GPUs
 │   ├── Discos.cs         # /sys/block + smartctl
+│   ├── Placa.cs          # links PCIe (/sys/bus/pci) e temperaturas de chipset/memória/rede
+│   ├── Usb.cs            # dispositivos USB: velocidade negociada, classes, drivers
+│   ├── Audio.cs          # /proc/asound + xruns (pw-top) e quantum (pw-metadata)
+│   ├── Alertas.cs        # regras de aviso (temperatura, ventoinhas, espaço)
 │   ├── BenchCpu.cs       # path tracer (portado do original, inalterado)
 │   ├── BenchDisco.cs     # RAM + disco com O_DIRECT
 │   ├── Rede.cs           # latência, DNS, velocidade
@@ -657,9 +764,12 @@ LinuxExplode/
 ├── Vistas/               # UI Avalonia
 │   ├── MainWindow.axaml  # barra lateral + área de conteúdo
 │   ├── Pagina*.cs        # uma classe por página
+│   ├── Bandeja.cs        # ícone na bandeja (StatusNotifierItem) e menu
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
+├── tests/                # xUnit (73 testes, correm no CI)
+├── docs/                 # capturas reais usadas no metainfo
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
 ```
@@ -684,6 +794,18 @@ LinuxExplode/
 - **Potência total da máquina** não existe por software: o RAPL só cobre o socket da CPU e
   nenhuma fonte ATX publica watts. O total do cartão é `pacote da CPU + GPUs dedicadas`; o
   RAPL exige ainda `sudo ./permitir-energia.sh` uma vez (o kernel expõe `energy_uj` como 0400).
+- **VRM / fases de alimentação** não têm sensor nesta placa: o `nct6687` expõe termistores sem
+  etiqueta (`Thermistor 0/1/15`) e chamar-lhes VRM seria adivinhar. O cartão da placa-mãe diz
+  "sem sensor nesta máquina" em vez de mostrar um número inventado.
+- **Link PCIe reduzido** só é assinalado em dispositivos finais, e o máximo é o que o próprio
+  dispositivo anuncia — não o do slot. Uma ponte não é classificada: o valor actual é o link que
+  ela serve. Se um controlador aparece a Gen1 x1 é porque o kernel reporta isso em `LnkSta`
+  (acontece nas funções internas do chipset desta placa).
+- **Xruns de áudio** são o contador do servidor PipeWire (coluna `ERR` do `pw-top`), acumulado
+  desde que o nó arrancou — e não existem se o servidor não responder. Sem `pw-top` acessível
+  (sandbox sem socket do PipeWire e sem `flatpak-spawn`), o cartão diz "xruns não medidos".
+- **Ícone na bandeja** precisa de `StatusNotifierItem`/AppIndicator no ambiente (KDE, niri+noctalia,
+  GNOME com extensão). Sem isso a aplicação arranca normalmente, só não há ícone.
 
 ## Licença
 

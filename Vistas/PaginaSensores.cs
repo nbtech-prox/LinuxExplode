@@ -21,6 +21,12 @@ public sealed class PaginaSensores : UserControl
     private Border? _cartaoPotencia;
     private TextBlock? _potNota;
     private TipoSensor? _filtro;
+    // ---- placa-mãe (chipset, memória, rede, Wi-Fi) ----
+    private readonly StackPanel _placaLista = new() { Spacing = 0 };
+    private readonly TextBlock _placaNota = new() { Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private string _placaChave = "";
+    private Border? _cartaoPlaca;
+
     private bool _aCarregar;
 
     // ---- ao vivo, throttling e energia ----
@@ -101,10 +107,15 @@ public sealed class PaginaSensores : UserControl
         barra.Children.Add(online);
 
         _corpo.Children.Add(barra);
-        _corpo.Children.Add(CartaoAlertas());
-        _corpo.Children.Add(CartaoAoVivo());
-        _corpo.Children.Add(CartaoThrottle());
-        _corpo.Children.Add(CartaoEnergia());
+
+        // gancho de teste/depuração: LINUXEXPLODE_SECAO=placa mostra só o cartão da placa-mãe
+        if ((Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "").ToLowerInvariant() != "placa")
+        {
+            _corpo.Children.Add(CartaoAlertas());
+            _corpo.Children.Add(CartaoAoVivo());
+            _corpo.Children.Add(CartaoThrottle());
+            _corpo.Children.Add(CartaoEnergia());
+        }
         _corpo.Children.Add(_lista);
         Content = UI.Pagina(cabecalho, _corpo);
 
@@ -142,8 +153,10 @@ public sealed class PaginaSensores : UserControl
 
             AtualizarAoVivo(todos, potenciaAgora, throttleAgora);
             AtualizarAlertas(todos);
+            AtualizarCartaoPlaca(todos);
 
-            Ordenar(verCpu ? _cartaoCpu : null, verPot ? _cartaoPotencia : null);
+            bool verPlaca = _filtro is null or TipoSensor.Temperatura;
+            Ordenar(verCpu ? _cartaoCpu : null, verPot ? _cartaoPotencia : null, verPlaca ? _cartaoPlaca : null);
 
             if (lista.Count == 0)
             {
@@ -484,6 +497,71 @@ public sealed class PaginaSensores : UserControl
     }
 
     // ------------------------------------------------------------------ alertas
+
+    /// <summary>
+    /// Cartão da placa-mãe: temperatura do chipset, dos módulos de memória, do NVMe, da NIC e do
+    /// Wi-Fi — os sensores hwmon que não são CPU nem GPU, com a origem identificada. O que não tem
+    /// sensor (VRM) é dito, não estimado.
+    /// </summary>
+    private void AtualizarCartaoPlaca(List<Sensor> sensores)
+    {
+        var temps = Placa.Temperaturas(sensores);
+        var faltas = Placa.SemSensor(temps);
+
+        string chave = string.Join("|", temps.Select(t => t.Chip + t.Nome + t.Texto)) + "#" + string.Join(",", faltas);
+        if (chave == _placaChave) return;
+        _placaChave = chave;
+
+        if (temps.Count == 0)
+        {
+            _placaLista.Children.Clear();
+            _placaLista.Children.Add(UI.Texto("Nenhum sensor de temperatura fora da CPU e da GPU nesta máquina.", "sub"));
+            _cartaoPlaca ??= UI.Cartao("Placa-mãe, chipset e memória", Envolver(_placaLista));
+            return;
+        }
+
+        _placaLista.Children.Clear();
+        foreach (var t in temps)
+        {
+            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("110,*,Auto") };
+
+            var fonte = UI.Texto(t.Fonte, "rotulo");
+            fonte.VerticalAlignment = VerticalAlignment.Center;
+
+            var nome = UI.Texto($"{t.Chip} · {t.Nome}", "chave");
+            nome.TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis;
+            nome.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(nome, 1);
+
+            var valor = UI.Texto(t.Texto, "valor");
+            valor.HorizontalAlignment = HorizontalAlignment.Right;
+            valor.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(valor, 2);
+
+            g.Children.Add(fonte);
+            g.Children.Add(nome);
+            g.Children.Add(valor);
+
+            var linha = new Border { Child = g };
+            linha.Classes.Add("linha");
+            _placaLista.Children.Add(linha);
+        }
+
+        _placaNota.Text = faltas.Count > 0
+            ? $"sem sensor nesta máquina: {string.Join(", ", faltas)} — a aplicação não inventa valores."
+            : "sensores lidos de /sys/class/hwmon; uma leitura ausente fica em branco em vez de zero.";
+
+        if (_cartaoPlaca is null)
+            _cartaoPlaca = UI.Cartao("Placa-mãe, chipset e memória", Envolver(_placaLista));
+    }
+
+    private Control Envolver(Control conteudo)
+    {
+        var pilha = new StackPanel { Spacing = 8 };
+        pilha.Children.Add(conteudo);
+        pilha.Children.Add(_placaNota);
+        return pilha;
+    }
 
     private Control CartaoAlertas()
     {

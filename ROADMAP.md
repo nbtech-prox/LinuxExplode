@@ -4,8 +4,9 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.3 (aba STRESS, gráficos ao vivo, throttling, energia, histórico comparado,
-  temas, `--json`, alertas, notificações e testes automáticos).
+- **Estado actual:** 0.20.5 (aba Dispositivos — PCIe, USB e áudio —, cartão da placa-mãe, ícone na
+  bandeja, para além de STRESS, gráficos ao vivo, throttling, energia, histórico comparado, temas,
+  `--json`, alertas, notificações e 73 testes automáticos).
 - **Regra de ouro:** nenhum valor apresentado é estimado. Se um sensor não existe, o cartão diz isso.
 - **Idioma:** interface, documentação e notas em pt-PT.
 
@@ -20,7 +21,7 @@ instaladores, repositório Flatpak actualizado e CI verde.
 | 5 | Energia da sessão e custo estimado (€/dia, €/mês) com tarifa editável | Sensores → cartão *Energia e custo* |
 | 8 | Histórico comparado por benchmark (melhor, mediana, variação) | Explode Bench, todos os cartões |
 | 13 | Exportar CSV/JSON e importar resultados de outra máquina | Bench → cartão *Histórico de resultados* |
-| 22 | Tema claro/escuro, escala da interface e atalhos | Barra lateral + `Ctrl+1…7`, `Ctrl+±`, `Ctrl+0`, `Ctrl+Q` |
+| 22 | Tema claro/escuro, escala da interface e atalhos | Barra lateral + `Ctrl+1…8`, `Ctrl+±`, `Ctrl+0`, `Ctrl+Q` |
 | 23 | `--json` em todos os comandos da linha de comandos | `--cli … --json` |
 
 **Critério de conclusão:** cada item verificado com valores reais nesta máquina e registado no
@@ -41,13 +42,16 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 ---
 
-## Fase 3 — 0.20.5 · Monitorização profunda
+## Fase 3 — 0.20.5 · Monitorização profunda (feito)
 
-| # | Item | Porquê | Aceitação | Esforço |
-|---|---|---|---|---|
-| 4 | Temperatura de chipset/VRM e velocidade do link PCIe | Fecha o retrato térmico da placa | Leitura de hwmon + `lspci -vv` para link actual/máximo | S |
-| 6 | Dispositivos USB e áudio (latência, xruns) | Diagnóstico de periféricos e de áudio em tempo real | Lista USB com velocidade; xruns de `/proc/asound/*` | M |
-| 21 | Ícone na bandeja com temperaturas e "parar tudo" | Monitorização sem janela aberta | TrayIcon do Avalonia; menu com as temperaturas e paragem do stress | M |
+| # | Item | Aceitação | Como foi verificado nesta máquina |
+|---|---|---|---|
+| 4 ✅ | Temperatura de chipset/VRM e link PCIe | hwmon classificado + link actual/máximo | chipset `prom21_xhci` 52,8 e 60,1 °C; RAM SPD5118 33,3/33,8 °C; NIC 38,5 °C; GPU 03:00.0 a PCIe 4.0 x16 ≈ 31,5 GB/s úteis; **VRM não tem sensor** e o cartão di-lo (não se usa `lspci`: os mesmos dados estão em `/sys`, e o sandbox não tem pciutils) |
+| 6 ✅ | USB e áudio (latência, xruns) | Lista USB com velocidade; xruns medidos | 7 dispositivos (1,5 Mbps → 480 Mbps) e 12 concentradores/controladores; com um PCM aberto: `Portal · pcm0p — running, 48000 Hz, 2 canais, S16_LE, período 2,7 ms, buffer 170,7 ms`; xruns da coluna ERR do `pw-top` (não de `/proc/asound`, que não tem contador) |
+| 21 ✅ | Ícone na bandeja com temperaturas e "parar tudo" | TrayIcon + menu funcional | `StatusNotifierItem` registado no noctalia; tooltip lido por DBus: `LINUX EXPLODE · CPU 43 °C · GPU 38 °C · 24 W`; menu com *Parar todo o stress* (activo só com sessões a correr) e *Sair* |
+
+**Critério de conclusão:** `--cli placa|usb|audio` (texto e `--json`) devolvem o mesmo que a interface,
+capturas reais em `docs/captura-dispositivos.png` e `docs/captura-placa.png`, e 73 testes verdes.
 
 ---
 
@@ -100,7 +104,8 @@ Objectivo: a aplicação avisa quando algo está mal, em vez de esperar que o ut
 
 1. `git log --oneline -5` e `git status -sb` — ver o que está commitado e por publicar.
 2. Ler a secção da fase actual neste documento e o CHANGELOG da última versão.
-3. `dotnet build -c Release` e `--cli info` devem dizer a versão do topo do CHANGELOG.
+3. `dotnet build -c Release` e `--cli info` devem dizer a versão do topo do CHANGELOG;
+   `dotnet test tests/LinuxExplode.Tests -c Release` tem de passar (73 testes na 0.20.5).
 4. Verificar o que está instalado: `flatpak info pt.linuxexplode.LinuxExplode` e
    `flatpak --user remote-info linuxexplode pt.linuxexplode.LinuxExplode`.
 5. Antes de publicar: `dotnet build`, `--cli bench`, `--cli stress … --json`, e o pop a abrir; depois

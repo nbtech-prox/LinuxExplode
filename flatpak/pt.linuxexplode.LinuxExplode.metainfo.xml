@@ -19,6 +19,9 @@
       <li>EXPLODE BENCH: path tracer determinístico para CPU (nota comparável entre máquinas),
           banda e latência de memória, e disco com O_DIRECT (sem cache).</li>
       <li>Diagnóstico de rede: latência, jitter, perda de pacotes, DNS e velocidade.</li>
+      <li>Dispositivos: links PCI Express (em uso vs máximo), USB com a velocidade negociada e
+          audio com os xruns e o quantum do PipeWire.</li>
+      <li>Icone na bandeja com as temperaturas e um botao para parar todo o stress.</li>
       <li>Relatório exportável em HTML ou JSON.</li>
     </ul>
   </description>
@@ -46,12 +49,28 @@
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-stress.png</image>
     </screenshot>
     <screenshot>
+      <caption>Dispositivos: PCI Express, USB e áudio com os xruns do PipeWire</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-dispositivos.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Placa-mãe: chipset, memória, rede e Wi-Fi (o que não tem sensor é dito)</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-placa.png</image>
+    </screenshot>
+    <screenshot>
       <caption>Tema claro com os mesmos dados</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-tema-claro.png</image>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="0.20.5" date="2026-10-25">
+      <description>
+        <p>Nova aba Dispositivos: links PCI Express (velocidade e largura em uso vs máximo anunciado),
+        dispositivos USB com a velocidade negociada e audio com o estado do ALSA e os xruns do PipeWire.</p>
+        <p>Cartao da placa-mae com chipset, memoria, NVMe, rede e Wi-Fi; icone na bandeja com
+        temperaturas e "parar todo o stress"; 73 testes.</p>
+      </description>
+    </release>
     <release version="0.20.3" date="2026-10-25">
       <description>
         <p>Alertas de temperatura, ventoinhas e espaço em disco, com notificacoes opcionais.</p>

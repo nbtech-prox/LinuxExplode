@@ -69,7 +69,39 @@ public partial class MainWindow : Window
     private void IrBench(object? s, RoutedEventArgs e) => Navegar("bench");
     private void IrStress(object? s, RoutedEventArgs e) => Navegar("stress");
     private void IrRede(object? s, RoutedEventArgs e) => Navegar("rede");
+    private void IrDispositivos(object? s, RoutedEventArgs e) => Navegar("dispositivos");
     private void IrRelatorio(object? s, RoutedEventArgs e) => Navegar("relatorio");
+
+    /// <summary>Mostra a janela (vinda da bandeja) e, se indicado, muda de página.</summary>
+    public void MostrarEm(string? pagina = null)
+    {
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        if (pagina is not null) Navegar(pagina);
+    }
+
+    /// <summary>Fecha a aplicação de vez, mesmo com «fechar para a bandeja» ligado (menu Sair).</summary>
+    public void Sair()
+    {
+        _sairDeVez = true;
+        Close();
+    }
+
+    private bool _sairDeVez;
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        // Com bandeja disponível, fechar a janela esconde-a: o ícone continua a mostrar temperaturas
+        // e a permitir parar o stress. "Sair" no menu da bandeja ou Ctrl+Q fecham de vez.
+        if (!_sairDeVez && Config.Atual.BandejaFechar && Vistas.Bandeja.Disponivel)
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+        base.OnClosing(e);
+    }
 
     private void Navegar(string chave)
     {
@@ -85,6 +117,7 @@ public partial class MainWindow : Window
                 "bench" => new PaginaBench(),
                 "stress" => new PaginaStress(),
                 "rede" => new PaginaRede(),
+                "dispositivos" => new PaginaDispositivos(),
                 "relatorio" => new PaginaRelatorio(),
                 _ => new PaginaSistema()
             };
@@ -159,7 +192,8 @@ public partial class MainWindow : Window
                 Avalonia.Input.Key.D4 => "bench",
                 Avalonia.Input.Key.D5 => "stress",
                 Avalonia.Input.Key.D6 => "rede",
-                Avalonia.Input.Key.D7 => "relatorio",
+                Avalonia.Input.Key.D7 => "dispositivos",
+                Avalonia.Input.Key.D8 => "relatorio",
                 _ => null
             };
 
@@ -187,7 +221,7 @@ public partial class MainWindow : Window
                     e.Handled = true;
                     break;
                 case Avalonia.Input.Key.Q:
-                    Close();
+                    Sair();
                     break;
             }
         };

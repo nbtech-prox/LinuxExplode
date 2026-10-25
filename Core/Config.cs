@@ -18,6 +18,10 @@ public sealed class Config
     public double EspacoMinimoGb { get; set; } = 10;
     public bool Notificacoes { get; set; }
 
+    // bandeja do sistema
+    public bool Bandeja { get; set; } = true;
+    public bool BandejaFechar { get; set; } = true;
+
     private static Config? _atual;
 
     public static Config Atual => _atual ??= Carregar();

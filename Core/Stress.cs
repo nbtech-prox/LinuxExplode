@@ -512,8 +512,36 @@ public sealed class SessaoStress : IDisposable
     {
         if (EmCurso) throw new InvalidOperationException("já há uma sessão de stress a correr");
 
+        lock (_abertas) _abertas.Add(this);
+
         _thread = new Thread(Correr) { IsBackground = true, Name = "stress-sessao" };
         _thread.Start();
+    }
+
+    // ------------------------------------------------------------------ registo das sessões abertas
+
+    private static readonly List<SessaoStress> _abertas = new();
+
+    /// <summary>Sessões iniciadas e ainda não libertadas (o ícone da bandeja usa esta lista).</summary>
+    public static List<SessaoStress> Abertas
+    {
+        get { lock (_abertas) return _abertas.ToList(); }
+    }
+
+    /// <summary>Quantas sessões estão a correr agora.</summary>
+    public static int EmCursoAgora => Abertas.Count(s => s.EmCurso);
+
+    /// <summary>Pára todas as sessões a correr (menu do ícone da bandeja). Devolve quantas parou.</summary>
+    public static int PararTodas()
+    {
+        var paradas = 0;
+        foreach (var s in Abertas)
+        {
+            if (!s.EmCurso) continue;
+            s.Parar();
+            paradas++;
+        }
+        return paradas;
     }
 
     public void Parar()
@@ -743,5 +771,6 @@ public sealed class SessaoStress : IDisposable
         try { _cancelar.Cancel(); } catch { }
         _vigia?.Dispose();
         _cancelar.Dispose();
+        lock (_abertas) _abertas.Remove(this);
     }
 }

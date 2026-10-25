@@ -41,6 +41,13 @@ jobs:
           $BIN --cli sensores | head -20
           $BIN --cli potencia
           $BIN --cli freq | head -10
+          # dispositivos: no runner há /sys (pci/usb) e não há placas de som — a app degrada e di-lo
+          $BIN --cli placa | head -10
+          $BIN --cli usb | head -5
+          $BIN --cli audio | head -5
+          $BIN --cli placa --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["comando"]=="placa", d'
+          $BIN --cli usb --json   | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d["dados"],list), d'
+          $BIN --cli audio --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "Nos" in d["dados"], d'
 
       - name: Testes unitários
         run: dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release --nologo

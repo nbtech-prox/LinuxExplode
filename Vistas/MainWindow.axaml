@@ -28,6 +28,7 @@
             <Button Classes="nav"       Name="NavBench"     Content="EXPLODE BENCH"    Click="IrBench" />
             <Button Classes="nav"       Name="NavStress"    Content="STRESS"         Click="IrStress" />
             <Button Classes="nav"       Name="NavRede"      Content="Rede"           Click="IrRede" />
+            <Button Classes="nav"       Name="NavDispositivos" Content="Dispositivos" Click="IrDispositivos" />
             <Button Classes="nav"       Name="NavRelatorio" Content="Relatório"      Click="IrRelatorio" />
           </StackPanel>
         </ScrollViewer>

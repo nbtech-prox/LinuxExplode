@@ -1,6 +1,6 @@
 {
   "app-id": "pt.linuxexplode.LinuxExplode",
-    "branch": "stable",
+  "branch": "stable",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
@@ -16,7 +16,11 @@
     "--filesystem=~/.config/MangoHud:ro",
     "--filesystem=~/.local/share/MangoHud:ro",
     "--talk-name=org.freedesktop.Notifications",
-    "--talk-name=org.freedesktop.Flatpak"
+    "--talk-name=org.freedesktop.Flatpak",
+    "--talk-name=org.kde.StatusNotifierWatcher",
+    "--talk-name=org.kde.StatusNotifierItem",
+    "--own-name=org.kde.StatusNotifierItem-2-0",
+    "--own-name=org.kde.StatusNotifierItem-2-1"
   ],
   "cleanup": [
     "/share/doc",
