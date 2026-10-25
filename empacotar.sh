@@ -98,17 +98,22 @@ REPO=flatpak/repo-x86_64
 REMOTE=linuxexplode
 rm -rf "$REPO"
 flatpak run org.flatpak.Builder --user --force-clean --repo="$REPO" build-dir flatpak/$APP_ID.json
-flatpak build-update-repo --title="LINUX EXPLODE (repositório local)" "$REPO"
+flatpak build-update-repo --title="LINUX EXPLODE" "$REPO"
 
-if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
-  flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+# Em CI só interessa o repositório e o bundle; instalar ali a app não serve para nada.
+if [ "${CI:-}" = "true" ]; then
+  echo "CI: repositório em $REPO (sem instalar localmente)"
 else
-  flatpak remote-add --user --no-gpg-verify --title="LINUX EXPLODE (local)" \
-    "$REMOTE" "file://$(pwd)/$REPO"
-fi
+  if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
+    flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+  else
+    flatpak remote-add --user --no-gpg-verify --title="LINUX EXPLODE" \
+      "$REMOTE" "file://$(pwd)/$REPO"
+  fi
 
-flatpak install --user -y --reinstall "$REMOTE" "$APP_ID" >/dev/null
-echo "instalado a partir do remote '$REMOTE' (flatpak update passa a funcionar)"
+  flatpak install --user -y --reinstall "$REMOTE" "$APP_ID" >/dev/null
+  echo "instalado a partir do remote '$REMOTE' (flatpak update passa a funcionar)"
+fi
 
 if [[ "$MODO" == "--bundle" ]]; then
   flatpak build-bundle "$REPO" linux-explode.flatpak "$APP_ID" stable

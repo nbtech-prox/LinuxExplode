@@ -85,6 +85,42 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber linux-explode.flatpak
 
+      # O repositório OSTree do build (flatpak/repo-x86_64, archive-z2) é publicado no ramo
+      # gh-pages: é o que permite ao gestor de pacotes ver e aplicar actualizações
+      # (remote https://<owner>.github.io/<repo>/).
+      - name: Publicar repositório Flatpak no ramo gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO=flatpak/repo-x86_64
+          test -f "$REPO/summary"
+
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/pages
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git worktree add --detach /tmp/pages origin/gh-pages
+            ( cd /tmp/pages && git checkout -B gh-pages )
+          else
+            git worktree add --detach /tmp/pages
+            ( cd /tmp/pages && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true )
+          fi
+
+          # copia só o que os clientes precisam, sem apagar o que já lá está (deltas antigos)
+          rm -rf "$REPO/tmp" "$REPO/state"
+          rsync -a --ignore-existing "$REPO/objects" /tmp/pages/
+          rsync -a "$REPO/config" "$REPO/refs" "$REPO/summary" /tmp/pages/
+          [ -f "$REPO/summary.idx" ] && cp "$REPO/summary.idx" /tmp/pages/
+          [ -d "$REPO/summaries" ] && rsync -a "$REPO/summaries" /tmp/pages/
+          touch /tmp/pages/.nojekyll
+
+          cd /tmp/pages
+          git add -A
+          git commit -m "repositório flatpak ${TAG}" || echo "sem alterações"
+          git push origin HEAD:gh-pages
+
   arm64:
     name: ARM64 (Flatpak + instalador)
     needs: preparar

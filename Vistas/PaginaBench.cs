@@ -16,6 +16,7 @@ public sealed class PaginaBench : UserControl
     private readonly TextBlock _pontuacao = new() { Text = "—", Classes = { "numero" } };
     private readonly TextBlock _historico = new() { Text = "", Classes = { "mono" } };
     private readonly List<string> _runs = new();
+    private string _ultimaChaveCpu = "";
 
     // RAM bench
     private readonly TextBlock _ramEstado = new() { Text = "pronto", Classes = { "sub" } };
@@ -115,9 +116,13 @@ public sealed class PaginaBench : UserControl
             ultimaNota = r.Nota;
             if (modalidade == ModalidadePrevia.Cpu)
             {
+                // O resultado fica fixo: só muda (e só entra no histórico) quando é diferente.
+                var chave = ChaveDoResultado(r.Nota);
+                if (chave == _ultimaChaveCpu) return;
+
+                _ultimaChaveCpu = chave;
                 _pontuacao.Text = r.Nota;
                 _estado.Text = r.Detalhe;
-                // cada corrida concluída entra no histórico (o pop recomeça sozinho)
                 if (r.CorridaConcluida)
                 {
                     _runs.Insert(0, $"{DateTime.Now:HH:mm}  {r.Nota} pts  ({threads}T)");
@@ -134,6 +139,21 @@ public sealed class PaginaBench : UserControl
 
         if (TopLevel.GetTopLevel(this) is Window dono) janela.Show(dono);
         else janela.Show();
+    }
+
+    /// <summary>
+    /// Chave de comparação de um resultado: dois algarismos significativos. Duas corridas do mesmo
+    /// teste dão 5 603 e 5 598 — para o utilizador é o mesmo resultado, e o histórico não pode
+    /// encher-se de linhas repetidas.
+    /// </summary>
+    private static string ChaveDoResultado(string nota)
+    {
+        var digitosTexto = new string(nota.Where(char.IsDigit).ToArray());
+        if (!long.TryParse(digitosTexto, out long valor) || valor <= 0) return nota;
+
+        int casas = (int)Math.Floor(Math.Log10(valor)) + 1;
+        long passo = (long)Math.Pow(10, Math.Max(0, casas - 2));
+        return ((valor + passo / 2) / passo * passo).ToString();
     }
 
     // ------------------------------------------------------------------ CPU
