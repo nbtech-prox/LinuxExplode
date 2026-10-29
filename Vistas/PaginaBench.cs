@@ -36,6 +36,13 @@ public sealed class PaginaBench : UserControl
     private readonly TextBlock _historicoEstado = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<InfoGpu> _gpus = new();
 
+    // Histórico em SQLite (0.20.13): pesquisa, período e gráfico da série escolhida
+    private readonly TextBox _histProcura = new() { Watermark = "procurar tipo, alvo ou detalhe…", Width = 320 };
+    private readonly ComboBox _histPeriodo = new() { Width = 150 };
+    private readonly StackPanel _histLista = new() { Spacing = 2 };
+    private readonly TextBlock _histResumo = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _histGrafico = new() { Spacing = 4 };
+
     // Latência de memória (0.20.7)
     private readonly CurvaLatencia _curva = new();
     private readonly TextBlock _latEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
@@ -494,18 +501,118 @@ public sealed class PaginaBench : UserControl
         botoes.Children.Add(UI.Botao("Importar…", false, Importar));
 
         conteudo.Children.Add(UI.Texto(
-            "As notas ficam guardadas em ~/.local/share/linux-explode/resultados.json, com a data e a versão. " +
-            "Cada cartão mostra o melhor resultado, a mediana e a variação da última corrida. Exporta para CSV " +
-            "para comparar máquinas numa folha de cálculo, ou importa o ficheiro de outra máquina.", "sub"));
+            "As notas ficam guardadas em SQLite (~/.local/share/linux-explode/historico.db), com a data e a " +
+            "versão. Cada cartão mostra o melhor resultado, a mediana e a variação da última corrida. " +
+            "Pesquisa por tipo, alvo ou detalhe e filtra por período; exporta para CSV/JSON para comparar " +
+            "máquinas, ou importa o ficheiro de outra máquina. O resultados.json antigo é migrado sozinho " +
+            "no primeiro arranque e guardado como resultados.json.migrado.", "sub"));
         conteudo.Children.Add(botoes);
+
+        _histPeriodo.Items.Add("tudo");
+        _histPeriodo.Items.Add("7 dias");
+        _histPeriodo.Items.Add("30 dias");
+        _histPeriodo.Items.Add("90 dias");
+        _histPeriodo.SelectedIndex = 0;
+        _histPeriodo.SelectionChanged += (_, _) => ActualizarHistorico();
+
+        _histProcura.TextChanged += (_, _) => ActualizarHistorico();
+
+        var filtros = new WrapPanel { Orientation = Orientation.Horizontal };
+        var campoProcura = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 12, 8) };
+        campoProcura.Children.Add(UI.Texto("PROCURAR", "rotulo"));
+        campoProcura.Children.Add(_histProcura);
+        var campoPeriodo = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 12, 8) };
+        campoPeriodo.Children.Add(UI.Texto("PERÍODO", "rotulo"));
+        campoPeriodo.Children.Add(_histPeriodo);
+        filtros.Children.Add(campoProcura);
+        filtros.Children.Add(campoPeriodo);
+        conteudo.Children.Add(filtros);
+
         conteudo.Children.Add(UI.Texto(Historico.Caminho, "mono"));
+        conteudo.Children.Add(_histResumo);
+        conteudo.Children.Add(_histGrafico);
+        conteudo.Children.Add(_histLista);
         conteudo.Children.Add(_historicoEstado);
 
-        _historicoEstado.Text = Historico.Todos().Count > 0
-            ? $"{Historico.Todos().Count} resultado(s) guardado(s)"
-            : "ainda sem resultados guardados — corre um teste";
+        ActualizarHistorico();
 
         return UI.Cartao("Histórico de resultados", conteudo);
+    }
+
+    /// <summary>
+    /// Relê o histórico com o filtro actual. A pesquisa é feita no SQLite (tipo, alvo ou detalhe) e o
+    /// gráfico mostra a série da combinação tipo/alvo mais recente que passou o filtro — com os valores
+    /// reais, sem normalizar notas de tipos diferentes.
+    /// </summary>
+    private void ActualizarHistorico()
+    {
+        DateTime? desde = _histPeriodo.SelectedIndex switch
+        {
+            1 => DateTime.Now.AddDays(-7),
+            2 => DateTime.Now.AddDays(-30),
+            3 => DateTime.Now.AddDays(-90),
+            _ => null
+        };
+
+        var lista = Historico.Pesquisar(_histProcura.Text, desde, limite: 80);
+        int total = Historico.Todos().Count;
+
+        _histResumo.Text = $"{lista.Count} de {total} resultado(s) no histórico" +
+                           (desde is not null ? $" · desde {desde:dd/MM/yyyy}" : "");
+
+        _histGrafico.Children.Clear();
+        _histLista.Children.Clear();
+
+        if (lista.Count == 0)
+        {
+            _histLista.Children.Add(UI.Texto(total == 0
+                ? "ainda sem resultados guardados — corre um teste"
+                : "nada encontrado com esse filtro", "sub"));
+            return;
+        }
+
+        // gráfico: a série mais recente com pelo menos 2 corridas (uma corrida não é uma linha)
+        var serie = lista
+            .GroupBy(r => (r.Tipo, r.Alvo))
+            .Where(g => g.Count() >= 2)
+            .OrderByDescending(g => g.Max(x => x.Quando))
+            .FirstOrDefault()?
+            .OrderBy(x => x.Quando)
+            .ToList() ?? new List<RegistoBench>();
+
+        if (serie.Count >= 2)
+        {
+            var spark = new Sparkline(Math.Clamp(serie.Count, 2, 600)) { Height = 64 };
+            foreach (var r in serie) spark.Adicionar(r.Nota);
+
+            var caixa = new StackPanel { Spacing = 2 };
+            caixa.Children.Add(UI.Texto(
+                $"últimas {serie.Count} corridas · {serie[0].Tipo} · {serie[0].Alvo} · " +
+                $"mín {serie.Min(r => r.Nota):N0} · máx {serie.Max(r => r.Nota):N0}", "mono"));
+            caixa.Children.Add(spark);
+            _histGrafico.Children.Add(caixa);
+        }
+
+        _histLista.Children.Add(LinhaHistorico("quando", "tipo", "alvo", "nota", "detalhe", true));
+        foreach (var r in lista)
+            _histLista.Children.Add(LinhaHistorico(r.Quando.ToString("dd/MM/yyyy HH:mm"), r.Tipo, r.Alvo,
+                r.Nota.ToString("N0"), r.Detalhe, false));
+    }
+
+    private static Control LinhaHistorico(string quando, string tipo, string alvo, string nota, string detalhe, bool cabecalho)
+    {
+        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("130,60,3*,85,2*") };
+        var textos = new[] { quando, tipo, alvo, nota, detalhe };
+        for (int i = 0; i < textos.Length; i++)
+        {
+            var t = UI.Texto(textos[i], cabecalho ? "rotulo" : "mono");
+            t.TextWrapping = TextWrapping.NoWrap;
+            t.TextTrimming = TextTrimming.CharacterEllipsis;
+            t.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(t, i);
+            g.Children.Add(t);
+        }
+        return g;
     }
 
     private void Exportar(string formato)

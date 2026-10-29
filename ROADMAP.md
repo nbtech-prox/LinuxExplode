@@ -98,7 +98,7 @@ quatro capturas em `docs/`.
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
 | 19 ✅ | Relatório único (sistema + sensores + benchmarks + stress) em HTML | Um ficheiro para arquivar ou partilhar | HTML autónomo com gráficos e data; botão na aba Relatório — feito, 16,9 KB com sete secções | M |
-| 20 | Histórico em SQLite com pesquisa e gráficos | O JSON actual não escala para meses de amostras | Esquema + migração do JSON + consultas por período | M |
+| 20 ✅ | Histórico em SQLite com pesquisa e gráficos | O JSON actual não escala para meses de amostras | Esquema + migração do JSON + consultas por período — feito, `historico.db` com procura e período; JSON migrado uma vez | M |
 | 10 | Benchmark de rede real (cliente/servidor próprio) | Mede a rede a sério, não só latência | Modo servidor e cliente; relatório de débito | M |
 | 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` | Chave de release, `summary.sig`, cliente a validar sem flag | M |
 | 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Revisão aceite; builds reprodutíveis; capturas e metainfo válidos | G |

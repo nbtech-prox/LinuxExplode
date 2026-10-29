@@ -23,6 +23,18 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
     `WebUtility.HtmlEncode` virava `conclu&#237;do` e deixava de ser encontrável).
   - O botão *Abrir* na página Relatório abre o último ficheiro gerado; o JSON continua a existir para
     automação.
+- **Histórico em SQLite** (`historico.db`), com pesquisa por texto, filtro por período e gráfico da
+  série: o cartão *Histórico de resultados* da aba EXPLODE BENCH ganhou uma caixa de procura (tipo,
+  alvo ou detalhe), um filtro de período (tudo / 7 / 30 / 90 dias), a lista filtrada e um gráfico da
+  combinação tipo/alvo mais recente com pelo menos duas corridas. `--cli historico [texto]
+  [--desde AAAA-MM-DD] [--ate AAAA-MM-DD] [--limite N]` (texto e `--json`) dá a mesma consulta.
+  - O `resultados.json` antigo é **migrado uma única vez** para o SQLite, com marca na tabela
+    `migracoes`, e renomeado para `resultados.json.migrado` — os 10 resultados desta máquina
+    passaram intactos (ranking igual, datas e versões preservadas).
+  - Esquema: `resultados` (quando, tipo, alvo, nota, detalhe, versao) com índices em (tipo, alvo) e
+    (quando), tecto de 500 entradas e a mesma regra de não engordar com notas repetidas. O pool de
+    ligações do `Microsoft.Data.Sqlite` foi **desligado** (`Pooling=false`): com ele, uma ligação em
+    cache continuava a ver o ficheiro apagado e a importação contava zero.
 
 ## [0.20.11] — 2026-10-29
 

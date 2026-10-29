@@ -14,8 +14,9 @@ public sealed record RegistoBench(
     string Versao);
 
 /// <summary>
-/// Histórico de resultados em <c>~/.local/share/linux-explode/resultados.json</c>. É o que permite
-/// comparar a corrida de hoje com as anteriores (melhor, mediana, variação) e exportar/importar.
+/// Histórico de resultados em SQLite (<c>~/.local/share/linux-explode/historico.db</c>, ver
+/// <see cref="Banco"/>). É o que permite comparar a corrida de hoje com as anteriores (melhor,
+/// mediana, variação), pesquisar por texto ou período e exportar/importar.
 /// </summary>
 public static class Historico
 {
@@ -26,19 +27,23 @@ public static class Historico
             ? forcar
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "linux-explode");
 
-    public static string Caminho => Path.Combine(Pasta, "resultados.json");
+    /// <summary>Base SQLite — a fonte de verdade desde a 0.20.13.</summary>
+    public static string Caminho => Banco.Caminho;
+
+    /// <summary>JSON antigo: só existe até à migração automática, que o renomeia para <c>.migrado</c>.</summary>
+    public static string CaminhoJson => Path.Combine(Pasta, "resultados.json");
 
     public static List<RegistoBench> Todos()
     {
-        try
-        {
-            if (!File.Exists(Caminho)) return new List<RegistoBench>();
-            return JsonSerializer.Deserialize<List<RegistoBench>>(File.ReadAllText(Caminho)) ?? new();
-        }
-        catch
-        {
-            return new List<RegistoBench>();
-        }
+        try { return Banco.Todos(); }
+        catch { return new List<RegistoBench>(); }
+    }
+
+    /// <summary>Pesquisa por texto e/ou período; do mais recente para o mais antigo.</summary>
+    public static List<RegistoBench> Pesquisar(string? texto = null, DateTime? desde = null, DateTime? ate = null, int limite = 200)
+    {
+        try { return Banco.Pesquisar(texto, desde, ate, limite); }
+        catch { return new List<RegistoBench>(); }
     }
 
     /// <summary>Guarda uma medição. Repetições com a mesma nota são ignoradas (o histórico não engorda).</summary>
@@ -48,25 +53,9 @@ public static class Historico
 
         lock (Cadeado)
         {
-            var lista = Todos();
-
-            var ultimo = lista.FirstOrDefault(r => r.Tipo == tipo && r.Alvo == alvo);
-            if (ultimo is not null && Math.Abs(ultimo.Nota - nota) < 0.001) return;
-
-            lista.Add(new RegistoBench(tipo, alvo, nota, detalhe, DateTime.Now, Relatorio.Versao));
-            if (lista.Count > 500) lista.RemoveRange(0, lista.Count - 500);
-            Gravar(lista);
+            try { Banco.Registar(new RegistoBench(tipo, alvo, nota, detalhe, DateTime.Now, Relatorio.Versao)); }
+            catch { }
         }
-    }
-
-    private static void Gravar(List<RegistoBench> lista)
-    {
-        try
-        {
-            Directory.CreateDirectory(Pasta);
-            File.WriteAllText(Caminho, JsonSerializer.Serialize(lista, new JsonSerializerOptions { WriteIndented = true }));
-        }
-        catch { }
     }
 
     /// <summary>Melhor, mediana e última nota de um tipo/alvo.</summary>
@@ -134,20 +123,20 @@ public static class Historico
 
         lock (Cadeado)
         {
-            var lista = Todos();
-            int antes = lista.Count;
+            var atuais = Todos();
+            var aceites = new List<RegistoBench>();
 
             foreach (var r in novos)
             {
-                if (lista.Any(x => x.Tipo == r.Tipo && x.Alvo == r.Alvo &&
-                                   Math.Abs(x.Nota - r.Nota) < 0.001 &&
-                                   Math.Abs((x.Quando - r.Quando).TotalSeconds) < 2))
+                if (atuais.Any(x => x.Tipo == r.Tipo && x.Alvo == r.Alvo &&
+                                    Math.Abs(x.Nota - r.Nota) < 0.001 &&
+                                    Math.Abs((x.Quando - r.Quando).TotalSeconds) < 2))
                     continue;
-                lista.Add(r);
+                aceites.Add(r);
             }
 
-            Gravar(lista);
-            return lista.Count - antes;
+            try { return Banco.RegistarVarios(aceites); }
+            catch { return 0; }
         }
     }
 

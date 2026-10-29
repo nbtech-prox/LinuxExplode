@@ -823,6 +823,37 @@ sessões ou sem benchmarks, a secção di-lo em vez de aparecer vazia.
 Nesta máquina o ficheiro sai com 16,9 KB, sete secções e quatro gráficos, a partir de 10 corridas de
 benchmark, 3 ciclos de stress, um stress simples e uma sessão gravada.
 
+## Histórico em SQLite
+
+O histórico de resultados deixou de ser um JSON relido por inteiro: passou a `historico.db`
+(SQLite, `~/.local/share/linux-explode/`), com índices por `(tipo, alvo)` e por data. O ficheiro
+`resultados.json` antigo é **migrado uma única vez** no primeiro arranque — a marca fica na tabela
+`migracoes` — e renomeado para `resultados.json.migrado`, pelo que nada se perde e nada é importado
+duas vezes.
+
+| Operação | Como |
+|---|---|
+| Guardar | `Historico.Registar` → `Banco.Registar`; notas repetidas do mesmo tipo/alvo não entram |
+| Ler | `Banco.Todos()` (ordem cronológica, tecto de 500 entradas) |
+| Pesquisar | `--cli historico gzip` ou `Banco.Pesquisar("gzip")` — procura em tipo, alvo e detalhe |
+| Período | `--cli historico --desde 2026-10-01 --ate 2026-10-31` |
+| Exportar/importar | os mesmos CSV/JSON de sempre; a importação junta sem duplicar |
+
+Na interface, o cartão *Histórico de resultados* (aba EXPLODE BENCH) tem a caixa **Procurar**, o
+filtro **Período** (tudo, 7, 30 ou 90 dias), a lista filtrada e um **gráfico** da série tipo/alvo mais
+recente com pelo menos duas corridas — sem normalizar notas de tipos diferentes, que não seriam
+comparáveis.
+
+```bash
+linux-explode --cli historico                       # 10 de 10 resultado(s)
+linux-explode --cli historico real --limite 2       # 2 de 10 · procura "real"
+linux-explode --cli historico --desde 2026-10-25 --json
+```
+
+Uma armadilha que custou testes: o `Microsoft.Data.Sqlite` faz pooling de ligações por omissão. Com o
+pool ligado, apagar `historico.db` por fora e voltar a abrir devolvia a ligação em cache (a apontar
+para o inode apagado) e a importação contava zero. A ligação é aberta com `Pooling=false`.
+
 ## Portabilidade (outro Linux, outro hardware)
 
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
@@ -854,7 +885,7 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **117 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **123 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
@@ -1003,6 +1034,7 @@ LinuxExplode/
 │   ├── Rede.cs           # latência, DNS, velocidade
 │   ├── Relatorio.cs      # fachada do relatório (HTML completo + JSON)
 │   ├── RelatorioCompleto.cs # junta sistema, sensores, benchmarks, stress e sessão num HTML autónomo
+│   ├── Banco.cs          # histórico em SQLite: esquema, migração do JSON, pesquisa e período
 │   ├── Cli.cs            # modo sem interface
 │   └── Util.cs
 ├── Vistas/               # UI Avalonia
@@ -1013,7 +1045,7 @@ LinuxExplode/
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (117 testes, correm no CI)
+├── tests/                # xUnit (123 testes, correm no CI)
 ├── docs/                 # capturas reais usadas no metainfo e no README
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64

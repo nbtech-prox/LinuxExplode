@@ -27,6 +27,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.33" />
     <PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.23.0" />
     <!-- O Silk.NET.Core traz System.Text.Json/Encodings.Web 9.x; sem referência DIRECTA o

@@ -43,6 +43,8 @@ public static class Cli
                 return Bench(args);
             case "ranking":
                 return RankingCli();
+            case "historico" or "histórico":
+                return HistoricoCli(args);
             case "gravar":
                 return GravarCli(args);
             case "stress":
@@ -71,7 +73,8 @@ public static class Cli
                               "     LinuxExplode --cli ciclos [cpu|ram|gpu|disco|tudo] [segundos] [--ciclos N] [--pausa SEG] [--threads N]\n" +
                               "     LinuxExplode --cli vram [--indice N] [--limite MB] [--bloco MB]     (0 = até o driver recusar)\n" +
                               "     LinuxExplode --cli autoteste [estado|curto|longo|parar] [disco]   (auto-teste S.M.A.R.T.)\n" +
-                              "     LinuxExplode --cli suspender [estado|testar] [--segundos N] [--simular]");
+                              "     LinuxExplode --cli suspender [estado|testar] [--segundos N] [--simular]\n" +
+            "     LinuxExplode --cli historico [texto] [--desde AAAA-MM-DD] [--ate AAAA-MM-DD] [--limite N]");
                 return 2;
         }
     }
@@ -854,6 +857,79 @@ public static class Cli
         return new { suporte, ultimo = Suspender.LerUltimo() };
     }
 
+    // ------------------------------------------------------------------ histórico (SQLite)
+
+    /// <summary>
+    /// <c>--cli historico [texto] [--desde AAAA-MM-DD] [--ate AAAA-MM-DD] [--limite N]</c>: procura no
+    /// histórico (tipo, alvo ou detalhe) e/ou limita por período. Sem filtro mostra os mais recentes.
+    /// </summary>
+    private static int HistoricoCli(string[] args)
+    {
+        var (texto, desde, ate, limite) = LerFiltroHistorico(args);
+        var lista = Historico.Pesquisar(texto, desde, ate, limite);
+        int total = Historico.Todos().Count;
+
+        Console.WriteLine($"HISTÓRICO — {lista.Count} de {total} resultado(s)" +
+                          (texto is { Length: > 0 } ? $" · procura \"{texto}\"" : "") +
+                          (desde is not null ? $" · desde {desde:yyyy-MM-dd}" : "") +
+                          (ate is not null ? $" · até {ate:yyyy-MM-dd}" : ""));
+
+        if (lista.Count == 0)
+        {
+            Console.WriteLine(total == 0 ? "  ainda sem resultados guardados" : "  nada encontrado com esse filtro");
+            return 0;
+        }
+
+        foreach (var r in lista)
+            Console.WriteLine($"  {r.Quando:yyyy-MM-dd HH:mm}  {r.Tipo,-6} {r.Alvo,-34} {r.Nota,12:N0}  {r.Detalhe}");
+        return 0;
+    }
+
+    private static object HistoricoJson(string[] args)
+    {
+        var (texto, desde, ate, limite) = LerFiltroHistorico(args);
+        return new
+        {
+            total = Historico.Todos().Count,
+            filtro = new
+            {
+                texto,
+                desde = desde?.ToString("yyyy-MM-dd"),
+                ate = ate?.ToString("yyyy-MM-dd"),
+                limite
+            },
+            resultados = Historico.Pesquisar(texto, desde, ate, limite)
+        };
+    }
+
+    private static (string? Texto, DateTime? Desde, DateTime? Ate, int Limite) LerFiltroHistorico(string[] args)
+    {
+        string? texto = args.Length > 2 && !args[2].StartsWith("--") ? args[2] : null;
+        DateTime? desde = null, ate = null;
+        int limite = 200;
+
+        for (int i = 2; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--desde" when i + 1 < args.Length:
+                    if (DateTime.TryParse(args[++i], CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+                        desde = d.Date;
+                    break;
+                case "--ate" when i + 1 < args.Length:
+                    if (DateTime.TryParse(args[++i], CultureInfo.InvariantCulture, DateTimeStyles.None, out var a))
+                        ate = a.Date.AddDays(1).AddSeconds(-1);
+                    break;
+                case "--limite" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out limite);
+                    limite = Math.Clamp(limite, 1, 500);
+                    break;
+            }
+        }
+
+        return (texto, desde, ate, limite);
+    }
+
     private static int LerLongo(string[] args, string nome, int porOmissao, int min, int max)
     {
         for (int i = 0; i < args.Length - 1; i++)
@@ -934,6 +1010,9 @@ public static class Cli
 
                 case "ranking":
                     return EmitirJson("ranking", Historico.Rankings());
+
+                case "historico" or "histórico":
+                    return EmitirJson("historico", HistoricoJson(args));
 
                 case "gravar":
                     return EmitirJson("gravar", GravarJson(args));

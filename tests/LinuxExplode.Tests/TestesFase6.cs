@@ -182,3 +182,111 @@ public sealed class RelatorioCompletoTests : IDisposable
         Assert.Equal("AMD Navi 22", RelatorioCompleto.Curto("Advanced Micro Devices, Inc. [AMD/ATI] Navi 22"));
     }
 }
+
+/// <summary>
+/// #20: o histórico passou de JSON a SQLite. Estes testes cobrem o que o JSON não dava de graça —
+/// pesquisa por texto e período — e a migração única do ficheiro antigo (sem duplicar nem perder nada).
+/// </summary>
+public sealed class BancoTests : IDisposable
+{
+    private readonly string _pasta = Path.Combine(Path.GetTempPath(), "linuxexplode-banco-" + Guid.NewGuid().ToString("N"));
+    private readonly string? _dadosAntes = Environment.GetEnvironmentVariable("LINUXEXPLODE_DADOS");
+
+    public BancoTests()
+    {
+        Directory.CreateDirectory(_pasta);
+        Environment.SetEnvironmentVariable("LINUXEXPLODE_DADOS", _pasta);
+    }
+
+    public void Dispose()
+    {
+        Environment.SetEnvironmentVariable("LINUXEXPLODE_DADOS", _dadosAntes);
+        try { Directory.Delete(_pasta, true); } catch { }
+    }
+
+    private static RegistoBench Registo(string tipo, string alvo, double nota, DateTime quando, string detalhe = "") =>
+        new(tipo, alvo, nota, detalhe, quando, "teste");
+
+    [Fact]
+    public void Registar_grava_e_le_do_banco()
+    {
+        Banco.Registar(Registo("cpu", "16 threads", 5809, DateTime.Now));
+        Banco.Registar(Registo("gpu", "RX 6700 XT", 12969144, DateTime.Now));
+
+        Assert.Equal(2, Banco.Contar());
+        Assert.Equal(2, Historico.Todos().Count);
+        Assert.True(File.Exists(Path.Combine(_pasta, "historico.db")));
+    }
+
+    [Fact]
+    public void Repetir_a_mesma_nota_nao_engorda_o_historico_mas_uma_diferente_entra()
+    {
+        Banco.Registar(Registo("cpu", "alvo", 100, DateTime.Now.AddMinutes(-2)));
+        Banco.Registar(Registo("cpu", "alvo", 100, DateTime.Now.AddMinutes(-1)));   // igual → ignorada
+        Assert.Equal(1, Banco.Contar());
+
+        Banco.Registar(Registo("cpu", "alvo", 101, DateTime.Now));                   // diferente → entra
+        Assert.Equal(2, Banco.Contar());
+    }
+
+    [Fact]
+    public void Pesquisar_filtra_por_texto_e_por_periodo()
+    {
+        var hoje = DateTime.Now.Date.AddHours(10);
+        Banco.RegistarVarios(new[]
+        {
+            Registo("cpu", "16 threads", 100, hoje.AddDays(-40), "antigo"),
+            Registo("gpu", "RX 6700 XT", 200, hoje.AddDays(-2), "recente"),
+            Registo("real", "gzip 48 MB", 300, hoje.AddDays(-1), "meio")
+        });
+
+        Assert.Equal(2, Banco.Pesquisar(desde: hoje.AddDays(-3)).Count);
+        Assert.Single(Banco.Pesquisar("gzip"));
+        Assert.Single(Banco.Pesquisar("antigo"));
+        Assert.Empty(Banco.Pesquisar("nada-disso"));
+        Assert.Equal(3, Banco.Pesquisar().Count);
+        Assert.Equal(2, Banco.Pesquisar(null, hoje.AddDays(-3), hoje).Count);
+    }
+
+    [Fact]
+    public void Migra_o_json_antigo_uma_vez_e_guarda_o_ficheiro()
+    {
+        var json = Path.Combine(_pasta, "resultados.json");
+        File.WriteAllText(json, """
+        [
+          { "Tipo": "cpu", "Alvo": "8 threads", "Nota": 5000, "Detalhe": "antigo", "Quando": "2026-01-02T03:04:05", "Versao": "0.20.9" },
+          { "Tipo": "gpu", "Alvo": "RX 6700 XT", "Nota": 12000000, "Detalhe": "antigo", "Quando": "2026-01-03T04:05:06", "Versao": "0.20.9" }
+        ]
+        """);
+
+        var primeira = Banco.Todos();
+        Assert.Equal(2, primeira.Count);
+        Assert.True(File.Exists(json + ".migrado"));
+        Assert.False(File.Exists(json));
+
+        // segunda chamada: a marca de migração impede duplicar
+        Assert.Equal(2, Banco.Todos().Count);
+        Assert.Equal(2, Banco.Contar());
+    }
+
+    [Fact]
+    public void Base_apagada_por_fora_volta_a_ser_criada_e_aceita_registos()
+    {
+        Banco.Registar(Registo("ram", "512 MB", 15000, DateTime.Now));
+        Assert.Equal(1, Banco.Contar());
+
+        File.Delete(Banco.Caminho);
+        int n = Banco.RegistarVarios(new[] { Registo("ram", "512 MB", 15000, DateTime.Now) });
+
+        Assert.Equal(1, n);
+        Assert.Equal(1, Banco.Contar());
+    }
+
+    [Fact]
+    public void Pesquisa_por_texto_encontra_no_detalhe()
+    {
+        Banco.Registar(Registo("real", "compilar", 102, DateTime.Now, "1500 funções cc -O2"));
+        Assert.Single(Banco.Pesquisar("funções"));
+        Assert.Equal("compilar", Banco.Pesquisar("cc -O2").Single().Alvo);
+    }
+}
