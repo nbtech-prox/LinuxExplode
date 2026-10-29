@@ -37,6 +37,8 @@ public static class Cli
                 return 0;
             case "rede":
                 return Rede().GetAwaiter().GetResult();
+            case "netbench":
+                return NetbenchCli(args);
             case "relatorio":
                 return RelatorioCli(args);
             case "bench":
@@ -74,7 +76,8 @@ public static class Cli
                               "     LinuxExplode --cli vram [--indice N] [--limite MB] [--bloco MB]     (0 = até o driver recusar)\n" +
                               "     LinuxExplode --cli autoteste [estado|curto|longo|parar] [disco]   (auto-teste S.M.A.R.T.)\n" +
                               "     LinuxExplode --cli suspender [estado|testar] [--segundos N] [--simular]\n" +
-            "     LinuxExplode --cli historico [texto] [--desde AAAA-MM-DD] [--ate AAAA-MM-DD] [--limite N]");
+            "     LinuxExplode --cli historico [texto] [--desde AAAA-MM-DD] [--ate AAAA-MM-DD] [--limite N]\n" +
+            "     LinuxExplode --cli netbench servidor [--porta N] [--uma-vez] | netbench cliente [host] [--porta N] [--mb N]");
                 return 2;
         }
     }
@@ -857,6 +860,66 @@ public static class Cli
         return new { suporte, ultimo = Suspender.LerUltimo() };
     }
 
+    // ------------------------------------------------------------------ débito real (cliente/servidor)
+
+    /// <summary>
+    /// <c>--cli netbench servidor [--porta N] [--uma-vez]</c> espera um cliente e devolve o que recebeu;
+    /// <c>--cli netbench cliente [host] [--porta N] [--mb N]</c> mede subida, descida, latência e jitter.
+    /// O mesmo código dos dois lados — o teste local prova o caminho todo.
+    /// </summary>
+    private static int NetbenchCli(string[] args)
+    {
+        string modo = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "cliente";
+        int porta = LerInteiro(args, "--porta", BenchRede.PortaPadrao, 1, 65535);
+
+        if (modo is "servidor" or "servir")
+        {
+            bool umaVez = args.Any(a => a == "--uma-vez");
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+            Console.WriteLine($"NETBENCH — servidor na porta {porta}" + (umaVez ? " (um cliente)" : " — Ctrl+C para parar"));
+            try
+            {
+                BenchRede.ServidorAsync(porta, m => Console.WriteLine("  " + m), umaVez, cts.Token)
+                    .GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException) { }
+            return 0;
+        }
+
+        string host = args.Length > 3 && !args[3].StartsWith("--") ? args[3] : "127.0.0.1";
+        int mb = LerInteiro(args, "--mb", 32, 1, 4096);
+
+        Console.WriteLine($"NETBENCH — {host}:{porta} · {mb} MB em cada sentido · latência com {20} amostras");
+        try
+        {
+            var r = BenchRede.Cliente(host, porta, mb, p => Console.WriteLine("  " + p));
+            Console.WriteLine($"resultado: {r.Resumo}");
+            foreach (var l in r.Linhas) Console.WriteLine("  " + l);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("falhou: " + ex.Message);
+            return 1;
+        }
+    }
+
+    private static object NetbenchJson(string[] args)
+    {
+        string modo = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "cliente";
+        if (modo is "servidor" or "servir")
+            return new { erro = "o modo servidor não devolve JSON — corre sem --json para ver o registo" };
+
+        string host = args.Length > 3 && !args[3].StartsWith("--") ? args[3] : "127.0.0.1";
+        int porta = LerInteiro(args, "--porta", BenchRede.PortaPadrao, 1, 65535);
+        int mb = LerInteiro(args, "--mb", 32, 1, 4096);
+
+        try { return BenchRede.Cliente(host, porta, mb); }
+        catch (Exception ex) { return new { erro = ex.Message, host, porta }; }
+    }
+
     // ------------------------------------------------------------------ histórico (SQLite)
 
     /// <summary>
@@ -998,6 +1061,9 @@ public static class Cli
 
                 case "rede":
                     return EmitirJson("rede", Core.Rede.Correr().GetAwaiter().GetResult());
+
+                case "netbench":
+                    return EmitirJson("netbench", NetbenchJson(args));
 
                 case "relatorio":
                     {

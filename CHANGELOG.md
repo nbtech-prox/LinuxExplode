@@ -35,6 +35,15 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
     (quando), tecto de 500 entradas e a mesma regra de não engordar com notas repetidas. O pool de
     ligações do `Microsoft.Data.Sqlite` foi **desligado** (`Pooling=false`): com ele, uma ligação em
     cache continuava a ver o ficheiro apagado e a importação contava zero.
+- **Débito real entre dois PC** (aba *Rede* → cartão *Débito real — cliente/servidor*): um lado serve,
+  o outro envia N MB e recebe os mesmos N MB de volta; a latência vem de 20 idas e voltas de 8 bytes e
+  o jitter é o desvio-padrão dessas amostras. Os dois sentidos são cronometrados e contados em bytes.
+  `--cli netbench servidor [--porta N] [--uma-vez]` e `--cli netbench cliente [host] [--porta N]
+  [--mb N]` (texto e `--json`). O mesmo código nos dois lados: no loopback desta máquina deu
+  11 325,8 MB/s a subir, 15 054,6 MB/s a descer e 0,11 ms de latência — valores de memória, que provam
+  o caminho e não a rede; numa LAN mede o que a rede fizer.
+  - A recusa de ligação sai em pt-PT com a instrução (o `Task.Wait` embrulha-a em `AggregateException`,
+    que aparecia como "One or more errors occurred").
 
 ## [0.20.11] — 2026-10-29
 

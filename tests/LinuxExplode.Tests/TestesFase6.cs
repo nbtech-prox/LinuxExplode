@@ -290,3 +290,37 @@ public sealed class BancoTests : IDisposable
         Assert.Equal("compilar", Banco.Pesquisar("cc -O2").Single().Alvo);
     }
 }
+
+/// <summary>
+/// #10: o benchmark de rede é cliente e servidor ao mesmo tempo. O teste local liga os dois lados no
+/// loopback e exige bytes contados nos dois sentidos e uma latência medida — não um número estimado.
+/// </summary>
+public sealed class BenchRedeTests
+{
+    [Fact]
+    public void Cliente_e_servidor_medem_a_ida_e_a_volta()
+    {
+        int porta = BenchRede.PortaLivre();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+        var servidor = BenchRede.ServidorAsync(porta, null, umaVez: true, cts.Token);
+        var r = BenchRede.Cliente("127.0.0.1", porta, 4, null, cts.Token);
+        servidor.GetAwaiter().GetResult();
+
+        Assert.Equal(4 * 1024 * 1024, r.Bytes);
+        Assert.True(r.SubidaMbs > 1, $"subida {r.SubidaMbs:0.0} MB/s");
+        Assert.True(r.DescidaMbs > 1, $"descida {r.DescidaMbs:0.0} MB/s");
+        Assert.InRange(r.LatenciaMs, 0, 100);
+        Assert.True(r.JitterMs >= 0);
+        Assert.Contains("enviados e", r.Linhas[0]);
+    }
+
+    [Fact]
+    public void Sem_servidor_do_outro_lado_o_cliente_falha_com_mensagem()
+    {
+        int porta = BenchRede.PortaLivre();
+        var erro = Record.Exception(() => BenchRede.Cliente("127.0.0.1", porta, 1));
+        Assert.NotNull(erro);
+        Assert.Contains("não consegui ligar", erro!.Message);
+    }
+}

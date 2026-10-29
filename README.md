@@ -50,7 +50,7 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 | **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. e **auto-teste curto/longo com progresso e histórico** | `/sys/block`, `/proc/mounts`, `smartctl`, `smartctl -t` |
 | **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
-| **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload | sockets + Cloudflare |
+| **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload e **débito real cliente/servidor** entre dois PC com a aplicação | sockets + Cloudflare; TCP próprio no débito real |
 | **Relatório** | um HTML autónomo com sistema, sensores, discos, ranking de benchmarks, último stress/ciclos/VRAM e a última sessão gravada (com gráficos), ou JSON para automação | `/sys`, `/proc`, DMI e as medições guardadas |
 
 ### Frequência — na aba Frequência de Sensores (núcleos primeiro, GPU depois)
@@ -823,6 +823,35 @@ sessões ou sem benchmarks, a secção di-lo em vez de aparecer vazia.
 Nesta máquina o ficheiro sai com 16,9 KB, sete secções e quatro gráficos, a partir de 10 corridas de
 benchmark, 3 ciclos de stress, um stress simples e uma sessão gravada.
 
+## Rede — diagnóstico e débito real
+
+O cartão **Diagnóstico de rede** mede latência TCP até ao router e à internet (min/média/máx, jitter,
+perda), o tempo de DNS e a velocidade de download/upload pelos servidores da Cloudflare — é o teste
+rápido de "a internet está bem?".
+
+O cartão **Débito real — cliente/servidor** mede outra coisa: o débito entre dois PC que correm a
+própria aplicação, sem servidores de terceiros. Um lado fica à escuta, o outro envia N MB e recebe os
+mesmos N MB de volta:
+
+```
+PC A: linux-explode --cli netbench servidor            # fica à escuta na porta 47820
+PC B: linux-explode --cli netbench cliente 192.168.1.10 --mb 64
+```
+
+O protocolo é mínimo — 20 idas e voltas de 8 bytes para a latência, o tamanho do corpo e os bytes —
+e é o mesmo código nos dois lados, por isso o teste local prova o caminho todo. O resultado mostra
+subida, descida, latência média/mín/máx e jitter; o servidor regista o que recebeu e a que ritmo.
+
+```bash
+linux-explode --cli netbench cliente 127.0.0.1 --porta 47820 --mb 32
+linux-explode --cli netbench servidor --uma-vez --json   # o modo servidor não devolve JSON
+```
+
+No loopback desta máquina (Ryzen 7 9700X), 32 MB em cada sentido: **11 325,8 MB/s a subir**,
+**15 054,6 MB/s a descer** e **0,11 ms** de latência. São valores de memória do kernel, não de uma
+rede — servem para provar que o cliente e o servidor funcionam, não para medir a LAN. Numa rede real o
+número é o que a rede (e o disco, se o outro lado for lento) permitirem.
+
 ## Histórico em SQLite
 
 O histórico de resultados deixou de ser um JSON relido por inteiro: passou a `historico.db`
@@ -885,7 +914,7 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **123 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **125 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
@@ -1035,6 +1064,7 @@ LinuxExplode/
 │   ├── Relatorio.cs      # fachada do relatório (HTML completo + JSON)
 │   ├── RelatorioCompleto.cs # junta sistema, sensores, benchmarks, stress e sessão num HTML autónomo
 │   ├── Banco.cs          # histórico em SQLite: esquema, migração do JSON, pesquisa e período
+│   ├── BenchRede.cs      # débito real cliente/servidor (TCP próprio, latência e jitter)
 │   ├── Cli.cs            # modo sem interface
 │   └── Util.cs
 ├── Vistas/               # UI Avalonia
@@ -1045,7 +1075,7 @@ LinuxExplode/
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (123 testes, correm no CI)
+├── tests/                # xUnit (125 testes, correm no CI)
 ├── docs/                 # capturas reais usadas no metainfo e no README
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
