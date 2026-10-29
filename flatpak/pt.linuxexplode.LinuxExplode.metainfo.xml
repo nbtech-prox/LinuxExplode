@@ -91,6 +91,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.13" date="2026-10-29">
+      <description>
+        <p>Fase 6 (dados e integração): relatório completo em HTML com sistema, sensores, discos,
+        ranking de benchmarks, último stress/ciclos/VRAM e a última sessão gravada, com gráficos SVG
+        embutidos; histórico em SQLite com migração automática do JSON, pesquisa por texto e filtro
+        por período; e benchmark de rede real cliente/servidor entre dois PC. 125 testes.</p>
+      </description>
+    </release>
     <release version="0.20.11" date="2026-10-29">
       <description>
         <p>Fase 5: stress e discos. Ciclos agendados no STRESS (N ciclos com pausa e relatório agregado

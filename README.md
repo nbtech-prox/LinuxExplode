@@ -11,7 +11,7 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.11](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.20.13](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -32,7 +32,7 @@ O repositório não está assinado com GPG (daí `--no-gpg-verify`).
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.11-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.20.13-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
@@ -820,7 +820,7 @@ teste passa a ser guardado sozinho em `~/.local/share/linux-explode/` (`ultimo-s
 `ultimo-ciclos.json`, `ultimo-vram.json`) — tanto pela interface como pelo `--cli`. Sem stress, sem
 sessões ou sem benchmarks, a secção di-lo em vez de aparecer vazia.
 
-Nesta máquina o ficheiro sai com 16,9 KB, sete secções e quatro gráficos, a partir de 10 corridas de
+Nesta máquina o ficheiro sai com 16,5 KB, sete secções e quatro gráficos, a partir de 10 corridas de
 benchmark, 3 ciclos de stress, um stress simples e uma sessão gravada.
 
 ## Rede — diagnóstico e débito real
@@ -888,7 +888,7 @@ para o inode apagado) e a importação contava zero. A ligação é aberta com `
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.11-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.13-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -926,7 +926,10 @@ real, o CSV da sessão (célula vazia em vez de zero) e o resumo por série; na 
 agregado dos ciclos (mediana, contadores somados, amostras reais, variação só a partir de 3), o parser
 do auto-teste S.M.A.R.T. nas duas famílias de log (NVMe parado e a correr, ATA a correr com conversão
 do restante, linha "in progress" fora do histórico, JSON inválido) e a simulação da suspensão — que
-falha se o relógio de parede e o monotónico não andarem juntos. Os testes correm no CI a cada push:
+falha se o relógio de parede e o monotónico não andarem juntos; na 0.20.13 juntou-se o relatório
+completo (secções, escape do hardware, CSV da sessão, gráficos SVG), o banco (migração única do JSON,
+pesquisa por texto e período, dedupe e o teste da base apagada por fora) e a rede (cliente e servidor
+no loopback, com a recusa de ligação a sair em pt-PT). Os testes correm no CI a cada push:
 
 ```bash
 dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
@@ -1002,15 +1005,15 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.11-linux-arm64.tar.gz  38 MB  instalador sem root
+#   linux-explode-0.20.13-linux-arm64.tar.gz  38 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.20.11-linux-arm64.tar.gz
-cd linux-explode-0.20.11-linux-arm64 && ./install.sh
+tar -xzf linux-explode-0.20.13-linux-arm64.tar.gz
+cd linux-explode-0.20.13-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
 ```

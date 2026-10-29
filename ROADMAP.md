@@ -4,10 +4,11 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.11 (ciclos de stress agendados com agregado, auto-teste S.M.A.R.T. na aba
-  Discos, enchimento de VRAM em Vulkan e teste de suspender/retomar, para além do ranking com mediana,
-  latência de memória, tarefa real, sessões em CSV, Dispositivos, placa-mãe, bandeja, STRESS, gráficos
-  ao vivo, throttling, energia, temas, `--json`, alertas e 108 testes).
+- **Estado actual:** 0.20.13 (relatório completo em HTML, histórico em SQLite com pesquisa/período e
+  débito real cliente/servidor, para além dos ciclos de stress, auto-teste S.M.A.R.T., VRAM, suspender/
+  retomar, ranking com mediana, latência de memória, tarefa real, sessões em CSV, Dispositivos,
+  placa-mãe, bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`, alertas e
+  125 testes).
 
 ## Fase 1 — 0.20.1 (feito)
 
@@ -93,17 +94,28 @@ quatro capturas em `docs/`.
 
 ---
 
-## Fase 6 — 0.20.13 · Dados e integração (próxima)
+## Fase 6 — 0.20.13 · Dados e integração (feito em parte)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
 | 19 ✅ | Relatório único (sistema + sensores + benchmarks + stress) em HTML | Um ficheiro para arquivar ou partilhar | HTML autónomo com gráficos e data; botão na aba Relatório — feito, 16,9 KB com sete secções | M |
 | 20 ✅ | Histórico em SQLite com pesquisa e gráficos | O JSON actual não escala para meses de amostras | Esquema + migração do JSON + consultas por período — feito, `historico.db` com procura e período; JSON migrado uma vez | M |
 | 10 ✅ | Benchmark de rede real (cliente/servidor próprio) | Mede a rede a sério, não só latência | Modo servidor e cliente; relatório de débito — feito, `--cli netbench`, teste local no loopback | M |
-| 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` | Chave de release, `summary.sig`, cliente a validar sem flag | M |
-| 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Revisão aceite; builds reprodutíveis; capturas e metainfo válidos | G |
+| 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` | Chave de release, `summary.sig`, cliente a validar sem flag — **passa para a 0.20.15** (precisa da chave do Nuno) | M |
+| 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Revisão aceite; builds reprodutíveis; capturas e metainfo válidos — **passa para a 0.20.15** (revisão externa) | G |
 
 ---
+
+## Fase 7 — 0.20.15 · Assinatura e distribuição (próxima)
+
+| # | Item | Porquê | Aceitação | Esforço |
+|---|---|---|---|---|
+| 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` na instalação | Chave de release criada e guardada como segredo no CI; `summary.sig` e commits assinados; cliente a validar sem a flag | M |
+| 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Metainfo e capturas válidos (já validados), builds reprodutíveis, pedido de revisão aceite | G |
+
+A chave GPG é do dono do projecto: gerar, exportar a pública para `docs/` e guardar a privada nos
+segredos do repositório são passos que exigem o aval do Nuno. A Flathub é uma revisão externa — o
+trabalho aqui é preparar o pacote e responder aos revisores.
 
 ## Fora de âmbito (por agora)
 

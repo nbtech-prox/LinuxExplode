@@ -3,7 +3,7 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
-## [0.20.13] — em preparação
+## [0.20.13] — 2026-10-29
 
 ### Adicionado
 
@@ -16,7 +16,7 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
   (`ultimo-stress.json`, `ultimo-ciclos.json`, `ultimo-vram.json` na pasta de dados), tanto pela
   interface como pela linha de comandos, para o relatório não depender de se ter clicado em
   *Guardar relatório*.
-  - O HTML gerado nesta máquina (0.20.13 em preparação) tem 16,9 KB, sete secções e quatro gráficos;
+  - O HTML gerado nesta máquina tem 16,5 KB, sete secções e quatro gráficos;
     foi verificado a abrir no browser com os dados reais de 10 corridas de benchmark, 3 ciclos, um
     stress e uma sessão de 4 amostras.
   - O escape é só de `< > & " '`: o documento é UTF-8, por isso "concluído" fica legível (com
