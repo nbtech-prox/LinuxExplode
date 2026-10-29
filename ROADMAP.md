@@ -101,21 +101,20 @@ quatro capturas em `docs/`.
 | 19 ✅ | Relatório único (sistema + sensores + benchmarks + stress) em HTML | Um ficheiro para arquivar ou partilhar | HTML autónomo com gráficos e data; botão na aba Relatório — feito, 16,9 KB com sete secções | M |
 | 20 ✅ | Histórico em SQLite com pesquisa e gráficos | O JSON actual não escala para meses de amostras | Esquema + migração do JSON + consultas por período — feito, `historico.db` com procura e período; JSON migrado uma vez | M |
 | 10 ✅ | Benchmark de rede real (cliente/servidor próprio) | Mede a rede a sério, não só latência | Modo servidor e cliente; relatório de débito — feito, `--cli netbench`, teste local no loopback | M |
-| 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` | Chave de release, `summary.sig`, cliente a validar sem flag — **passa para a 0.20.15** (precisa da chave do Nuno) | M |
+| 25 ✅ | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` | Chave de release ed25519 `81F5CFA1…F80AC`, `summary.sig` no gh-pages, cliente a validar sem flag; segredo no CI e verificação obrigatória no `release.yml` | M |
 | 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Revisão aceite; builds reprodutíveis; capturas e metainfo válidos — **passa para a 0.20.15** (revisão externa) | G |
 
 ---
 
-## Fase 7 — 0.20.15 · Assinatura e distribuição (próxima)
+## Fase 7 — 0.20.15 · Distribuição (próxima)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
 | 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` na instalação | Chave de release criada e guardada como segredo no CI; `summary.sig` e commits assinados; cliente a validar sem a flag | M |
 | 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Metainfo e capturas válidos (já validados), builds reprodutíveis, pedido de revisão aceite | G |
 
-A chave GPG é do dono do projecto: gerar, exportar a pública para `docs/` e guardar a privada nos
-segredos do repositório são passos que exigem o aval do Nuno. A Flathub é uma revisão externa — o
-trabalho aqui é preparar o pacote e responder aos revisores.
+A assinatura GPG ficou feita na 0.20.13 (chave ed25519, pública em `docs/`). A Flathub é uma revisão
+externa: o trabalho aqui é preparar o pacote, responder aos revisores e manter os builds reprodutíveis.
 
 ## Fora de âmbito (por agora)
 

@@ -71,7 +71,11 @@ jobs:
               org.freedesktop.Sdk/x86_64/25.08
           '
 
-      - name: Compilar bundle
+      # A chave privada vem dos segredos do repositório; sem ela o build sai sem assinatura e o
+      # passo seguinte falha de propósito — um release não pode sair sem o repositório assinado.
+      - name: Compilar bundle (repositório assinado)
+        env:
+          LINUXEXPLODE_GPG_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
         run: dbus-run-session -- ./empacotar.sh --bundle
 
       - name: Verificar o bundle
@@ -79,11 +83,17 @@ jobs:
           set -euo pipefail
           ls -lh linux-explode.flatpak
           test -s linux-explode.flatpak
+          test -s flatpak/repo-x86_64/summary.sig
+          # summary.sig é um GVariant do OSTree (tipo ostree.gpgsigs), não um .sig do gpg:
+          # a assinatura valida-se com o próprio flatpak ao ler o remote.
+          strings flatpak/repo-x86_64/summary.sig | grep -qx 'ostree.gpgsigs'
 
       - name: Anexar ao release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber linux-explode.flatpak
+        run: >
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber
+          linux-explode.flatpak docs/linux-explode-release.gpg docs/linux-explode-release.asc
 
       # O repositório OSTree do build (flatpak/repo-x86_64, archive-z2) é publicado no ramo
       # gh-pages: é o que permite ao gestor de pacotes ver e aplicar actualizações
@@ -112,6 +122,8 @@ jobs:
           rm -rf "$REPO/tmp" "$REPO/state"
           rsync -a --ignore-existing "$REPO/objects" /tmp/pages/
           rsync -a "$REPO/config" "$REPO/refs" "$REPO/summary" /tmp/pages/
+          cp "$REPO/summary.sig" /tmp/pages/summary.sig
+          cp docs/linux-explode-release.gpg /tmp/pages/linux-explode-release.gpg
           [ -f "$REPO/summary.idx" ] && cp "$REPO/summary.idx" /tmp/pages/
           [ -d "$REPO/summaries" ] && rsync -a "$REPO/summaries" /tmp/pages/
           touch /tmp/pages/.nojekyll

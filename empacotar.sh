@@ -16,6 +16,28 @@ STAGING=flatpak/staging
 VERSAO=$(grep -oP '(?<=<Version>)[^<]+' LinuxExplode.csproj | head -1)
 MODO="${1:-}"
 
+# ------------------------------------------------------------------ assinatura GPG
+# Com LINUXEXPLODE_GPG_KEY (chave privada em ASCII armor, com quebras de linha) o repositório sai
+# assinado: os commits e o summary levam assinatura e o cliente deixa de precisar de --no-gpg-verify.
+# Sem a variável o build continua a servir para desenvolvimento, mas o remote fica sem verificação.
+# O homedir temporário tem de viver DENTRO do projecto: o org.flatpak.Builder corre em sandbox e não
+# vê o /tmp do anfitrião.
+GPG_DIR=""
+GPG_ARGS=()
+if [[ -n "${LINUXEXPLODE_GPG_KEY:-}" ]]; then
+  GPG_DIR="$(pwd)/.gpg-release"
+  rm -rf "$GPG_DIR"; mkdir -p "$GPG_DIR"; chmod 700 "$GPG_DIR"
+  trap 'rm -rf "$GPG_DIR"' EXIT
+  printf '%s' "$LINUXEXPLODE_GPG_KEY" | GNUPGHOME="$GPG_DIR" gpg --batch --import >/dev/null 2>&1
+  GPG_ID=$(GNUPGHOME="$GPG_DIR" gpg --batch --list-secret-keys --with-colons | awk -F: '/^sec:/{print $5; exit}')
+  if [[ -z "$GPG_ID" ]]; then
+    echo "erro: LINUXEXPLODE_GPG_KEY não contém uma chave secreta válida" >&2
+    exit 1
+  fi
+  GPG_ARGS=(--gpg-sign="$GPG_ID" --gpg-homedir="$GPG_DIR")
+  echo "== assinatura GPG activa (chave $GPG_ID)"
+fi
+
 # ------------------------------------------------------------------ ARM64
 # O bundle aarch64 é produzido sem flatpak-builder e SEM emulação: o build
 # dir é montado à mão e finalizado com build-finish (que não aceita --arch;
@@ -61,7 +83,7 @@ empacotar_arm64() {
     --talk-name=org.freedesktop.Notifications --talk-name=org.freedesktop.Flatpak "$B" >/dev/null
 
   echo "== 4/4  exportar e empacotar o bundle"
-  flatpak build-export --arch=aarch64 "$R" "$B" stable
+  flatpak build-export --arch=aarch64 "${GPG_ARGS[@]}" "$R" "$B" stable
   flatpak build-bundle --arch=aarch64 "$R" linux-explode-aarch64.flatpak "$APP_ID" stable
 
   echo
@@ -97,18 +119,29 @@ echo "== 3/3  construir flatpak e publicar num repositório local"
 REPO=flatpak/repo-x86_64
 REMOTE=linuxexplode
 rm -rf "$REPO"
-flatpak run org.flatpak.Builder --user --force-clean --repo="$REPO" build-dir flatpak/$APP_ID.json
-flatpak build-update-repo --title="LINUX EXPLODE" "$REPO"
+flatpak run org.flatpak.Builder --user --force-clean --repo="$REPO" "${GPG_ARGS[@]}" build-dir flatpak/$APP_ID.json
+flatpak build-update-repo --title="LINUX EXPLODE" "${GPG_ARGS[@]}" "$REPO"
 
 # Em CI só interessa o repositório e o bundle; instalar ali a app não serve para nada.
 if [ "${CI:-}" = "true" ]; then
   echo "CI: repositório em $REPO (sem instalar localmente)"
 else
-  if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
-    flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+  if [[ ${#GPG_ARGS[@]} -gt 0 ]]; then
+    if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
+      flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+      flatpak remote-modify --user --gpg-import=docs/linux-explode-release.gpg "$REMOTE"
+      flatpak remote-modify --user --gpg-verify "$REMOTE"
+    else
+      flatpak remote-add --user --title="LINUX EXPLODE" \
+        --gpg-import=docs/linux-explode-release.gpg "$REMOTE" "file://$(pwd)/$REPO"
+    fi
   else
-    flatpak remote-add --user --no-gpg-verify --title="LINUX EXPLODE" \
-      "$REMOTE" "file://$(pwd)/$REPO"
+    if flatpak remote-list --user --columns=name | grep -qx "$REMOTE"; then
+      flatpak remote-modify --user --url="file://$(pwd)/$REPO" "$REMOTE"
+    else
+      flatpak remote-add --user --no-gpg-verify --title="LINUX EXPLODE" \
+        "$REMOTE" "file://$(pwd)/$REPO"
+    fi
   fi
 
   flatpak install --user -y --reinstall "$REMOTE" "$APP_ID" >/dev/null

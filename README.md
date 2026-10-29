@@ -19,12 +19,32 @@ O projecto publica um **repositório Flatpak** em `https://nbtech-prox.github.io
 Acrescenta-se uma vez e a partir daí as actualizações aparecem no gestor de aplicações:
 
 ```bash
-flatpak remote-add --user --no-gpg-verify linuxexplode https://nbtech-prox.github.io/LinuxExplode/
+curl -fsSLO https://nbtech-prox.github.io/LinuxExplode/linux-explode-release.gpg
+flatpak remote-add --user --gpg-import=linux-explode-release.gpg \
+  linuxexplode https://nbtech-prox.github.io/LinuxExplode/
 flatpak install --user linuxexplode pt.linuxexplode.LinuxExplode
 flatpak update --user
 ```
 
-O repositório não está assinado com GPG (daí `--no-gpg-verify`).
+O repositório é **assinado com GPG**: o `summary` e os commits levam assinatura e o Flatpak recusa
+um update com assinatura inválida. A chave de release é
+`Linux Explode Releases <nbtech-prox@users.noreply.github.com>`, ed25519,
+fingerprint `81F5CFA1CE36B58DD8C4308424CD0B309D2F80AC`; a pública está em
+`docs/linux-explode-release.gpg` (e no próprio gh-pages).
+
+**Quem instalou antes da 0.20.13** (com `--no-gpg-verify`) passa a verificar sem reinstalar a app:
+
+```bash
+curl -fsSLO https://nbtech-prox.github.io/LinuxExplode/linux-explode-release.gpg
+flatpak remote-modify --user --gpg-import=linux-explode-release.gpg linuxexplode
+flatpak remote-modify --user --gpg-verify linuxexplode
+flatpak update --user
+```
+
+A chave privada vive nos segredos do repositório (`FLATPAK_GPG_PRIVATE_KEY`) e numa cópia local em
+`~/.config/linux-explode/` (chmod 600), ao lado do certificado de revogação. Se for preciso rodar a
+chave, publica-se a nova em `docs/` com outro nome — a antiga fica no repositório para os clientes
+que ainda a tenham — e repete-se o pedido de importação.
 
 ### Pelos ficheiros
 
@@ -1079,7 +1099,7 @@ LinuxExplode/
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
 ├── tests/                # xUnit (125 testes, correm no CI)
-├── docs/                 # capturas reais usadas no metainfo e no README
+├── docs/                 # capturas reais e a chave pública do repositório (`linux-explode-release.gpg`)
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
 ```

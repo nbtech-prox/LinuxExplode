@@ -35,6 +35,14 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
     (quando), tecto de 500 entradas e a mesma regra de não engordar com notas repetidas. O pool de
     ligações do `Microsoft.Data.Sqlite` foi **desligado** (`Pooling=false`): com ele, uma ligação em
     cache continuava a ver o ficheiro apagado e a importação contava zero.
+- **Distribuição: repositório Flatpak assinado com GPG.** O `flatpak build-export` e o
+  `build-update-repo` passam a assinar os commits e o `summary` com a chave de release
+  `81F5CFA1CE36B58DD8C4308424CD0B309D2F80AC` (ed25519, `Linux Explode Releases`), guardada no
+  segredo `FLATPAK_GPG_PRIVATE_KEY` e numa cópia local em `~/.config/linux-explode/`. A pública é
+  publicada em `docs/linux-explode-release.gpg` e no gh-pages. Quem instala deixa de precisar de
+  `--no-gpg-verify`; quem já tinha o remote antigo importa a chave e liga a verificação com dois
+  `flatpak remote-modify` (README). O `release.yml` falha se o `summary.sig` não existir, para não
+  sair um release sem assinatura.
 - **Débito real entre dois PC** (aba *Rede* → cartão *Débito real — cliente/servidor*): um lado serve,
   o outro envia N MB e recebe os mesmos N MB de volta; a latência vem de 20 idas e voltas de 8 bytes e
   o jitter é o desvio-padrão dessas amostras. Os dois sentidos são cronometrados e contados em bytes.
