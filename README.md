@@ -52,7 +52,7 @@ que ainda a tenham — e repete-se o pedido de importação.
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.13-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.20.13-linux-arm64.tar.gz` (39 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
@@ -1025,7 +1025,7 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.13-linux-arm64.tar.gz  38 MB  instalador sem root
+#   linux-explode-0.20.13-linux-arm64.tar.gz  39 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
