@@ -11,7 +11,7 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.3](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.20.11](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -32,7 +32,7 @@ O repositório não está assinado com GPG (daí `--no-gpg-verify`).
 |---|---|
 | `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.3-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode-0.20.11-linux-arm64.tar.gz` (38 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
@@ -44,10 +44,10 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 
 | Módulo | O que mostra | Fonte |
 |---|---|---|
-| **Sistema** | distribuição, kernel, arquitetura, máquina, placa-mãe, BIOS, CPU (núcleos/threads/frequências/cache L3), RAM e módulos (fabricante, part number, velocidade), GPUs | `/etc/os-release`, `/proc/cpuinfo`, `/proc/meminfo`, `/sys/class/dmi/id`, `/sys/class/drm`, `/sys/bus/nvmem` (SPD) |
+| **Sistema** | distribuição, kernel, arquitetura, máquina, placa-mãe, BIOS, CPU (núcleos/threads/frequências/cache L3), RAM e módulos (fabricante, part number, velocidade), GPUs e **teste de suspender/retomar** | `/etc/os-release`, `/proc/cpuinfo`, `/proc/meminfo`, `/sys/class/dmi/id`, `/sys/class/drm`, `/sys/bus/nvmem` (SPD) |
 | **Sensores** | temperatura, ventoinhas, potência, tensão, corrente e frequência, ao vivo (1 s), com filtro por tipo — no filtro **Frequência** os núcleos da CPU vêm primeiro e a GPU depois; no filtro **Potência** abre com o cartão **Consumo do PC** (RAPL + GPUs) antes da lista de hwmon | `/sys/class/hwmon`, `/sys/devices/system/cpu`, `/sys/class/powercap` (RAPL) |
 
-| **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. | `/sys/block`, `/proc/mounts`, `smartctl` |
+| **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. e **auto-teste curto/longo com progresso e histórico** | `/sys/block`, `/proc/mounts`, `smartctl`, `smartctl -t` |
 | **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
 | **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload | sockets + Cloudflare |
@@ -642,6 +642,56 @@ plataforma passa dos 200 W. Serve para validar overclock, pasta térmica e estab
 Num teste de 20 s o CPU rende menos do que isolado (68 em vez de 82 GFLOP/s) — é o que acontece
 quando a RAM, o disco e a GPU lhe roubam largura de banda. Esse é o resultado honesto.
 
+### Ciclos agendados — o mesmo teste N vezes
+
+Um teste longo diz que a máquina aguenta; **N ciclos iguais dizem se ela repete o resultado**. O
+cartão *Ciclos agendados* corre o mesmo alvo (CPU, RAM, GPU, disco ou *tudo*) N vezes com uma pausa
+entre ciclos e no fim apresenta, por métrica, a **mediana, o mínimo, o máximo e a variação**.
+
+Os números são os do ranking: a mediana é o resultado, uma corrida isolada não é, e a variação só é
+afirmada a partir de 3 ciclos — com 2 o cartão diz "amostra pequena (2)" em vez de gritar
+instabilidade. Se a variação passar os 3 % o resumo avisa que a máquina não repetiu o resultado e que
+a causa (térmica, turbo, outro processo) tem de ser vista.
+
+Nesta máquina, dois ciclos de 3 s com FMA vetorial em 16 threads:
+
+| Métrica | Mediana | Mínimo | Máximo |
+|---|---|---|---|
+| CPU (M/s) | 5 526,9 | 5 503,8 | 5 549,9 |
+| CPU (GFLOP/s) | 88,4 | 88,1 | 88,8 |
+
+Picos de 61 °C na CPU e 42 °C na GPU, com cada ciclo a fechar em 3 s. A guarda térmica continua
+activa: um ciclo que dispare o limite termina a série e o resumo diz qual foi o motivo.
+
+```bash
+linux-explode --cli ciclos cpu 60 --ciclos 5 --pausa 30     # 5 × 1 min com 30 s de pausa
+linux-explode --cli ciclos tudo 120 --ciclos 3 --limite 90   # burn-in em série
+linux-explode --cli ciclos cpu 30 --ciclos 3 --json          # agregado para script
+```
+
+### Memória da GPU — encher a VRAM até o driver recusar
+
+O stress normal aquece a GPU mas não mexe na memória de vídeo. O cartão *Memória da GPU (Vulkan)*
+aloca blocos de VRAM (64 MB a 1 GB) até um limite escolhido — ou até o driver recusar —, **escreve um
+padrão em cada bloco por inteiro** e relê duas amostras de 4 KB de cada um, comparando-as com o que
+foi escrito. Quando um bloco não cabe, o resultado diz qual foi a resposta do driver
+(`ErrorOutOfDeviceMemory`) e o teste termina com o que já tinha alocado e verificado.
+
+O total alocado é o que o driver aceitou; o **pico e o uso em `/sys/class/drm/card*/device/mem_info_vram_used`**
+são uma fonte independente da aplicação. Nesta máquina (RX 6700 XT, 11,98 GB de heap): 2 GB em 16
+blocos de 128 MB em 0,7 s, uso a subir de 737,59 MB para **2,72 GB** de pico, 128 KB relidos sem
+nenhuma diferença.
+
+O valor "depois" do `--cli` é lido ainda dentro do processo — o driver só devolve o heap quando o
+processo termina (2,72 GB durante o teste, 702 MB depois de sair). Encher até o driver recusar pode
+deixar o ambiente gráfico sem memória: com o desktop a correr, 2 GB é o limite seguro nestas placas.
+
+```bash
+linux-explode --cli vram                       # 4 GB por omissão, GPU 0
+linux-explode --cli vram --indice 1 --limite 512 --bloco 128
+linux-explode --cli vram --limite 0            # até o driver recusar
+```
+
 ### Segurança
 
 - O ficheiro do teste de disco é criado em `~/.cache/linux-explode/stress/` e **apagado no fim**.
@@ -666,23 +716,85 @@ linux-explode --cli stress disco 120
 linux-explode --cli stress gpu 60
 linux-explode --cli stress tudo 300                     # burn-in de 5 minutos
 linux-explode --cli stress cpu 30 --limite 80           # guarda térmica mais apertada
+linux-explode --cli ciclos cpu 60 --ciclos 5 --pausa 30 # série de ciclos com agregado
+linux-explode --cli vram --limite 2048 --bloco 128      # encher a VRAM e verificar
 ```
 
 ### Limitações (honestas)
 
 - O stress de GPU usa o path tracer do projecto; não substitui ferramentas dedicadas (gpu-burn,
-  Furmark) nem testa a VRAM até à falha.
+  Furmark). A VRAM passou a ser testada à parte (cartão *Memória da GPU*), mas alocar até à falha
+  pode afectar o ambiente gráfico — o limite é uma escolha do utilizador.
 - O stress de disco corre num ficheiro dentro do teu home — não testa o disco inteiro nem SMART
   durante a carga (a temperatura do disco aparece na aba Discos).
 - A carga de CPU é sintética: aquece e mede, mas não prevê o desempenho de um jogo ou de uma
   compilação específicos.
+
+## Discos: auto-teste S.M.A.R.T.
+
+A saúde S.M.A.R.T. diz o que o disco reporta; o **auto-teste** é o controlador a exercitar o disco a
+sério. Cada disco na aba **Discos** tem agora os botões *Teste curto* (≈2 min num NVMe, 1–2 min num
+HDD) e *Teste longo* (varre a superfície inteira — pode demorar horas), o estado a correr com a
+percentagem, *Abortar*, e o histórico dos últimos testes com as horas de funcionamento em que
+correram.
+
+Duas famílias de log, lidas do mesmo JSON do `smartctl -a`:
+
+- **NVMe** — `nvme_self_test_log`: operação em curso, percentagem de conclusão e tabela de resultados.
+- **ATA** — `ata_smart_data.self_test.status` (com `remaining_percent`) e `ata_smart_self_test_log`,
+  de onde a linha "in progress" é excluída do histórico (é o teste a correr, não um resultado).
+
+Nesta máquina, o cartão mostra o histórico real dos dois discos — no PNY CS1030, dois testes curtos
+concluídos sem erros às 9 642 h e um abortado; no ST1000DM010, seis testes curtos concluídos, o mais
+antigo às 34 264 h. O progresso actualiza-se sozinho de 4 em 4 segundos enquanto algum teste corre
+(o `smartctl -t` devolve logo o controlo; o disco continua o teste sozinho).
+
+```bash
+linux-explode --cli autoteste                       # estado e histórico do primeiro disco
+linux-explode --cli autoteste curto nvme0n1         # dispara um teste curto
+linux-explode --cli autoteste longo sda --json      # teste longo, saída JSON
+linux-explode --cli autoteste parar nvme0n1         # aborta
+```
+
+Precisa do `smartctl` com a regra NOPASSWD (a mesma que a saúde já usa); sem ela o cartão diz o
+comando exacto para a conceder, em vez de inventar um resultado.
+
+## Suspender e retomar
+
+Num portátil é aqui que tudo se parte: sensores deixam de responder, o RAPL perde a permissão, o
+relógio salta. O cartão *Suspender e retomar* (aba **Sistema**) mostra primeiro o que o sistema
+anuncia — `/sys/power/state`, `/sys/power/mem_sleep` — e se há permissão para suspender e para
+acordar sozinho. Depois suspende a sério e mede o tempo dormido por **três relógios independentes**:
+
+- **parede − monotónico**: o relógio monotónico pára durante o suspend, a diferença é o tempo dormido;
+- **uptime (CLOCK_BOOTTIME)**: confirma o mesmo número por outra via;
+- no fim compara temperaturas e potência antes/depois e diz se os sensores voltaram a responder.
+
+O despertar automático usa `rtcwake` (agenda a hora no relógio da máquina); sem essa regra no sudoers
+cai para `systemctl suspend` e a máquina acorda quando lhe tocas — o cartão di-lo em vez de falhar em
+silêncio. O botão *Simular (sem dormir)* corre a mesma medição sem suspender e serve de prova de que a
+conta dá zero: nesta máquina 1,59 s de relógio de parede, **0,00 s** de suspend e 0,01 s de diferença
+de uptime.
+
+```bash
+linux-explode --cli suspender                    # suporte, permissões e último teste
+linux-explode --cli suspender testar --segundos 15
+linux-explode --cli suspender testar --simular   # prova a conta sem dormir
+```
+
+Para o despertar sozinho, acrescenta o `rtcwake` ao mesmo ficheiro do smartctl:
+
+```bash
+echo "$USER ALL=(root) NOPASSWD: /usr/bin/smartctl, /usr/bin/rtcwake" | sudo tee /etc/sudoers.d/smartctl
+sudo chmod 440 /etc/sudoers.d/smartctl
+```
 
 ## Portabilidade (outro Linux, outro hardware)
 
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.3-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.11-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -708,7 +820,7 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **99 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **108 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
@@ -716,7 +828,11 @@ finais vs pontes, códigos de classe PCI, nomes de fabricante, velocidades e cla
 amostra de cada formato ALSA, latência de período/buffer, o parser do `pw-top` e a leitura de
 `/proc/asound` a partir de uma árvore temporária; na 0.20.7 juntaram-se a mediana/variância do
 ranking, a curva de latência (monótona, L1 muito abaixo da RAM), a fonte C determinística da tarefa
-real, o CSV da sessão (célula vazia em vez de zero) e o resumo por série. Os testes correm no CI a cada push:
+real, o CSV da sessão (célula vazia em vez de zero) e o resumo por série; na 0.20.11 juntou-se o
+agregado dos ciclos (mediana, contadores somados, amostras reais, variação só a partir de 3), o parser
+do auto-teste S.M.A.R.T. nas duas famílias de log (NVMe parado e a correr, ATA a correr com conversão
+do restante, linha "in progress" fora do histórico, JSON inválido) e a simulação da suspensão — que
+falha se o relógio de parede e o monotónico não andarem juntos. Os testes correm no CI a cada push:
 
 ```bash
 dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
@@ -792,15 +908,15 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.3-linux-arm64.tar.gz  38 MB  instalador sem root
+#   linux-explode-0.20.11-linux-arm64.tar.gz  38 MB  instalador sem root
 #   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.20.3-linux-arm64.tar.gz
-cd linux-explode-0.14.0-linux-arm64 && ./install.sh
+tar -xzf linux-explode-0.20.11-linux-arm64.tar.gz
+cd linux-explode-0.20.11-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
 ```
@@ -837,7 +953,7 @@ LinuxExplode/
 │   ├── MemoriaModulos.cs # módulos de RAM: SPD DDR5/DDR4 e SMBIOS, sem root
 │   ├── Sensores.cs       # hwmon
 │   ├── Potencia.cs       # potência da CPU (contadores RAPL) + power1_* das GPUs
-│   ├── Discos.cs         # /sys/block + smartctl
+│   ├── Discos.cs         # /sys/block + smartctl (saúde e auto-teste curto/longo)
 │   ├── BenchMemoria.cs   # latência por tamanho de bloco (pointer chasing, 4 KB → 256 MB)
 │   ├── TarefaReal.cs     # descomprimir (SHA-256) + compilar C, sem rede
 │   ├── GravadorSessao.cs # sessão de monitorização em CSV, com resumo e gráfico
@@ -845,6 +961,9 @@ LinuxExplode/
 │   ├── Usb.cs            # dispositivos USB: velocidade negociada, classes, drivers
 │   ├── Audio.cs          # /proc/asound + xruns (pw-top) e quantum (pw-metadata)
 │   ├── Alertas.cs        # regras de aviso (temperatura, ventoinhas, espaço)
+│   ├── CiclosStress.cs   # série de N ciclos do mesmo stress, com agregado por métrica
+│   ├── StressVram.cs     # enchimento de VRAM em Vulkan, com escrita e verificação
+│   ├── Suspender.cs      # suspender/retomar: três relógios e sensores depois do wake
 │   ├── BenchCpu.cs       # path tracer (portado do original, inalterado)
 │   ├── BenchDisco.cs     # RAM + disco com O_DIRECT
 │   ├── Rede.cs           # latência, DNS, velocidade
@@ -859,8 +978,8 @@ LinuxExplode/
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (99 testes, correm no CI)
-├── docs/                 # capturas reais usadas no metainfo
+├── tests/                # xUnit (108 testes, correm no CI)
+├── docs/                 # capturas reais usadas no metainfo e no README
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
 ```
@@ -869,6 +988,12 @@ LinuxExplode/
 
 - **S.M.A.R.T. detalhado** precisa de `smartmontools` e root. Dentro do Flatpak o acesso a
   `/dev` é limitado: a app diz isso na própria página, em vez de inventar um veredito.
+- **Auto-teste S.M.A.R.T.** é assíncrono por natureza: a app dispara e acompanha, mas quem corre o
+  teste é o controlador do disco. Num HDD, o teste longo pode demorar horas e degradar o desempenho
+  do disco enquanto corre (podes abortá-lo no cartão).
+- **Suspender/retomar** só é testável a sério com permissão para suspender; o despertar automático
+  exige o `rtcwake` no sudoers. Sem ele o teste suspende na mesma, mas fica à espera de uma tecla —
+  o cartão avisa antes. A simulação prova a aritmética dos relógios sem dormir nada.
 - **Benchmarks de GPU** do original (stress test D3D11, ray tracing D3D12) foram substituídos por
   equivalentes em Vulkan (`Core/BenchGpu.cs`, `Core/BenchRt.cs`); o modo ray tracing exige
   `VK_KHR_ray_query` no driver.

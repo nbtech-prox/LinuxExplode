@@ -36,7 +36,8 @@ public sealed record ResultadoStress(
     double PicoCpuC,
     double PicoGpuC,
     double EnergiaKwh,
-    double Segundos);
+    double Segundos,
+    IReadOnlyDictionary<string, double>? Metricas = null);
 
 /// <summary>
 /// Guarda térmica: para a sessão quando a CPU ou a GPU passam do limite. Os valores são lidos dos
@@ -581,6 +582,7 @@ public sealed class SessaoStress : IDisposable
         }, null, 0, 400);
 
         var linhas = new List<string>();
+        var metricas = new Dictionary<string, double>(StringComparer.Ordinal);
         bool completo = true;
 
         try
@@ -595,6 +597,9 @@ public sealed class SessaoStress : IDisposable
                                    $" → {r.Unidades / r.Segundos / 1_000_000.0:0.0} M/s");
                         if (r.Flops > 0) linhas.Add($"CPU: {r.Flops / 1e9 / r.Segundos:0.0} GFLOP/s ({_threads} threads)");
                         if (r.Bytes > 0) linhas.Add($"CPU↔RAM: {r.Bytes / r.Segundos / 1e9:0.0} GB/s de tráfego");
+                        metricas["cpu_milhoes_s"] = r.Unidades / r.Segundos / 1_000_000.0;
+                        if (r.Flops > 0) metricas["cpu_gflops"] = r.Flops / 1e9 / r.Segundos;
+                        if (r.Bytes > 0) metricas["cpu_gbs_trafego"] = r.Bytes / r.Segundos / 1e9;
                         break;
                     }
 
@@ -607,6 +612,9 @@ public sealed class SessaoStress : IDisposable
                         linhas.Add(r.Erros == 0
                             ? $"RAM: {r.PalavrasVerificadas:N0} palavras verificadas, sem erros"
                             : $"RAM: {r.Erros:N0} ERROS em {r.PalavrasVerificadas:N0} palavras — memória instável");
+                        metricas["ram_escrita_gbs"] = r.EscritaGbs;
+                        metricas["ram_leitura_gbs"] = r.LeituraGbs;
+                        metricas["ram_erros"] = r.Erros;
                         break;
                     }
 
@@ -617,6 +625,8 @@ public sealed class SessaoStress : IDisposable
                         linhas.Add($"GPU ({r.Nome}): {r.Pontos / 1e6:0.0} M pontos em {r.Segundos:0.0} s" +
                                    $" → {r.Pontos / r.Segundos / 1e6:0.0} M pts/s");
                         if (r.Falhas > 0) linhas.Add($"GPU: {r.Falhas} dispatch(es) falharam — ver o registo");
+                        metricas["gpu_milhoes_pts_s"] = r.Pontos / r.Segundos / 1e6;
+                        metricas["gpu_falhas"] = r.Falhas;
                         break;
                     }
 
@@ -629,6 +639,10 @@ public sealed class SessaoStress : IDisposable
                         linhas.Add(r.Erros == 0
                             ? "Disco: dados relidos iguais aos escritos (sem corrupção)"
                             : $"Disco: {r.Erros:N0} bytes diferentes na releitura");
+                        metricas["disco_escrita_mbs"] = r.EscritaMbs;
+                        metricas["disco_leitura_mbs"] = r.LeituraMbs;
+                        metricas["disco_iops4k"] = r.Iops4K;
+                        metricas["disco_erros"] = r.Erros;
                         break;
                     }
 
@@ -650,23 +664,36 @@ public sealed class SessaoStress : IDisposable
                             var r = cpu.Result;
                             linhas.Add($"CPU: {r.Unidades:N0} {r.Unidade} em {r.Segundos:0.00} s" +
                                        $" → {r.Unidades / r.Segundos / 1e6:0.0} M/s · {r.Flops / 1e9 / r.Segundos:0.0} GFLOP/s");
+                            metricas["cpu_milhoes_s"] = r.Unidades / r.Segundos / 1e6;
+                            if (r.Flops > 0) metricas["cpu_gflops"] = r.Flops / 1e9 / r.Segundos;
                         }
                         if (ram.Status == TaskStatus.RanToCompletion)
                         {
                             var r = ram.Result;
                             linhas.Add($"RAM: {Util.Gb(r.BytesAlocados)} × {r.Passagens} · escrita {r.EscritaGbs:0.0} GB/s · " +
                                        $"leitura {r.LeituraGbs:0.0} GB/s · {r.Erros} erro(s)");
+                            metricas["ram_escrita_gbs"] = r.EscritaGbs;
+                            metricas["ram_leitura_gbs"] = r.LeituraGbs;
+                            metricas["ram_erros"] = r.Erros;
                         }
                         if (gpu.Status == TaskStatus.RanToCompletion)
                         {
                             var r = gpu.Result;
                             linhas.Add($"GPU ({r.Nome}): {r.Pontos / r.Segundos / 1e6:0.0} M pts/s");
+                            metricas["gpu_milhoes_pts_s"] = r.Pontos / r.Segundos / 1e6;
+                            metricas["gpu_falhas"] = r.Falhas;
                         }
                         if (disco.Status == TaskStatus.RanToCompletion)
                         {
                             var r = disco.Result;
                             linhas.Add($"Disco: escrita {r.EscritaMbs:0} MB/s · leitura {r.LeituraMbs:0} MB/s · {r.Erros} erro(s)");
+                            metricas["disco_escrita_mbs"] = r.EscritaMbs;
+                            metricas["disco_leitura_mbs"] = r.LeituraMbs;
+                            metricas["disco_iops4k"] = r.Iops4K;
+                            metricas["disco_erros"] = r.Erros;
                         }
+                        metricas["tarefas_falhadas"] = new Task[] { cpu, ram, gpu, disco }
+                            .Count(t => t.Status != TaskStatus.RanToCompletion);
                         break;
                     }
             }
@@ -708,7 +735,7 @@ public sealed class SessaoStress : IDisposable
             : motivo;
 
         var resultado = new ResultadoStress(_alvo, completo, resumo, linhas, picoCpu, picoGpu, energia,
-            relogio.Elapsed.TotalSeconds);
+            relogio.Elapsed.TotalSeconds, metricas);
 
         Terminou?.Invoke(resultado);
     }

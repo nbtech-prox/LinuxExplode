@@ -4,9 +4,10 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.9 (ranking local com mediana de 3 corridas, curva de latência de memória,
-  tarefa do mundo real e sessões gravadas em CSV, para além da aba Dispositivos, cartão da placa-mãe,
-  bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`, alertas e 99 testes).
+- **Estado actual:** 0.20.11 (ciclos de stress agendados com agregado, auto-teste S.M.A.R.T. na aba
+  Discos, enchimento de VRAM em Vulkan e teste de suspender/retomar, para além do ranking com mediana,
+  latência de memória, tarefa real, sessões em CSV, Dispositivos, placa-mãe, bandeja, STRESS, gráficos
+  ao vivo, throttling, energia, temas, `--json`, alertas e 108 testes).
 
 ## Fase 1 — 0.20.1 (feito)
 
@@ -76,18 +77,23 @@ instalada: sem ela o ranking e o histórico comparado não funcionavam no Flatpa
 
 ---
 
-## Fase 5 — 0.20.11 · Stress e discos (próxima)
+## Fase 5 — 0.20.11 · Stress e discos (feito)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
-| 15 | Ciclos de stress agendados (N ciclos, pausa entre eles) | Testes de estabilidade longos sem estar à frente | Configuração de ciclos; relatório agregado (picos, falhas) | M |
-| 16 | Auto-teste SMART (curto/longo) a partir da aba Discos | Diz se o disco está saudável a sério | `smartctl -t`; progresso e resultado do teste anterior | S |
-| 14 | Enchimento de VRAM (alocar até falhar, escrever e verificar) | O único subsistema sem stress hoje | Alocação em Vulkan com limite configurável, erro claro quando falha | G |
-| 17 | Teste de suspender/retomar | Portáteis falham aqui | Suspender, acordar, verificar sensores e serviços | M |
+| 15 ✅ | Ciclos de stress agendados (N ciclos, pausa entre eles) | Testes de estabilidade longos sem estar à frente | Configuração de ciclos; relatório agregado (picos, falhas) — `--cli ciclos`, mediana/min/max por métrica | M |
+| 16 ✅ | Auto-teste SMART (curto/longo) a partir da aba Discos | Diz se o disco está saudável a sério | `smartctl -t`; progresso e resultado do teste anterior — botões por disco, percentagem e histórico | S |
+| 14 ✅ | Enchimento de VRAM (alocar até falhar, escrever e verificar) | O único subsistema sem stress hoje | Alocação em Vulkan com limite configurável, erro claro quando falha — `--cli vram`, pico confirmado em `/sys` | G |
+| 17 ✅ | Teste de suspender/retomar | Portáteis falham aqui | Suspender, acordar, verificar sensores e serviços — três relógios, `--simular` para a conta zero | M |
+
+**Critério de conclusão:** cada item verificado nesta máquina — ciclos com números reais e tabela na
+interface, auto-teste com o histórico do NVMe e do HDD, VRAM com 2 GB alocados e relidos, suspensão
+com a simulação coerente (o teste real precisa do `rtcwake` no sudoers para acordar sozinho) — e as
+quatro capturas em `docs/`.
 
 ---
 
-## Fase 6 — 0.20.13 · Dados e integração
+## Fase 6 — 0.20.13 · Dados e integração (próxima)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|

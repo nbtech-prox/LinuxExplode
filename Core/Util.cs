@@ -27,6 +27,14 @@ public static class Util
 
     /// <summary>Corre um comando do sistema e devolve stdout (vazio se não existir).</summary>
     public static string Comando(string ficheiro, params string[] args)
+        => ComandoCodigo(ficheiro, args).Saida;
+
+    /// <summary>
+    /// Corre um comando e devolve stdout + código de saída. Comandos que respondem devagar
+    /// (smartctl a iniciar um auto-teste, suspend) precisam do código para distinguir sucesso de
+    /// "abriu o dispositivo mas não fez nada".
+    /// </summary>
+    public static (string Saida, int Codigo) ComandoCodigo(string ficheiro, params string[] args)
     {
         try
         {
@@ -39,12 +47,16 @@ public static class Util
             };
             foreach (var a in args) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi);
-            if (p is null) return "";
+            if (p is null) return ("", -1);
+            var erro = p.StandardError.ReadToEndAsync();
             string saida = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(8000);
-            return saida.Trim();
+            if (!p.WaitForExit(15000)) { try { p.Kill(true); } catch { } }
+            // alguns comandos (smartctl) escrevem o diagnóstico no stderr quando não há root
+            var restante = erro.IsCompletedSuccessfully ? erro.Result : "";
+            if (saida.Trim().Length == 0 && restante.Trim().Length > 0) saida = restante;
+            return (saida.Trim(), p.HasExited ? p.ExitCode : -1);
         }
-        catch { return ""; }
+        catch { return ("", -1); }
     }
 
     /// <summary>Caminho absoluto de um executável no PATH (null se não existir).</summary>

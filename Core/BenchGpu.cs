@@ -47,7 +47,7 @@ public static unsafe class BenchGpu
         return ms.ToArray();
     }
 
-    private static (Vk Vk, Instance Inst) CriarInstancia()
+    internal static (Vk Vk, Instance Inst) CriarInstancia()
     {
         var vk = Vk.GetApi();
         var pNome = Marshal.StringToHGlobalAnsi("LINUX EXPLODE");
@@ -67,7 +67,7 @@ public static unsafe class BenchGpu
         return (vk, inst);
     }
 
-    private static PhysicalDevice[] DispositivosFisicos(Vk vk, Instance inst)
+    internal static PhysicalDevice[] DispositivosFisicos(Vk vk, Instance inst)
     {
         uint n = 0;
         vk.EnumeratePhysicalDevices(inst, ref n, null);
@@ -77,7 +77,7 @@ public static unsafe class BenchGpu
         return arr;
     }
 
-    private static string NomeDoDispositivo(Vk vk, PhysicalDevice pd)
+    internal static string NomeDoDispositivo(Vk vk, PhysicalDevice pd)
     {
         PhysicalDeviceProperties props;
         vk.GetPhysicalDeviceProperties(pd, &props);
@@ -121,7 +121,7 @@ public static unsafe class BenchGpu
         return lista.OrderBy(g => g.Tipo == "dedicada" ? 0 : g.Tipo == "integrada" ? 1 : 2).ToList();
     }
 
-    private static int FamiliaCompute(Vk vk, PhysicalDevice pd)
+    internal static int FamiliaCompute(Vk vk, PhysicalDevice pd)
     {
         uint n = 0;
         vk.GetPhysicalDeviceQueueFamilyProperties(pd, ref n, null);
@@ -133,7 +133,7 @@ public static unsafe class BenchGpu
         return -1;
     }
 
-    private static uint TipoMemoria(Vk vk, PhysicalDevice pd, uint mascara, MemoryPropertyFlags desejado)
+    internal static uint TipoMemoria(Vk vk, PhysicalDevice pd, uint mascara, MemoryPropertyFlags desejado)
     {
         vk.GetPhysicalDeviceMemoryProperties(pd, out var mp);
         for (uint i = 0; i < mp.MemoryTypeCount; i++)

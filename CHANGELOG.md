@@ -3,6 +3,54 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.11] — 2026-10-29
+
+### Adicionado
+
+- **Ciclos de stress agendados** (STRESS → *Ciclos agendados*): repete o mesmo teste N vezes com uma
+  pausa entre ciclos e apresenta o **agregado por métrica** — mediana, mínimo, máximo e variação — em
+  vez de uma corrida isolada. A guarda térmica continua activa e um ciclo que a dispare termina a
+  série; o resumo diz quantos ciclos completaram e por que parou.
+  `--cli ciclos [cpu|ram|gpu|disco|tudo] [segundos] --ciclos N --pausa S` (texto e `--json`), saída 1
+  quando algum ciclo falha. Verificado nesta máquina: 2 ciclos de 2 s (16 threads, FMA vetorial) deram
+  5 594 M/s de mediana e 89,5 GFLOP/s, com a nota "amostra pequena" — a variação só é afirmada a
+  partir de 3 ciclos, como no ranking.
+- **Auto-teste S.M.A.R.T. a partir da aba Discos**: botões *Teste curto* / *Teste longo* por disco,
+  percentagem ao vivo (o NVMe publica-a; no ATA mostra-se o restante do controlador), *Abortar* e o
+  histórico dos últimos testes com as horas de funcionamento em que correram. O parser lê as duas
+  famílias de log (`nvme_self_test_log` e `ata_smart_data` + `ata_smart_self_test_log`) e a linha
+  "in progress" do log ATA não entra no histórico.
+  `--cli autoteste [estado|curto|longo|parar] [disco]`.
+- **Enchimento de VRAM em Vulkan** (STRESS → *Memória da GPU*): aloca blocos até ao limite escolhido
+  (ou até o driver recusar), escreve um padrão em cada bloco por inteiro e relê duas amostras de 4 KB
+  de cada um, verificando-as. O total é o que o driver aceitou; o pico e o uso vêm de
+  `/sys/class/drm/card*/device/mem_info_vram_used`, uma fonte independente da aplicação. Quando um
+  bloco não cabe, o resultado diz qual foi o erro do driver em vez de rebentar.
+  `--cli vram [--indice N] [--limite MB] [--bloco MB]` (0 = até falhar), saída 1 se a verificação
+  encontrar diferenças. Verificado nesta máquina (RX 6700 XT): 2 GB em 16 blocos de 128 MB em 0,7 s,
+  /sys de 737,59 MB para 2,72 GB de pico, 128 KB relidos sem diferenças.
+- **Teste de suspender/retomar** (Sistema → *Suspender e retomar*): mostra o que o sistema anuncia
+  (`/sys/power/state`, `mem_sleep`) e se há permissão para suspender e para acordar sozinho. O teste
+  suspende a sério (rtcwake, ou systemctl quando o rtcwake não está autorizado) e mede o tempo dormido
+  por três relógios independentes: parede − monotónico, e o uptime (CLOCK_BOOTTIME); no fim compara
+  as temperaturas e a potência antes/depois e diz se voltaram a responder. `--cli suspender
+  [estado|testar] [--segundos N] [--simular]`, com `--simular` a provar que a conta dá zero sem dormir
+  (1,59 s de parede, 0,00 s de suspend, uptime a confirmar 0,01 s). Sem `rtcwake` no sudoers o cartão
+  di-lo e a máquina acorda à mão.
+
+### Alterado
+
+- A linha do uso de `--cli` passa a listar os quatro comandos novos (estava a esconder metade deles).
+- A leitura do uso de VRAM em `/sys` explica que o valor "depois" é medido ainda dentro do processo:
+  o driver só devolve o heap ao sair (verificado: 2,72 GB no processo, 702 MB depois de terminar).
+
+### Testes
+
+- 108 testes (9 novos): mediana/contadores/amostras do agregado de ciclos, o parser do auto-teste em
+  NVMe parado, NVMe a correr, ATA a correr (conversão do restante em percentagem e exclusão da linha
+  "in progress"), JSON inválido/sem permissão, e a simulação da suspensão a exigir diferença zero
+  entre os relógios.
+
 ## [0.20.9] — 2026-10-25
 
 ### Corrigido

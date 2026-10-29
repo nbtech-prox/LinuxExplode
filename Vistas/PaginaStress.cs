@@ -45,6 +45,29 @@ public sealed class PaginaStress : UserControl
     private DateTime _inicio;
     private TimeSpan _duracaoEscolhida = TimeSpan.FromMinutes(5);
 
+    // ciclos agendados
+    private readonly ComboBox _ciclosAlvo = new() { Width = 170 };
+    private readonly ComboBox _ciclosN = new() { Width = 110 };
+    private readonly ComboBox _ciclosDuracao = new() { Width = 130 };
+    private readonly ComboBox _ciclosPausa = new() { Width = 130 };
+    private readonly TextBlock _ciclosEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _ciclosResumo = new() { Text = "sem série registada", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _ciclosTabela = new() { Spacing = 4 };
+    private readonly List<Button> _botoesCiclos = new();
+    private SessaoCiclos? _serie;
+    private bool _ciclosTerminado;
+
+    // enchimento de VRAM
+    private readonly ComboBox _vramGpu = new();
+    private readonly ComboBox _vramLimite = new() { Width = 160 };
+    private readonly ComboBox _vramBloco = new() { Width = 130 };
+    private readonly TextBlock _vramEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _vramResumo = new() { Text = "sem teste de VRAM", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _vramLinhas = new() { Spacing = 2 };
+    private readonly List<Button> _botoesVram = new();
+    private CancellationTokenSource? _vramCancelar;
+    private List<InfoVram> _vramGpus = new();
+
     public PaginaStress()
     {
         _parar = UI.Botao("Parar", false, Parar);
@@ -56,21 +79,48 @@ public sealed class PaginaStress : UserControl
             UI.Cabecalho("STRESS", "Aquece CPU, RAM, GPU e disco — com guarda térmica e valores medidos", _parar),
             _corpo);
 
-        _corpo.Children.Add(CartaoConfiguracao());
-        _corpo.Children.Add(CartaoTestes());
-        _corpo.Children.Add(CartaoAoVivo());
-        _corpo.Children.Add(CartaoResultado());
-        _corpo.Children.Add(CartaoRegisto());
+        // gancho de captura: LINUXEXPLODE_SECAO=testes|ciclos|vram|ao-vivo|resultado|registo deixa
+        // só esse cartão no topo da janela (não há scroll fiável para fotografar o fundo da página)
+        var secao = (Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "").ToLowerInvariant();
+        bool Quer(string nome) => secao.Length == 0 || secao == nome;
+
+        if (Quer("config")) _corpo.Children.Add(CartaoConfiguracao());
+        if (Quer("testes")) _corpo.Children.Add(CartaoTestes());
+        if (Quer("ciclos")) _corpo.Children.Add(CartaoCiclos());
+        if (Quer("vram")) _corpo.Children.Add(CartaoVram());
+        if (Quer("ao-vivo") || Quer("aovivo")) _corpo.Children.Add(CartaoAoVivo());
+        if (Quer("resultado")) _corpo.Children.Add(CartaoResultado());
+        if (Quer("registo")) _corpo.Children.Add(CartaoRegisto());
 
         Evento("pronto · limites de fábrica: CPU/GPU 95 °C");
 
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
+            await CarregarGpus();
+
+            // verificação automática dos cartões novos: LINUXEXPLODE_AUTOTEST=vram|ciclos
+            // (o diálogo tem de ser provado pelo caminho do botão, não só pela linha de comandos)
+            var autoTeste = (Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST") ?? "").ToLowerInvariant();
+
+            if (autoTeste == "vram")
+            {
+                ComecarVram();
+                return;
+            }
+
+            if (autoTeste == "ciclos")
+            {
+                int n = int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_CICLOS"), out int cn) ? cn : 2;
+                int seg = int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_STRESS_SEG"), out int cs) ? cs : 3;
+                ComecarCiclos(TimeSpan.FromSeconds(Math.Clamp(seg, 1, 600)), Math.Clamp(n, 1, 20));
+                return;
+            }
+
             // verificação automática: LINUXEXPLODE_STRESS=cpu|ram|gpu|disco|tudo (+ _SEG=N)
             var auto = Environment.GetEnvironmentVariable("LINUXEXPLODE_STRESS");
             if (string.IsNullOrEmpty(auto)) return;
 
-            int seg = int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_STRESS_SEG"), out int v) ? v : 10;
+            int seg2 = int.TryParse(Environment.GetEnvironmentVariable("LINUXEXPLODE_STRESS_SEG"), out int v) ? v : 10;
             var alvo = auto.ToLowerInvariant() switch
             {
                 "ram" => AlvoStress.Ram,
@@ -80,8 +130,32 @@ public sealed class PaginaStress : UserControl
                 _ => AlvoStress.Cpu
             };
 
-            Comecar(alvo, TimeSpan.FromSeconds(Math.Clamp(seg, 5, 3600)));
+            Comecar(alvo, TimeSpan.FromSeconds(Math.Clamp(seg2, 5, 3600)));
         };
+    }
+
+    private async Task CarregarGpus()
+    {
+        try
+        {
+            _vramGpus = await Task.Run(StressVram.Dispositivos);
+            _vramGpu.Items.Clear();
+            foreach (var g in _vramGpus)
+                _vramGpu.Items.Add($"[{g.Indice}] {g.Nome} · {g.Tipo} · {Util.Bytes(g.HeapBytes)}");
+
+            if (_vramGpus.Count == 0)
+            {
+                _vramGpu.Items.Add("nenhuma GPU Vulkan — falta o driver");
+                _vramGpu.SelectedIndex = 0;
+                foreach (var b in _botoesVram) b.IsEnabled = false;
+            }
+            else _vramGpu.SelectedIndex = 0;
+        }
+        catch (Exception ex)
+        {
+            _vramGpu.Items.Add("falha a listar GPUs: " + ex.Message);
+            _vramGpu.SelectedIndex = 0;
+        }
     }
 
     // ------------------------------------------------------------------ configuração
@@ -181,6 +255,405 @@ public sealed class PaginaStress : UserControl
         return UI.Cartao("Testes", pilha);
     }
 
+    // ------------------------------------------------------------------ ciclos agendados
+
+    private Control CartaoCiclos()
+    {
+        _ciclosAlvo.Items.Add("CPU");
+        _ciclosAlvo.Items.Add("RAM");
+        _ciclosAlvo.Items.Add("GPU");
+        _ciclosAlvo.Items.Add("disco");
+        _ciclosAlvo.Items.Add("tudo (burn-in)");
+        _ciclosAlvo.SelectedIndex = 0;
+
+        _ciclosN.Items.Add("3 ciclos");
+        _ciclosN.Items.Add("5 ciclos");
+        _ciclosN.Items.Add("10 ciclos");
+        _ciclosN.Items.Add("20 ciclos");
+        _ciclosN.SelectedIndex = 0;
+
+        _ciclosDuracao.Items.Add("30 s");
+        _ciclosDuracao.Items.Add("1 minuto");
+        _ciclosDuracao.Items.Add("2 minutos");
+        _ciclosDuracao.Items.Add("5 minutos");
+        _ciclosDuracao.SelectedIndex = 1;
+
+        _ciclosPausa.Items.Add("10 s");
+        _ciclosPausa.Items.Add("30 s");
+        _ciclosPausa.Items.Add("1 minuto");
+        _ciclosPausa.Items.Add("2 minutos");
+        _ciclosPausa.SelectedIndex = 1;
+
+        var iniciar = UI.Botao("Iniciar série", true, () => ComecarCiclos());
+        var parar = UI.Botao("Parar série", false, PararCiclos);
+        parar.IsEnabled = false;
+        _botoesCiclos.Add(iniciar);
+        _botoesCiclos.Add(parar);
+
+        var acoes = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var b in _botoesCiclos)
+        {
+            b.Margin = new Avalonia.Thickness(0, 0, 8, 8);
+            acoes.Children.Add(b);
+        }
+
+        var pilha = new StackPanel { Spacing = 12 };
+        pilha.Children.Add(UI.Grelha(4, 12,
+            Campo("Alvo", _ciclosAlvo),
+            Campo("Duração do ciclo", _ciclosDuracao),
+            Campo("Número de ciclos", _ciclosN),
+            Campo("Pausa entre ciclos", _ciclosPausa)));
+        pilha.Children.Add(acoes);
+        pilha.Children.Add(_ciclosEstado);
+        pilha.Children.Add(_ciclosResumo);
+        pilha.Children.Add(_ciclosTabela);
+        pilha.Children.Add(UI.Texto(
+            "A série repete o mesmo teste N vezes, com pausa entre ciclos, e dá a mediana de cada métrica " +
+            "com o mínimo e o máximo. Um teste longo não mostra se a máquina repete o resultado; N ciclos " +
+            "iguais mostram — e se a variação passar os 3 % o cartão avisa. A guarda térmica continua " +
+            "activa e um ciclo que a dispare termina a série.", "sub"));
+        return UI.Cartao("Ciclos agendados", pilha);
+    }
+
+    private void ComecarCiclos(TimeSpan? duracaoFixa = null, int? ciclosFixo = null)
+    {
+        if (_serie is { EmCurso: true })
+        {
+            Evento("a série de ciclos já está a correr");
+            return;
+        }
+        if (_sessao is { EmCurso: true })
+        {
+            Evento("há um teste simples a correr — usa Parar antes de arrancar a série");
+            return;
+        }
+        if (_vramCancelar is not null)
+        {
+            Evento("o teste de VRAM está a correr — pára-o antes de arrancar a série");
+            return;
+        }
+
+        var alvo = _ciclosAlvo.SelectedIndex switch
+        {
+            1 => AlvoStress.Ram,
+            2 => AlvoStress.Gpu,
+            3 => AlvoStress.Disco,
+            4 => AlvoStress.Tudo,
+            _ => AlvoStress.Cpu
+        };
+        int ciclos = ciclosFixo ?? (_ciclosN.SelectedIndex switch { 1 => 5, 2 => 10, 3 => 20, _ => 3 });
+        var duracao = duracaoFixa ?? (_ciclosDuracao.SelectedIndex switch
+        {
+            0 => TimeSpan.FromSeconds(30),
+            2 => TimeSpan.FromMinutes(2),
+            3 => TimeSpan.FromMinutes(5),
+            _ => TimeSpan.FromMinutes(1)
+        });
+        var pausa = _ciclosPausa.SelectedIndex switch
+        {
+            0 => TimeSpan.FromSeconds(10),
+            2 => TimeSpan.FromMinutes(1),
+            3 => TimeSpan.FromMinutes(2),
+            _ => TimeSpan.FromSeconds(30)
+        };
+
+        GuardaTermica.LimiteCpu = _limite.SelectedIndex switch { 0 => 85, 1 => 90, 2 => 95, _ => 95 };
+        GuardaTermica.LimiteGpu = GuardaTermica.LimiteCpu;
+
+        int threads = _threads.SelectedIndex switch
+        {
+            0 => Environment.ProcessorCount,
+            1 => 1,
+            _ => int.TryParse(_threads.SelectedItem?.ToString(), out int n) ? n : Environment.ProcessorCount
+        };
+
+        var carga = _carga.SelectedIndex switch
+        {
+            1 => CargaCpu.Inteiro,
+            2 => CargaCpu.Flutuante,
+            3 => CargaCpu.Memoria,
+            _ => CargaCpu.Vector
+        };
+
+        double fracao = _memoria.SelectedIndex switch { 0 => 0.25, 2 => 0.75, _ => 0.5 };
+        long tamanho = _tamanho.SelectedIndex switch
+        {
+            0 => 256L * 1024 * 1024,
+            2 => 1024L * 1024 * 1024,
+            3 => 2048L * 1024 * 1024,
+            _ => 512L * 1024 * 1024
+        };
+
+        _serie?.Dispose();
+        _serie = new SessaoCiclos(new OpcoesCiclos(alvo, ciclos, duracao, pausa, threads, carga, fracao,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".cache", "linux-explode", "stress"),
+            tamanho, 0));
+
+        _serie.Progresso += p => Dispatcher.UIThread.Post(() => MostrarProgressoCiclos(p));
+        _serie.Terminou += r => Dispatcher.UIThread.Post(() => MostrarCiclos(r));
+
+        _ciclosTabela.Children.Clear();
+        _ciclosTerminado = false;
+        _ciclosResumo.Text = $"a correr: {NomeAlvo(alvo)} · {ciclos} ciclo(s) de {duracao.TotalSeconds:0} s";
+        _ciclosEstado.Text = "a arrancar…";
+
+        foreach (var b in _botoes) b.IsEnabled = false;
+        _botoesCiclos[0].IsEnabled = false;
+        _botoesCiclos[1].IsEnabled = true;
+        AtualizarBotoesParar();
+
+        Evento($"série · {NomeAlvo(alvo)} · {ciclos} × {duracao.TotalSeconds:0} s · pausa {pausa.TotalSeconds:0} s");
+
+        try { _serie.Iniciar(); }
+        catch (Exception ex)
+        {
+            Evento("a série não arrancou: " + ex.Message);
+            TerminarCiclosInterface();
+        }
+    }
+
+    private void PararCiclos()
+    {
+        if (_serie is not { EmCurso: true }) return;
+        _serie.Parar();
+        _ciclosEstado.Text = "a parar…";
+        Evento("pedido de paragem da série de ciclos");
+    }
+
+    private void MostrarProgressoCiclos(ProgressoStress p)
+    {
+        // um progresso atrasado do último ciclo não pode apagar o resultado já apresentado
+        if (_ciclosTerminado) return;
+
+        _ciclosEstado.Text = string.IsNullOrEmpty(p.Ritmo)
+            ? $"{p.Segundos:0} s · {p.Fase}"
+            : $"{p.Segundos:0} s · {p.Fase} · {p.Ritmo}";
+        if (!string.IsNullOrEmpty(p.Detalhe)) _ciclosResumo.Text = "a correr · " + p.Detalhe;
+    }
+
+    private void MostrarCiclos(ResultadoCiclos r)
+    {
+        _ciclosTerminado = true;
+        _ciclosResumo.Text = $"{r.Resumo} · {r.Segundos:0} s · energia {r.EnergiaKwh * 1000:0,0} Wh · " +
+                             $"picos CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C";
+
+        _ciclosTabela.Children.Clear();
+        if (r.Agregado.Count > 0)
+        {
+            _ciclosTabela.Children.Add(LinhaCiclos("métrica", "mediana", "mínimo", "máximo", "variação", true));
+            foreach (var m in r.Agregado)
+                _ciclosTabela.Children.Add(LinhaCiclos(m.Rotulo,
+                    m.Contador ? $"{m.Mediana:0}" : $"{m.Mediana:N1}",
+                    m.Contador ? $"em {m.Amostras}" : $"{m.Minimo:N1}",
+                    m.Contador ? "—" : $"{m.Maximo:N1}",
+                    m.Contador ? "total" : m.Amostras >= 3 ? $"±{m.VariacaoPct:0.0} %" : $"amostra pequena ({m.Amostras})",
+                    false));
+        }
+
+        for (int i = 0; i < r.Lista.Count; i++)
+        {
+            var c = r.Lista[i];
+            _ciclosTabela.Children.Add(UI.Texto(
+                $"ciclo {i + 1}: {(c.Completo ? "completo" : "parado")} em {c.Segundos:0} s · " +
+                $"pico CPU {c.PicoCpuC:0} °C · GPU {c.PicoGpuC:0} °C · {c.EnergiaKwh * 1000:0.0} Wh", "mono"));
+        }
+
+        _ciclosEstado.Text = r.Parado ? "série parada" : "série terminada";
+        Evento($"fim da série · {r.Resumo} · pico CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C");
+        TerminarCiclosInterface();
+    }
+
+    private static Control LinhaCiclos(string a, string b, string c, string d, string e, bool cabecalho)
+    {
+        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,*,*,Auto") };
+        var textos = new[] { a, b, c, d, e };
+        for (int i = 0; i < textos.Length; i++)
+        {
+            var t = UI.Texto(textos[i], cabecalho ? "rotulo" : "mono");
+            t.TextWrapping = TextWrapping.NoWrap;
+            t.TextTrimming = TextTrimming.CharacterEllipsis;
+            t.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(t, i);
+            g.Children.Add(t);
+        }
+        return g;
+    }
+
+    private void TerminarCiclosInterface()
+    {
+        if (_vramCancelar is null)
+            foreach (var b in _botoes) b.IsEnabled = true;
+        _botoesCiclos[0].IsEnabled = true;
+        _botoesCiclos[1].IsEnabled = false;
+        AtualizarBotoesParar();
+    }
+
+    // ------------------------------------------------------------------ VRAM (Vulkan)
+
+    private Control CartaoVram()
+    {
+        _vramLimite.Items.Add("512 MB");
+        _vramLimite.Items.Add("1 GB");
+        _vramLimite.Items.Add("2 GB");
+        _vramLimite.Items.Add("4 GB");
+        _vramLimite.Items.Add("8 GB");
+        _vramLimite.Items.Add("até o driver recusar");
+        _vramLimite.SelectedIndex = 2;
+
+        _vramBloco.Items.Add("64 MB");
+        _vramBloco.Items.Add("128 MB");
+        _vramBloco.Items.Add("256 MB");
+        _vramBloco.Items.Add("1 GB");
+        _vramBloco.SelectedIndex = 1;
+
+        _vramGpu.Items.Add("a listar GPUs…");
+        _vramGpu.SelectedIndex = 0;
+
+        var encher = UI.Botao("Encher VRAM", true, ComecarVram);
+        var parar = UI.Botao("Parar", false, PararVram);
+        parar.IsEnabled = false;
+        _botoesVram.Add(encher);
+        _botoesVram.Add(parar);
+
+        var acoes = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var b in _botoesVram)
+        {
+            b.Margin = new Avalonia.Thickness(0, 0, 8, 8);
+            acoes.Children.Add(b);
+        }
+
+        var pilha = new StackPanel { Spacing = 12 };
+
+        // grelha com a coluna da GPU a crescer: um UniformGrid dava-lhe a mesma largura das outras
+        // e o nome do dispositivo (longo) passava por cima do limite
+        var grelha = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,*,*") };
+        var celulas = new Control[]
+        {
+            Campo("GPU", _vramGpu),
+            Campo("Limite", _vramLimite),
+            Campo("Bloco", _vramBloco)
+        };
+        for (int i = 0; i < celulas.Length; i++)
+        {
+            celulas[i].Margin = new Avalonia.Thickness(6);
+            Grid.SetColumn(celulas[i], i);
+            grelha.Children.Add(celulas[i]);
+        }
+
+        pilha.Children.Add(grelha);
+        pilha.Children.Add(acoes);
+        pilha.Children.Add(_vramEstado);
+        pilha.Children.Add(_vramResumo);
+        pilha.Children.Add(_vramLinhas);
+        pilha.Children.Add(UI.Texto(
+            "Aloca blocos de VRAM em Vulkan, escreve um padrão em cada um e relê duas amostras. O total é o " +
+            "que o driver aceitou; o pico e o uso vêm de /sys/class/drm (fonte independente da aplicação). " +
+            "Encher até o driver recusar pode deixar o ambiente gráfico sem memória — nestas placas o limite " +
+            "seguro é 2 GB com o desktop a correr.", "sub"));
+        return UI.Cartao("Memória da GPU (Vulkan)", pilha);
+    }
+
+    private void ComecarVram()
+    {
+        if (_vramCancelar is not null)
+        {
+            Evento("o teste de VRAM já está a correr");
+            return;
+        }
+        if (_vramGpus.Count == 0)
+        {
+            Evento("sem GPU Vulkan — não há VRAM para encher");
+            return;
+        }
+        if (_sessao is { EmCurso: true } || _serie is { EmCurso: true })
+        {
+            Evento("há outro teste a correr — usa Parar antes de encher a VRAM");
+            return;
+        }
+
+        int escolha = Math.Clamp(_vramGpu.SelectedIndex, 0, _vramGpus.Count - 1);
+        int indice = _vramGpus[escolha].Indice;
+        long limiteMb = _vramLimite.SelectedIndex switch
+        {
+            0 => 512, 1 => 1024, 3 => 4096, 4 => 8192, 5 => 0, _ => 2048
+        };
+        long blocoMb = _vramBloco.SelectedIndex switch { 0 => 64, 2 => 256, 3 => 1024, _ => 128 };
+
+        _vramCancelar = new CancellationTokenSource();
+        var ct = _vramCancelar.Token;
+
+        _vramLinhas.Children.Clear();
+        _vramResumo.Text = limiteMb == 0
+            ? $"a encher até o driver recusar, blocos de {blocoMb} MB"
+            : $"a encher até {limiteMb} MB, blocos de {blocoMb} MB";
+        _vramEstado.Text = "a alocar blocos…";
+
+        _botoesVram[0].IsEnabled = false;
+        _botoesVram[1].IsEnabled = true;
+        foreach (var b in _botoes) b.IsEnabled = false;
+        AtualizarBotoesParar();
+
+        Evento($"VRAM · GPU {indice} · limite {(limiteMb == 0 ? "até falhar" : limiteMb + " MB")} · bloco {blocoMb} MB");
+
+        _ = Task.Run(() =>
+        {
+            ResultadoVram? resultado = null;
+            string? erro = null;
+            try
+            {
+                resultado = StressVram.Correr(indice, limiteMb * 1024 * 1024, blocoMb * 1024 * 1024,
+                    p => Dispatcher.UIThread.Post(() => _vramEstado.Text = p), ct);
+            }
+            catch (Exception ex) { erro = ex.Message; }
+
+            Dispatcher.UIThread.Post(() => TerminarVram(resultado, erro));
+        });
+    }
+
+    private void PararVram()
+    {
+        if (_vramCancelar is null) return;
+        _vramCancelar.Cancel();
+        _vramEstado.Text = "a parar…";
+        Evento("pedido de paragem do teste de VRAM");
+    }
+
+    private void TerminarVram(ResultadoVram? r, string? erro)
+    {
+        _vramCancelar?.Dispose();
+        _vramCancelar = null;
+
+        if (_sessao is not { EmCurso: true } && _serie is not { EmCurso: true })
+            foreach (var b in _botoes) b.IsEnabled = true;
+        _botoesVram[0].IsEnabled = _vramGpus.Count > 0;
+        _botoesVram[1].IsEnabled = false;
+        AtualizarBotoesParar();
+
+        _vramLinhas.Children.Clear();
+
+        if (r is null)
+        {
+            _vramResumo.Text = "o teste de VRAM falhou: " + (erro ?? "sem resultado");
+            _vramEstado.Text = "terminado com erro";
+            Evento("VRAM falhou: " + erro);
+            return;
+        }
+
+        _vramResumo.Text = r.TotalAlocado == 0 && r.Erro is not null
+            ? $"não alocou nada — {r.Erro}"
+            : $"{r.Blocos} bloco(s) · {Util.Bytes(r.TotalAlocado)} em {r.Segundos:0.0} s" +
+              (r.SysfsPico is long pico ? $" · pico em /sys {Util.Bytes(pico)}" : "");
+        _vramEstado.Text = r.Parado ? "parado pelo utilizador" : "terminado";
+
+        foreach (var l in r.Linhas) _vramLinhas.Children.Add(UI.Texto("· " + l, "mono"));
+
+        Evento($"VRAM · {r.Gpu} · {Util.Bytes(r.TotalAlocado)} · {r.ErrosVerificacao} erro(s) de verificação");
+    }
+
+    private void AtualizarBotoesParar()
+        => _parar.IsEnabled = _sessao is { EmCurso: true } || _serie is { EmCurso: true } || _vramCancelar is not null;
+
     // ------------------------------------------------------------------ ao vivo
 
     private Control CartaoAoVivo()
@@ -236,6 +709,18 @@ public sealed class PaginaStress : UserControl
         if (_sessao is { EmCurso: true })
         {
             Evento("já há um teste a correr — usa Parar primeiro");
+            return;
+        }
+
+        if (_serie is { EmCurso: true })
+        {
+            Evento("a série de ciclos está a correr — pára-a antes de arrancar um teste simples");
+            return;
+        }
+
+        if (_vramCancelar is not null)
+        {
+            Evento("o teste de VRAM está a correr — pára-o antes de arrancar outro teste");
             return;
         }
 
@@ -317,10 +802,29 @@ public sealed class PaginaStress : UserControl
 
     private void Parar()
     {
-        if (_sessao is null || !_sessao.EmCurso) return;
-        Evento("pedido de paragem do utilizador");
-        _sessao.Parar();
-        _fase.Text = "a parar…";
+        bool algo = false;
+
+        if (_sessao is { EmCurso: true })
+        {
+            _sessao.Parar();
+            algo = true;
+        }
+
+        if (_serie is { EmCurso: true })
+        {
+            _serie.Parar();
+            Evento("pedido de paragem da série de ciclos");
+            algo = true;
+        }
+
+        if (_vramCancelar is not null)
+        {
+            _vramCancelar.Cancel();
+            Evento("pedido de paragem do teste de VRAM");
+            algo = true;
+        }
+
+        if (algo) _fase.Text = "a parar…";
     }
 
     private void MostrarProgresso(ProgressoStress p)
@@ -368,7 +872,7 @@ public sealed class PaginaStress : UserControl
     private void TerminarInterface()
     {
         foreach (var b in _botoes) b.IsEnabled = true;
-        _parar.IsEnabled = false;
+        AtualizarBotoesParar();
         _fase.Text = _ultimo is null ? "pronto para começar" : "terminado — podes repetir";
     }
 
@@ -440,10 +944,23 @@ public sealed class PaginaStress : UserControl
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+
         if (_sessao is { EmCurso: true })
         {
             _sessao.Parar();
             Evento("página fechada — teste parado");
+        }
+
+        if (_serie is { EmCurso: true })
+        {
+            _serie.Parar();
+            Evento("página fechada — série de ciclos parada");
+        }
+
+        if (_vramCancelar is not null)
+        {
+            _vramCancelar.Cancel();
+            Evento("página fechada — teste de VRAM parado");
         }
     }
 }

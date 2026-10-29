@@ -47,6 +47,14 @@ public static class Cli
                 return GravarCli(args);
             case "stress":
                 return Stress(args);
+            case "autoteste" or "smart":
+                return AutoTesteCli(args);
+            case "ciclos":
+                return CiclosCli(args);
+            case "vram":
+                return VramCli(args);
+            case "suspender":
+                return SuspenderCli(args);
             case "alertas":
                 return AlertasCli();
             case "placa":
@@ -56,10 +64,14 @@ public static class Cli
             case "audio" or "áudio":
                 return AudioCli();
             default:
-                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|ranking|gravar|stress|relatorio] [html|json]\n" +
+                Console.WriteLine("uso: LinuxExplode --cli [info|freq|sensores|potencia|fps|discos|rede|placa|usb|audio|bench|ranking|gravar|stress|relatorio|autoteste|ciclos|vram|suspender] [html|json]\n" +
                               "     LinuxExplode --cli bench [multi|single|N|gpu [índice]|rt [índice]|latmem|real] [ram] [disco] [--repeticoes N]\n" +
                               "     LinuxExplode --cli gravar [segundos]     (grava uma sessão de monitorização em CSV)\n" +
-                              "     LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]");
+                              "     LinuxExplode --cli stress [cpu|ram|gpu|disco|tudo] [segundos] [--threads N] [--carga inteiro|flutuante|vector|memoria] [--limite N]\n" +
+                              "     LinuxExplode --cli ciclos [cpu|ram|gpu|disco|tudo] [segundos] [--ciclos N] [--pausa SEG] [--threads N]\n" +
+                              "     LinuxExplode --cli vram [--indice N] [--limite MB] [--bloco MB]     (0 = até o driver recusar)\n" +
+                              "     LinuxExplode --cli autoteste [estado|curto|longo|parar] [disco]   (auto-teste S.M.A.R.T.)\n" +
+                              "     LinuxExplode --cli suspender [estado|testar] [--segundos N] [--simular]");
                 return 2;
         }
     }
@@ -463,6 +475,384 @@ public static class Cli
         return resultado.Completo ? 0 : 1;
     }
 
+    // ------------------------------------------------------------------ auto-teste S.M.A.R.T.
+
+    /// <summary>
+    /// <c>--cli autoteste [estado|curto|longo|parar] [disco]</c>: dispara e acompanha o auto-teste do
+    /// disco. O smartctl pede o teste ao controlador e devolve logo o controlo — o progresso e o
+    /// resultado aparecem no log do próprio disco e são lidos daí, não guardados pela aplicação.
+    /// </summary>
+    private static int AutoTesteCli(string[] args)
+    {
+        var (acao, dispositivo) = LerAcaoEDispositivo(args);
+        var discos = Discos.Ler();
+        var disco = EscolherDisco(discos, dispositivo);
+        if (disco is null)
+        {
+            Console.WriteLine(dispositivo is null
+                ? "nenhum disco físico encontrado em /sys/block"
+                : $"disco não encontrado: {dispositivo} (vê a lista com --cli discos)");
+            return 2;
+        }
+
+        Console.WriteLine($"EXPLODE SMART — auto-teste do disco {disco.Dev} ({disco.Modelo})");
+
+        if (acao is "curto" or "longo")
+        {
+            var tipo = acao == "curto" ? TipoAutoTeste.Curto : TipoAutoTeste.Longo;
+            var (ok, mensagem) = Discos.IniciarAutoTeste(disco.Dev, tipo);
+            Console.WriteLine($"  pedido    {acao} → {(ok ? "iniciado" : "falhou")}: {mensagem}");
+            MostrarAutoTeste(Discos.LerAutoTeste(disco.Dev));
+            Console.WriteLine("  nota      o teste corre no disco; consulta com `--cli autoteste`");
+            return ok ? 0 : 1;
+        }
+
+        if (acao == "parar")
+        {
+            var (ok, mensagem) = Discos.PararAutoTeste(disco.Dev);
+            Console.WriteLine($"  parar     {(ok ? "ok" : "falhou")}: {mensagem}");
+            return ok ? 0 : 1;
+        }
+
+        MostrarAutoTeste(acao == "estado" ? disco.AutoTeste : Discos.LerAutoTeste(disco.Dev));
+        return 0;
+    }
+
+    private static void MostrarAutoTeste(AutoTesteInfo a)
+    {
+        Console.WriteLine($"  estado    {a.Estado}");
+        Console.WriteLine($"  suporte   {(a.Suportado ? "sim" : "não")}");
+        if (a.Historico.Count == 0)
+        {
+            Console.WriteLine("  histórico nenhum teste anterior");
+        }
+        else
+        {
+            Console.WriteLine($"  histórico {a.Historico.Count} teste(s), o mais recente primeiro:");
+            foreach (var h in a.Historico.Take(6))
+                Console.WriteLine($"    {h.Tipo,-9} {h.Resultado,-30} {h.HorasLigado?.ToString("N0") ?? "—",8} h ligado" +
+                                  (h.Passou is bool p && !p ? "  FALHOU" : ""));
+        }
+        if (a.Nota is not null) Console.WriteLine("  nota      " + a.Nota);
+    }
+
+    /// <summary>Ação + disco a partir dos argumentos posicionais (ou <c>--dispositivo</c>).</summary>
+    private static (string Acao, string? Dispositivo) LerAcaoEDispositivo(string[] args)
+    {
+        string acao = "estado";
+        string? dispositivo = null;
+        for (int i = 2; i < args.Length; i++)
+        {
+            if (args[i] is "--json" or "-j") continue;
+            if (args[i] == "--dispositivo" && i + 1 < args.Length) { dispositivo = args[++i]; continue; }
+            if (args[i].StartsWith("--")) continue;
+            if (acao == "estado" && args[i] is "estado" or "curto" or "longo" or "parar" or "listar")
+                acao = args[i];
+            else
+                dispositivo = args[i];
+        }
+        return (acao, dispositivo?.Replace("/dev/", ""));
+    }
+
+    private static DiscoInfo? EscolherDisco(List<DiscoInfo> discos, string? dispositivo)
+        => dispositivo is not null
+            ? discos.FirstOrDefault(d => d.Dev == dispositivo)
+            : discos.FirstOrDefault(d => d.Dev.StartsWith("nvme")) ?? discos.FirstOrDefault();
+
+    /// <summary>Versão JSON do auto-teste: o pedido (se houve) e o estado lido do disco.</summary>
+    private static object AutoTesteJson(string[] args)
+    {
+        var (acao, dispositivo) = LerAcaoEDispositivo(args);
+        var disco = EscolherDisco(Discos.Ler(), dispositivo);
+        if (disco is null)
+            return new { erro = "sem discos", pedido = dispositivo };
+
+        object? pedido = null;
+        AutoTesteInfo estado;
+
+        if (acao is "curto" or "longo")
+        {
+            var tipo = acao == "curto" ? TipoAutoTeste.Curto : TipoAutoTeste.Longo;
+            var (ok, mensagem) = Discos.IniciarAutoTeste(disco.Dev, tipo);
+            pedido = new { acao, ok, mensagem };
+            estado = Discos.LerAutoTeste(disco.Dev);
+        }
+        else if (acao == "parar")
+        {
+            var (ok, mensagem) = Discos.PararAutoTeste(disco.Dev);
+            pedido = new { acao, ok, mensagem };
+            estado = Discos.LerAutoTeste(disco.Dev);
+        }
+        else
+        {
+            estado = acao == "estado" ? disco.AutoTeste : Discos.LerAutoTeste(disco.Dev);
+        }
+
+        return new { dispositivo = disco.Dev, modelo = disco.Modelo, acao, pedido, estado };
+    }
+
+    // ------------------------------------------------------------------ ciclos de stress
+
+    /// <summary>
+    /// <c>--cli ciclos [cpu|ram|gpu|disco|tudo] [segundos] --ciclos N --pausa S</c>: o mesmo teste
+    /// repetido N vezes com pausa, para ver se a máquina repete o resultado ou degrada.
+    /// </summary>
+    private static int CiclosCli(string[] args)
+    {
+        var opcoes = LerOpcoesCiclos(args, out string alvoTexto);
+        if (opcoes is null)
+        {
+            Console.WriteLine("uso: LinuxExplode --cli ciclos [cpu|ram|gpu|disco|tudo] [segundos] " +
+                              "--ciclos N --pausa SEG [--threads N] [--limite N] [--carga inteiro|flutuante|vector|memoria]");
+            return 2;
+        }
+
+        Console.WriteLine($"EXPLODE CICLOS — {alvoTexto} · {opcoes.Ciclos} ciclo(s) de {opcoes.Duracao.TotalSeconds:0} s" +
+                          $", pausa {opcoes.Pausa.TotalSeconds:0} s");
+
+        using var sessao = new SessaoCiclos(opcoes);
+        var fim = new ManualResetEventSlim(false);
+        ResultadoCiclos? resultado = null;
+        var inicio = DateTime.Now;
+        string ultima = "";
+
+        sessao.Progresso += p =>
+        {
+            string linha = $"  [{p.Segundos,6:0.0} s] {p.Fase}" +
+                           (string.IsNullOrEmpty(p.Ritmo) ? "" : $" · {p.Ritmo}") +
+                           (string.IsNullOrEmpty(p.Detalhe) ? "" : $" · {p.Detalhe}");
+            if (linha != ultima && DateTime.Now - inicio > TimeSpan.FromSeconds(2))
+            {
+                ultima = linha;
+                Console.WriteLine(linha);
+            }
+        };
+        sessao.Terminou += r => { resultado = r; fim.Set(); };
+        sessao.Iniciar();
+
+        var limite = opcoes.Ciclos * (opcoes.Duracao + opcoes.Pausa) + TimeSpan.FromSeconds(180);
+        if (!fim.Wait(limite)) sessao.Parar();
+        fim.Wait(TimeSpan.FromSeconds(30));
+
+        if (resultado is null)
+        {
+            Console.WriteLine("ciclos: sem resultado (a série não terminou)");
+            return 1;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"resultado: {resultado.Resumo}");
+        Console.WriteLine($"picos: CPU {resultado.PicoCpuC:0} °C · GPU {resultado.PicoGpuC:0} °C · " +
+                          $"energia {resultado.EnergiaKwh * 1000:0.0} Wh em {resultado.Segundos:0} s");
+        foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
+        return resultado is { Falhas: 0, Parado: false } ? 0 : 1;
+    }
+
+    private static OpcoesCiclos? LerOpcoesCiclos(string[] args, out string alvoTexto)
+    {
+        alvoTexto = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "cpu";
+        var alvo = alvoTexto switch
+        {
+            "cpu" => AlvoStress.Cpu,
+            "ram" or "memoria" => AlvoStress.Ram,
+            "gpu" => AlvoStress.Gpu,
+            "disco" => AlvoStress.Disco,
+            "tudo" => AlvoStress.Tudo,
+            _ => (AlvoStress?)null
+        };
+        if (alvo is null) return null;
+
+        double segundos = 10;
+        int ciclos = 3, threads = 0, pausa = 30;
+        var carga = CargaCpu.Vector;
+
+        for (int i = 3; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--ciclos" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out ciclos);
+                    ciclos = Math.Clamp(ciclos, 1, 100);
+                    break;
+                case "--pausa" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out pausa);
+                    pausa = Math.Clamp(pausa, 0, 3600);
+                    break;
+                case "--threads" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out threads);
+                    break;
+                case "--limite" when i + 1 < args.Length:
+                    if (double.TryParse(args[++i], NumberStyles.Float, CultureInfo.InvariantCulture, out double limite))
+                    {
+                        GuardaTermica.LimiteCpu = limite;
+                        GuardaTermica.LimiteGpu = limite;
+                    }
+                    break;
+                case "--carga" when i + 1 < args.Length:
+                    carga = args[++i].ToLowerInvariant() switch
+                    {
+                        "inteiro" => CargaCpu.Inteiro,
+                        "flutuante" => CargaCpu.Flutuante,
+                        "memoria" or "memória" => CargaCpu.Memoria,
+                        _ => CargaCpu.Vector
+                    };
+                    break;
+                default:
+                    if (double.TryParse(args[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double s))
+                        segundos = Math.Clamp(s, 1, 3600);
+                    break;
+            }
+        }
+
+        return new OpcoesCiclos(alvo.Value, ciclos, TimeSpan.FromSeconds(segundos), TimeSpan.FromSeconds(pausa),
+            threads, carga);
+    }
+
+    private static object CiclosJson(string[] args)
+    {
+        var opcoes = LerOpcoesCiclos(args, out string alvoTexto);
+        if (opcoes is null) return new { erro = "alvo inválido", uso = "cpu|ram|gpu|disco|tudo" };
+
+        using var sessao = new SessaoCiclos(opcoes);
+        var fim = new ManualResetEventSlim(false);
+        ResultadoCiclos? resultado = null;
+        sessao.Terminou += r => { resultado = r; fim.Set(); };
+        sessao.Iniciar();
+
+        var limite = opcoes.Ciclos * (opcoes.Duracao + opcoes.Pausa) + TimeSpan.FromSeconds(180);
+        if (!fim.Wait(limite)) sessao.Parar();
+        fim.Wait(TimeSpan.FromSeconds(30));
+
+        return resultado ?? (object)new { erro = "a série não terminou", alvo = alvoTexto };
+    }
+
+    // ------------------------------------------------------------------ VRAM
+
+    /// <summary>
+    /// <c>--cli vram [--indice N] [--limite MB] [--bloco MB]</c>: enche a VRAM até ao limite (0 = até o
+    /// driver recusar), escrevendo e relendo cada bloco. O limite por omissão é 4 GB para o teste não
+    /// deixar o ambiente gráfico sem memória.
+    /// </summary>
+    private static int VramCli(string[] args)
+    {
+        var infos = StressVram.Dispositivos();
+        if (infos.Count == 0)
+        {
+            Console.WriteLine("nenhuma GPU Vulkan com memória alocável — instala o driver Vulkan");
+            return 1;
+        }
+
+        Console.WriteLine("GPUs disponíveis:");
+        foreach (var g in infos)
+            Console.WriteLine($"  [{g.Indice}] {g.Nome}  ({g.Tipo}) · heap {Util.Bytes(g.HeapBytes)}" +
+                              (g.SysfsUsado is long u ? $" · {Util.Bytes(u)} em uso" : ""));
+
+        int indice = LerInteiro(args, "--indice", infos[0].Indice, 0, 32);
+        long limiteMb = LerLongo(args, "--limite", 4096, 0, 1024 * 1024);
+        long blocoMb = LerLongo(args, "--bloco", 128, 16, 16384);
+        long limite = limiteMb * 1024 * 1024;
+
+        Console.WriteLine();
+        Console.WriteLine($"a encher VRAM: limite {(limiteMb == 0 ? "até o driver recusar" : $"{limiteMb} MB")}, " +
+                          $"blocos de {blocoMb} MB…");
+
+        using var cts = new CancellationTokenSource();
+        var resultado = StressVram.Correr(indice, limite, blocoMb * 1024 * 1024,
+            p => Console.Write($"\r  {p,-58}"), cts.Token);
+
+        Console.WriteLine($"\r  GPU: {resultado.Gpu}");
+        foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
+        return resultado.ErrosVerificacao == 0 ? 0 : 1;
+    }
+
+    private static object VramJson(string[] args)
+    {
+        var infos = StressVram.Dispositivos();
+        if (infos.Count == 0) return new { erro = "sem GPU Vulkan com memória alocável", gpus = infos };
+
+        int indice = LerInteiro(args, "--indice", infos[0].Indice, 0, 32);
+        long limiteMb = LerLongo(args, "--limite", 4096, 0, 1024 * 1024);
+        long blocoMb = LerLongo(args, "--bloco", 128, 16, 16384);
+
+        var resultado = StressVram.Correr(indice, limiteMb * 1024 * 1024, blocoMb * 1024 * 1024);
+        return new { gpus = infos, resultado };
+    }
+
+    // ------------------------------------------------------------------ suspender/retomar
+
+    /// <summary>
+    /// <c>--cli suspender [estado|testar] [--segundos N] [--simular]</c>: mede o tempo que a máquina
+    /// esteve suspensa e se os sensores voltaram. <c>estado</c> só mostra o suporte e o último teste.
+    /// </summary>
+    private static int SuspenderCli(string[] args)
+    {
+        string acao = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "estado";
+
+        if (acao is "testar" or "teste")
+        {
+            int segundos = LerInteiro(args, "--segundos", 15, 5, 3600);
+            bool simular = args.Any(a => a == "--simular");
+
+            var suporte = Suspender.Suporte();
+            Console.WriteLine(suporte.PodeAcordarSozinho && !simular
+                ? $"a suspender por {segundos} s — a máquina acorda sozinha com o rtcwake"
+                : "a testar a suspensão — se a máquina dormir, acorda-a com uma tecla");
+            Console.WriteLine("  " + suporte.Nota);
+
+            var resultado = Suspender.Testar(segundos, simular, s => Console.WriteLine("  " + s));
+            Console.WriteLine();
+            Console.WriteLine("resultado: " + resultado.Veredito);
+            foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
+            Console.WriteLine($"  sensores  CPU {Snap(resultado.Antes.CpuC)} → {Snap(resultado.Depois.CpuC)} · " +
+                              $"GPU {Snap(resultado.Antes.GpuC)} → {Snap(resultado.Depois.GpuC)}");
+            return resultado.Suspendeu || simular ? 0 : 1;
+
+            static string Snap(double? v) => v is double d ? $"{d:0} °C" : "—";
+        }
+
+        var suporte2 = Suspender.Suporte();
+        Console.WriteLine("SUSPENSÃO — suporte deste sistema");
+        Console.WriteLine($"  estados   {(suporte2.Estados.Length > 0 ? suporte2.Estados : "—")}");
+        Console.WriteLine($"  modo      {suporte2.ModoMemoria ?? "—"}");
+        Console.WriteLine($"  suspender {Sim(suporte2.PodeSuspender)} · acordar sozinho {Sim(suporte2.PodeAcordarSozinho)}");
+        Console.WriteLine("  nota      " + suporte2.Nota);
+
+        var ultimo = Suspender.LerUltimo();
+        if (ultimo is null)
+        {
+            Console.WriteLine("  último    nenhum teste gravado");
+            return 0;
+        }
+
+        Console.WriteLine($"  último    {ultimo.Quando:yyyy-MM-dd HH:mm} · {ultimo.Veredito}");
+        foreach (var l in ultimo.Linhas) Console.WriteLine("            " + l);
+        return 0;
+
+        static string Sim(bool v) => v ? "sim" : "não";
+    }
+
+    private static object SuspenderJson(string[] args)
+    {
+        string acao = args.Length > 2 && !args[2].StartsWith("--") ? args[2].ToLowerInvariant() : "estado";
+        var suporte = Suspender.Suporte();
+
+        if (acao is "testar" or "teste")
+        {
+            int segundos = LerInteiro(args, "--segundos", 15, 5, 3600);
+            bool simular = args.Any(a => a == "--simular");
+            return new { suporte, simulado = simular, resultado = Suspender.Testar(segundos, simular) };
+        }
+
+        return new { suporte, ultimo = Suspender.LerUltimo() };
+    }
+
+    private static int LerLongo(string[] args, string nome, int porOmissao, int min, int max)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == nome && long.TryParse(args[i + 1], out long v))
+                return (int)Math.Clamp(v, min, max);
+        return porOmissao;
+    }
 
     private static readonly JsonSerializerOptions OpcoesJson = new()
     {
@@ -545,6 +935,18 @@ public static class Cli
 
                 case "stress":
                     return StressJson(args);
+
+                case "autoteste" or "smart":
+                    return EmitirJson("autoteste", AutoTesteJson(args));
+
+                case "ciclos":
+                    return EmitirJson("ciclos", CiclosJson(args));
+
+                case "vram":
+                    return EmitirJson("vram", VramJson(args));
+
+                case "suspender":
+                    return EmitirJson("suspender", SuspenderJson(args));
 
                 case "alertas":
                     return EmitirJson("alertas", Alertas.Avaliar());

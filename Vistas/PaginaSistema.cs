@@ -1,5 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
 using LinuxExplode.Core;
 
 namespace LinuxExplode.Vistas;
@@ -7,6 +10,13 @@ namespace LinuxExplode.Vistas;
 public sealed class PaginaSistema : UserControl
 {
     private readonly StackPanel _corpo = new() { Spacing = 14 };
+
+    // suspender e retomar
+    private readonly TextBlock _suspEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly StackPanel _suspLinhas = new() { Spacing = 2 };
+    private readonly ComboBox _suspSegundos = new() { Width = 130 };
+    private readonly List<Button> _suspBotoes = new();
+    private bool _suspACorrer;
 
     public PaginaSistema()
     {
@@ -20,6 +30,22 @@ public sealed class PaginaSistema : UserControl
 
     private async Task Carregar()
     {
+        // gancho de captura: LINUXEXPLODE_SECAO=suspender deixa só esse cartão no topo da janela
+        if ((Environment.GetEnvironmentVariable("LINUXEXPLODE_SECAO") ?? "")
+            .Equals("suspender", StringComparison.OrdinalIgnoreCase))
+        {
+            _corpo.Children.Clear();
+            _corpo.Children.Add(CartaoSuspensao());
+
+            // LINUXEXPLODE_AUTOTEST=suspender corre a simulação (nunca suspende) para provar o caminho
+            // do botão sem clicar: o resultado tem de aparecer no cartão
+            if ((Environment.GetEnvironmentVariable("LINUXEXPLODE_AUTOTEST") ?? "")
+                .Equals("suspender", StringComparison.OrdinalIgnoreCase))
+                _ = TestarSuspensao(true);
+
+            return;
+        }
+
         Sistema s;
         try { s = await Task.Run(Sistema.Recolher); }
         catch (Exception ex)
@@ -45,6 +71,8 @@ public sealed class PaginaSistema : UserControl
             foreach (var g in s.Gpus)
                 _corpo.Children.Add(UI.Cartao("Placa de vídeo", CartaoGpu(g)));
         }
+
+        _corpo.Children.Add(CartaoSuspensao());
     }
 
     private static Control Metricas(Sistema s)
@@ -161,4 +189,116 @@ public sealed class PaginaSistema : UserControl
             p.Children.Add(UI.Linha("Agora", $"{g.Temp ?? "—"}   ·   uso {g.Uso ?? "—"}", false));
         return p;
     }
+
+    // ------------------------------------------------------------------ suspender e retomar
+
+    private Control CartaoSuspensao()
+    {
+        var suporte = Suspender.Suporte();
+
+        _suspSegundos.Items.Clear();
+        _suspSegundos.Items.Add("10 s");
+        _suspSegundos.Items.Add("15 s");
+        _suspSegundos.Items.Add("30 s");
+        _suspSegundos.Items.Add("60 s");
+        _suspSegundos.SelectedIndex = 1;
+
+        var testar = UI.Botao("Testar suspensão", true, () => _ = TestarSuspensao(false));
+        var simular = UI.Botao("Simular (sem dormir)", false, () => _ = TestarSuspensao(true));
+        testar.IsEnabled = suporte.Suportado && suporte.PodeSuspender;
+        _suspBotoes.Clear();
+        _suspBotoes.Add(testar);
+        _suspBotoes.Add(simular);
+
+        var acoes = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var b in _suspBotoes)
+        {
+            b.Margin = new Thickness(0, 0, 8, 0);
+            acoes.Children.Add(b);
+        }
+
+        var suporteLinhas = new StackPanel { Spacing = 0 };
+        suporteLinhas.Children.Add(UI.Linha("Estados", suporte.Estados.Length > 0 ? suporte.Estados : "—"));
+        suporteLinhas.Children.Add(UI.Linha("Modo em memória", suporte.ModoMemoria ?? "—"));
+        suporteLinhas.Children.Add(UI.Linha("Suspender", suporte.PodeSuspender ? "sim (sudo sem password)" : "não — falta permissão"));
+        suporteLinhas.Children.Add(UI.Linha("Acordar sozinho", suporte.PodeAcordarSozinho ? "sim (rtcwake)" : "não — acorda-se à mão", false));
+
+        var linhaConfig = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        linhaConfig.Children.Add(UI.Texto("DORMIR", "rotulo"));
+        linhaConfig.Children.Add(_suspSegundos);
+        linhaConfig.Children.Add(acoes);
+
+        var pilha = new StackPanel { Spacing = 10 };
+        pilha.Children.Add(suporteLinhas);
+        pilha.Children.Add(UI.Texto(suporte.Nota, "sub"));
+        pilha.Children.Add(linhaConfig);
+        pilha.Children.Add(_suspEstado);
+        pilha.Children.Add(_suspLinhas);
+
+        if (Suspender.LerUltimo() is { } ultimo)
+            pilha.Children.Add(UI.Texto($"último teste: {ultimo.Quando:yyyy-MM-dd HH:mm} · {ultimo.Veredito}", "sub"));
+
+        pilha.Children.Add(UI.Texto(
+            "O teste suspende a máquina a sério e mede o tempo de três formas independentes: relógio de parede " +
+            "menos relógio monotónico (que pára no suspend), e o uptime (CLOCK_BOOTTIME). No fim verifica se " +
+            "os sensores e a potência voltaram a responder — num portátil é aqui que se vê se o wake deixou " +
+            "algo partido. Sem rtcwake no sudoers a máquina só acorda quando lhe tocas; o botão Simular mede " +
+            "os relógios sem dormir e prova que a conta dá zero.", "sub"));
+
+        return UI.Cartao("Suspender e retomar", pilha);
+    }
+
+    private async Task TestarSuspensao(bool simular)
+    {
+        if (_suspACorrer) return;
+        _suspACorrer = true;
+
+        foreach (var b in _suspBotoes) b.IsEnabled = false;
+        _suspEstado.Text = simular ? "simulação: a ler os relógios…" : "a suspender…";
+        _suspLinhas.Children.Clear();
+
+        int segundos = _suspSegundos.SelectedIndex switch { 0 => 10, 2 => 30, 3 => 60, _ => 15 };
+
+        try
+        {
+            var r = await Task.Run(() => Suspender.Testar(segundos, simular,
+                s => Dispatcher.UIThread.Post(() => _suspEstado.Text = s)));
+            MostrarSuspensao(r);
+        }
+        catch (Exception ex)
+        {
+            _suspEstado.Text = "o teste falhou: " + ex.Message;
+        }
+        finally
+        {
+            _suspACorrer = false;
+            var suporte = Suspender.Suporte();
+            foreach (var b in _suspBotoes) b.IsEnabled = true;
+            if (_suspBotoes.Count > 0 && (!suporte.Suportado || !suporte.PodeSuspender))
+                _suspBotoes[0].IsEnabled = false;
+        }
+    }
+
+    private void MostrarSuspensao(ResultadoSuspensao r)
+    {
+        _suspEstado.Text = r.Veredito;
+        _suspLinhas.Children.Clear();
+
+        _suspLinhas.Children.Add(UI.Texto(
+            $"relógio de parede {r.RelogioParedeS:0.00} s · suspend medido {r.DormiuS:0.00} s · " +
+            $"uptime confirma {r.DiferencaUptimeS:0.00} s", "mono"));
+        _suspLinhas.Children.Add(UI.Texto(
+            $"sensores CPU {Snap(r.Antes.CpuC)} → {Snap(r.Depois.CpuC)} · GPU {Snap(r.Antes.GpuC)} → {Snap(r.Depois.GpuC)} · " +
+            $"potência {SnapW(r.Antes.Watts)} → {SnapW(r.Depois.Watts)}", "mono"));
+        _suspLinhas.Children.Add(UI.Texto(
+            r.SensoresOk && r.EnergiaOk
+                ? "sensores e potência voltaram a responder depois do wake"
+                : "há leituras que não voltaram depois do wake — o cartão mostra quais", "sub"));
+
+        foreach (var l in r.Linhas) _suspLinhas.Children.Add(UI.Texto("· " + l, "mono"));
+    }
+
+    private static string Snap(double? v) => v is double d ? $"{d:0} °C" : "—";
+
+    private static string SnapW(double? v) => v is double d ? $"{d:0.0} W" : "—";
 }

@@ -72,9 +72,34 @@
       <caption>Tema claro com os mesmos dados</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-tema-claro.png</image>
     </screenshot>
+    <screenshot>
+      <caption>Ciclos agendados: o mesmo teste N vezes, com mediana, mínimo e máximo por métrica</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-ciclos.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>VRAM: 2 GB alocados em Vulkan, com o pico confirmado em /sys e a releitura verificada</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-vram.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Auto-teste S.M.A.R.T. curto/longo por disco, com o histórico real dos testes anteriores</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-autoteste.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Suspender e retomar: três relógios a confirmar o tempo dormido e os sensores depois do wake</caption>
+      <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-suspender.png</image>
+    </screenshot>
   </screenshots>
 
   <releases>
+    <release version="0.20.11" date="2026-10-29">
+      <description>
+        <p>Fase 5: stress e discos. Ciclos agendados no STRESS (N ciclos com pausa e relatório agregado
+        com mediana, mínimo e máximo), enchimento de VRAM em Vulkan com verificação do padrão escrito,
+        auto-teste S.M.A.R.T. curto/longo na aba Discos com progresso e histórico, e teste de
+        suspender/retomar que mede o tempo dormido por três relógios e verifica os sensores depois do
+        wake. 108 testes.</p>
+      </description>
+    </release>
     <release version="0.20.9" date="2026-10-25">
       <description>
         <p>Correcao importante: dentro do Flatpak o historico de resultados e as sessoes gravadas
