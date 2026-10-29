@@ -3,6 +3,27 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.13] — em preparação
+
+### Adicionado
+
+- **Relatório único em HTML** (aba *Relatório* → *Gerar HTML completo*, e `--cli relatorio html`):
+  junta num só ficheiro o sistema, as GPUs, os discos com S.M.A.R.T. e auto-teste, todos os sensores,
+  o **ranking local de benchmarks** com as últimas 15 corridas, o **último stress / série de ciclos /
+  enchimento de VRAM** e a **última sessão gravada** com gráficos de CPU, GPU, potência e frequência.
+  O documento é autónomo — CSS e SVG embutidos, zero pedidos de rede, zero script — e abre em qualquer
+  browser. O último resultado de cada stress passa a ser guardado automaticamente
+  (`ultimo-stress.json`, `ultimo-ciclos.json`, `ultimo-vram.json` na pasta de dados), tanto pela
+  interface como pela linha de comandos, para o relatório não depender de se ter clicado em
+  *Guardar relatório*.
+  - O HTML gerado nesta máquina (0.20.13 em preparação) tem 16,9 KB, sete secções e quatro gráficos;
+    foi verificado a abrir no browser com os dados reais de 10 corridas de benchmark, 3 ciclos, um
+    stress e uma sessão de 4 amostras.
+  - O escape é só de `< > & " '`: o documento é UTF-8, por isso "concluído" fica legível (com
+    `WebUtility.HtmlEncode` virava `conclu&#237;do` e deixava de ser encontrável).
+  - O botão *Abrir* na página Relatório abre o último ficheiro gerado; o JSON continua a existir para
+    automação.
+
 ## [0.20.11] — 2026-10-29
 
 ### Adicionado

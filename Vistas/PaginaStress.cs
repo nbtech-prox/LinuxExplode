@@ -435,6 +435,7 @@ public sealed class PaginaStress : UserControl
     private void MostrarCiclos(ResultadoCiclos r)
     {
         _ciclosTerminado = true;
+        RelatorioCompleto.GuardarUltimosCiclos(r);  // entra no relatório completo
         _ciclosResumo.Text = $"{r.Resumo} · {r.Segundos:0} s · energia {r.EnergiaKwh * 1000:0,0} Wh · " +
                              $"picos CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C";
 
@@ -645,6 +646,7 @@ public sealed class PaginaStress : UserControl
             : $"{r.Blocos} bloco(s) · {Util.Bytes(r.TotalAlocado)} em {r.Segundos:0.0} s" +
               (r.SysfsPico is long pico ? $" · pico em /sys {Util.Bytes(pico)}" : "");
         _vramEstado.Text = r.Parado ? "parado pelo utilizador" : "terminado";
+        RelatorioCompleto.GuardarUltimoVram(r);     // entra no relatório completo
 
         foreach (var l in r.Linhas) _vramLinhas.Children.Add(UI.Texto("· " + l, "mono"));
 
@@ -848,6 +850,7 @@ public sealed class PaginaStress : UserControl
     private void MostrarResultado(ResultadoStress r)
     {
         _ultimo = r;
+        RelatorioCompleto.GuardarUltimoStress(r);   // entra no relatório completo
         _resultado.Children.Clear();
 
         _resumo.Text = r.Resumo.StartsWith("concluído")

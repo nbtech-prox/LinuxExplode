@@ -468,6 +468,8 @@ public static class Cli
             return 1;
         }
 
+        RelatorioCompleto.GuardarUltimoStress(resultado);
+
         Console.WriteLine();
         Console.WriteLine($"resultado: {(resultado.Completo ? "completo" : "parado")} — {resultado.Resumo}");
         foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
@@ -640,6 +642,8 @@ public static class Cli
             return 1;
         }
 
+        RelatorioCompleto.GuardarUltimosCiclos(resultado);
+
         Console.WriteLine();
         Console.WriteLine($"resultado: {resultado.Resumo}");
         Console.WriteLine($"picos: CPU {resultado.PicoCpuC:0} °C · GPU {resultado.PicoGpuC:0} °C · " +
@@ -723,6 +727,7 @@ public static class Cli
         if (!fim.Wait(limite)) sessao.Parar();
         fim.Wait(TimeSpan.FromSeconds(30));
 
+        if (resultado is not null) RelatorioCompleto.GuardarUltimosCiclos(resultado);
         return resultado ?? (object)new { erro = "a série não terminou", alvo = alvoTexto };
     }
 
@@ -760,6 +765,8 @@ public static class Cli
         var resultado = StressVram.Correr(indice, limite, blocoMb * 1024 * 1024,
             p => Console.Write($"\r  {p,-58}"), cts.Token);
 
+        RelatorioCompleto.GuardarUltimoVram(resultado);
+
         Console.WriteLine($"\r  GPU: {resultado.Gpu}");
         foreach (var l in resultado.Linhas) Console.WriteLine("  " + l);
         return resultado.ErrosVerificacao == 0 ? 0 : 1;
@@ -775,6 +782,7 @@ public static class Cli
         long blocoMb = LerLongo(args, "--bloco", 128, 16, 16384);
 
         var resultado = StressVram.Correr(indice, limiteMb * 1024 * 1024, blocoMb * 1024 * 1024);
+        RelatorioCompleto.GuardarUltimoVram(resultado);
         return new { gpus = infos, resultado };
     }
 
@@ -1127,6 +1135,7 @@ public static class Cli
             return 1;
         }
 
+        RelatorioCompleto.GuardarUltimoStress(resultado);
         EmitirJson("stress", resultado);
         return resultado.Completo ? 0 : 1;
     }

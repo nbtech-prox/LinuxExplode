@@ -51,7 +51,7 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 | **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
 | **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload | sockets + Cloudflare |
-| **Relatório** | exporta tudo em HTML (com a marca EXPLODE) ou JSON | — |
+| **Relatório** | um HTML autónomo com sistema, sensores, discos, ranking de benchmarks, último stress/ciclos/VRAM e a última sessão gravada (com gráficos), ou JSON para automação | `/sys`, `/proc`, DMI e as medições guardadas |
 
 ### Frequência — na aba Frequência de Sensores (núcleos primeiro, GPU depois)
 
@@ -789,6 +789,40 @@ echo "$USER ALL=(root) NOPASSWD: /usr/bin/smartctl, /usr/bin/rtcwake" | sudo tee
 sudo chmod 440 /etc/sudoers.d/smartctl
 ```
 
+## Relatório completo — um ficheiro HTML
+
+O botão *Gerar HTML completo* (aba **Relatório**) escreve um único ficheiro autónomo: CSS embutido,
+gráficos SVG desenhados a partir das amostras medidas, **zero pedidos de rede e zero script**. Abre em
+qualquer browser, arquiva-se e partilha-se sem levar mais nada atrás. O mesmo relatório sai da linha de
+comandos:
+
+```bash
+linux-explode --cli relatorio html                 # ~/linux-explode-<data>.html
+linux-explode --cli relatorio html /caminho/rel.html
+linux-explode --cli relatorio json                 # para automação
+```
+
+O que vai lá dentro:
+
+| Secção | Conteúdo |
+|---|---|
+| Destaques | CPU, memória, GPU, discos, corridas no histórico e o último stress |
+| Sistema | distribuição, kernel, arquitetura, máquina, placa-mãe, BIOS, uptime, CPU e RAM |
+| Placas de vídeo | modelo, PCI, driver, relógio, VRAM, temperatura |
+| Discos e saúde | modelo, tamanho, veredito S.M.A.R.T., horas, desgaste, **auto-teste** e partições |
+| Sensores | todas as leituras de hwmon, agrupadas por chip |
+| Benchmarks | ranking local (mediana das últimas 3, melhor, última, variação) com barras por tipo e as últimas 15 corridas |
+| Stress, ciclos e VRAM | o último resultado de cada um, com métricas agregadas e as linhas medidas |
+| Sessão gravada | resumo da última sessão CSV e quatro gráficos (CPU, GPU, potência, frequência) |
+
+Para o relatório não depender de se ter clicado em *Guardar relatório*, o último resultado de cada
+teste passa a ser guardado sozinho em `~/.local/share/linux-explode/` (`ultimo-stress.json`,
+`ultimo-ciclos.json`, `ultimo-vram.json`) — tanto pela interface como pelo `--cli`. Sem stress, sem
+sessões ou sem benchmarks, a secção di-lo em vez de aparecer vazia.
+
+Nesta máquina o ficheiro sai com 16,9 KB, sete secções e quatro gráficos, a partir de 10 corridas de
+benchmark, 3 ciclos de stress, um stress simples e uma sessão gravada.
+
 ## Portabilidade (outro Linux, outro hardware)
 
 O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
@@ -820,7 +854,7 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **108 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **117 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
@@ -967,7 +1001,8 @@ LinuxExplode/
 │   ├── BenchCpu.cs       # path tracer (portado do original, inalterado)
 │   ├── BenchDisco.cs     # RAM + disco com O_DIRECT
 │   ├── Rede.cs           # latência, DNS, velocidade
-│   ├── Relatorio.cs      # HTML + JSON
+│   ├── Relatorio.cs      # fachada do relatório (HTML completo + JSON)
+│   ├── RelatorioCompleto.cs # junta sistema, sensores, benchmarks, stress e sessão num HTML autónomo
 │   ├── Cli.cs            # modo sem interface
 │   └── Util.cs
 ├── Vistas/               # UI Avalonia
@@ -978,7 +1013,7 @@ LinuxExplode/
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (108 testes, correm no CI)
+├── tests/                # xUnit (117 testes, correm no CI)
 ├── docs/                 # capturas reais usadas no metainfo e no README
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
