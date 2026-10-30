@@ -14,6 +14,14 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
   `WrapPanel` — com a janela estreita ou a escala a 135 % a caixa desce para a linha seguinte em vez
   de sair pela margem direita (era o que acontecia a 980 px, com o texto cortado em "Notificações do
   sis…").
+- **Portabilidade verificada e documentada**: o `.tar.gz` precisa de `libicu` — sem ela o .NET aborta
+  antes do `Main` ("Couldn't find a valid ICU package installed on the system"). Medido em contentores
+  Debian 12, Ubuntu 24.04 e Fedora 41 mínimos; com `libicu72` o binário correu em Debian 12
+  (glibc 2.36), por isso o piso não é o glibc do build (2.44). O Flatpak não tem este problema — o
+  runtime traz ICU. A tabela de portabilidade do README passou a incluir isto, o uso/VRAM só no
+  amdgpu (NVIDIA/Intel não os expõem em sysfs) e a temperatura de CPU em SoC ARM.
+- **GPU Intel**: `i915` e `xe` passam a chamar-se "GPU (Intel)" na lista de sensores, para a
+  temperatura da GPU entrar no cartão e nos alertas como já acontecia com AMD e NVIDIA.
 - **Migração para .NET 10** (`net10.0`, LTS até 14 de novembro de 2028). O .NET 8 entra em fim de
   suporte a **10 de novembro de 2026** — o último patch foi o 8.0.33, a 25 de outubro — e a extensão
   `org.freedesktop.Sdk.Extension.dotnet8` da Flathub acompanha o mesmo ciclo. Projecto principal,

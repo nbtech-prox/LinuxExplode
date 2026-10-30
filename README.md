@@ -913,7 +913,12 @@ Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm
 | Situação | O que acontece |
 |---|---|
 | Outra distro (Debian, Fedora, openSUSE, NixOS) | funciona; não há nada específico do Arch |
+| Flatpak em qualquer distro | o runtime `org.freedesktop.Platform` 25.08 traz glibc, ICU, X11/Wayland e Vulkan loader — é o caminho sem dependências |
+| `.tar.gz` sem `libicu` instalada | **não arranca**: `Couldn't find a valid ICU package installed on the system`. Medido em Debian 12, Ubuntu 24.04 e Fedora 41 mínimos. Instalar `libicu` (nome do pacote varia: `libicu72`, `libicu74`, `icu`) ou usar o Flatpak |
+| `.tar.gz` com `libicu` | correu em Debian 12 (glibc 2.36) com um binário compilado aqui em glibc 2.44 — o piso testado é 2.36, não o build host |
 | GPU AMD, Intel ou NVIDIA | Vulkan é genérico; a lista de GPUs é enumerada em runtime |
+| GPU NVIDIA ou Intel | temperatura e nome vêm da hwmon/pci.ids; **uso (%) e VRAM só no amdgpu** (`gpu_busy_percent`, `mem_info_vram_*`), porque é o único driver que os expõe em sysfs |
+| CPU ARM (SoC, Raspberry Pi) | sem `k10temp`/`coretemp` a app não elege uma temperatura de CPU; lista todos os canais hwmon que o kernel expuser |
 | GPU sem `VK_KHR_ray_query` (Polaris, GTX 10xx) | o botão de ray tracing responde "indisponível" em vez de inventar nota |
 | Sem driver Vulkan (VM, servidor) | "nenhuma GPU Vulkan com fila de computação" |
 | Sem `smartctl` | discos continuam a aparecer; saúde fica "—" com o comando de instalação |

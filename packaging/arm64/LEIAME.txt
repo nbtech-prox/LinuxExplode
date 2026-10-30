@@ -6,6 +6,12 @@ instalado, nem de Flatpak, nem de root. Único requisito para a interface
 gráfica: driver de vídeo com Vulkan (Mesa RADV, ANV ou NVIDIA). A CLI
 (--cli) funciona sem Vulkan.
 
+Um requisito de sistema: **libicu** (libicu72, libicu74, libicu78… conforme a
+distro). O .NET usa-a para a cultura pt-PT; sem ela o binário nem arranca
+("Couldn't find a valid ICU package installed on the system"). Qualquer
+instalação de ambiente de trabalho a traz; num sistema mínimo: `apt install
+libicu72`, `dnf install libicu`, `pacman -S icu`.
+
 INSTALAR
 --------
     tar -xzf linux-explode-0.1.0-linux-arm64.tar.gz

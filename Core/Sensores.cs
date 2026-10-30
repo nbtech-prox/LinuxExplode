@@ -192,6 +192,7 @@ public static class Sensores
         "coretemp" => "CPU (coretemp)",
         "amdgpu" => "GPU (amdgpu)",
         "amdgpu_hwmon" => "GPU (amdgpu)",
+        "i915" or "xe" => "GPU (Intel)",
         "nvme" => "NVMe",
         "nvidia" or "nouveau" => "GPU (NVIDIA)",
         "dell_smm" or "thinkpad" or "asus" or "asus_wmi_sensors" => "Portátil",
