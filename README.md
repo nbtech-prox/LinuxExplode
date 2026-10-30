@@ -1,6 +1,6 @@
 # LINUX EXPLODE
 
-Reescrita da app original de Windows em **Avalonia 11 + .NET 8**, para correr nativamente
+Reescrita da app original de Windows em **Avalonia 11 + .NET 10**, para correr nativamente
 em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida diretamente de
 `/proc`, `/sys` e DMI — sem WMI, sem registo, sem root para as funcionalidades principais.
 
@@ -11,7 +11,7 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.13](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última versão: **[v0.20.15](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -50,9 +50,9 @@ que ainda a tenham — e repete-se o pedido de importação.
 
 | Ficheiro | Para quê |
 |---|---|
-| `linux-explode.flatpak` (30 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
-| `linux-explode-aarch64.flatpak` (27 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.13-linux-arm64.tar.gz` (39 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
+| `linux-explode.flatpak` (33 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
+| `linux-explode-aarch64.flatpak` (29 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
+| `linux-explode-0.20.15-linux-arm64.tar.gz` (42 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
@@ -905,10 +905,10 @@ para o inode apagado) e a importação contava zero. A ligação é aberta com `
 
 ## Portabilidade (outro Linux, outro hardware)
 
-O binário é **self-contained**: leva o runtime .NET 8 dentro, não precisa de nada instalado
+O binário é **self-contained**: leva o runtime .NET 10 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.13-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.15-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -986,12 +986,12 @@ com *Could not find file …/\*\*/\*.axaml*. O `.csproj` exclui esses artefactos
 
 ## Compilar e correr
 
-Requisitos: .NET SDK 8 (`dotnet --version` ≥ 8.0) e, para o Flatpak, `flatpak` + `org.flatpak.Builder`.
+Requisitos: .NET SDK 10 (`dotnet --version` ≥ 10.0) e, para o Flatpak, `flatpak` + `org.flatpak.Builder`.
 
 ```bash
 # desenvolvimento
 dotnet build -c Release
-./bin/Release/net8.0/LinuxExplode
+./bin/Release/net10.0/LinuxExplode
 
 # executável autónomo (não precisa de .NET instalado)
 dotnet publish LinuxExplode.csproj -c Release -r linux-x64 --self-contained true \
@@ -1025,15 +1025,15 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.13-linux-arm64.tar.gz  39 MB  instalador sem root
-#   linux-explode-aarch64.flatpak            27 MB  precisa do runtime aarch64
+#   linux-explode-0.20.15-linux-arm64.tar.gz  42 MB  instalador sem root
+#   linux-explode-aarch64.flatpak            29 MB  precisa do runtime aarch64
 ```
 
 No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
 
 ```bash
-tar -xzf linux-explode-0.20.13-linux-arm64.tar.gz
-cd linux-explode-0.20.13-linux-arm64 && ./install.sh
+tar -xzf linux-explode-0.20.15-linux-arm64.tar.gz
+cd linux-explode-0.20.15-linux-arm64 && ./install.sh
 # ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
 # outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
 ```

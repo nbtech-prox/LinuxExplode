@@ -3,6 +3,35 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.15] — 2026-10-30
+
+### Alterado
+
+- **Migração para .NET 10** (`net10.0`, LTS até 14 de novembro de 2028). O .NET 8 entra em fim de
+  suporte a **10 de novembro de 2026** — o último patch foi o 8.0.33, a 25 de outubro — e a extensão
+  `org.freedesktop.Sdk.Extension.dotnet8` da Flathub acompanha o mesmo ciclo. Projecto principal,
+  projecto de testes e os dois workflows (CI e Release) passaram a usar o SDK 10.
+  - Aqui o SDK é o **10.0.403** e o runtime o **10.0.14**; o binário publicado é self-contained, por
+    isso não depende de nada instalado no destino.
+  - `Microsoft.Data.Sqlite` subiu de 8.0.33 para **10.0.14** (o histórico continua a abrir
+    `historico.db` sem migração nova).
+  - **Saiu o `CorrigirSystemTextJson`**: no .NET 8 o publish self-contained repunha o
+    System.Text.Json 8.0 do runtime pack por cima do 9.x de que o Silk.NET.Core depende e era preciso
+    copiar o DLL do pacote à mão. No .NET 10 o runtime já traz a 10.x, que satisfaz a dependência; a
+    cópia passou a ser desnecessária e seria errada, porque copiava o build net8.0 por cima do
+    runtime 10.
+  - As referências explícitas a `System.Text.Json` e `System.Text.Encodings.Web` saíram: em net10.0
+    são referências implícitas do framework (declará-las dá `NU1510` e volta a arrastar o pacote).
+  - Verificação nesta máquina: build sem erros e com os 6 avisos conhecidos do `BenchRt.cs`,
+    **125 testes verdes** em `net10.0`, `--cli info`, `--cli sensores`, `--cli historico`,
+    `--cli discos --json` (caminho S.M.A.R.T.) e `--cli bench gpu` (**12 869 755 pts**, dentro do
+    valor habitual), tanto no build de Release como no binário self-contained publicado. Dentro do
+    Flatpak instalado: `--cli info` diz 0.20.15, o S.M.A.R.T. continua a chegar ao anfitrião por
+    `flatpak-spawn` (2 discos, estado `live`) e o mesmo bench deu **12 888 786 pts**.
+  - O cross-publish ARM64 foi refeito: binário ELF aarch64 confirmado, **42 MB** de tar.gz (era
+    39 MB) e **29 MB** de bundle (era 27 MB); o bundle x86_64 passou a **33 MB** (era 30 MB). O
+    runtime .NET 10 é maior do que o 8 — os números do README foram medidos, não estimados.
+
 ## [0.20.13] — 2026-10-29
 
 ### Adicionado

@@ -54,7 +54,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # O empacotar.sh usa `flatpak run org.flatpak.Builder` e o manifesto aponta ao 25.08.
       - name: Instalar Flatpak, Builder e runtime 25.08
@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       # O ramo --arm64 do empacotar.sh usa build-finish/build-export/build-bundle:
       # são parte do pacote flatpak, não do org.flatpak.Builder.

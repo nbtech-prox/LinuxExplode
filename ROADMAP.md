@@ -4,11 +4,11 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.13 (relatório completo em HTML, histórico em SQLite com pesquisa/período e
-  débito real cliente/servidor, para além dos ciclos de stress, auto-teste S.M.A.R.T., VRAM, suspender/
-  retomar, ranking com mediana, latência de memória, tarefa real, sessões em CSV, Dispositivos,
-  placa-mãe, bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`, alertas e
-  125 testes).
+- **Estado actual:** 0.20.15 (migração para .NET 10 LTS; relatório completo em HTML, histórico em
+  SQLite com pesquisa/período, débito real cliente/servidor, ciclos de stress, auto-teste S.M.A.R.T.,
+  VRAM, suspender/retomar, ranking com mediana, latência de memória, tarefa real, sessões em CSV,
+  Dispositivos, placa-mãe, bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`,
+  alertas e 125 testes).
 
 ## Fase 1 — 0.20.1 (feito)
 
@@ -106,15 +106,36 @@ quatro capturas em `docs/`.
 
 ---
 
-## Fase 7 — 0.20.15 · Distribuição (próxima)
+## Fase 7 — 0.20.15 · Distribuição (em curso)
 
 | # | Item | Porquê | Aceitação | Esforço |
 |---|---|---|---|---|
-| 25 | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` na instalação | Chave de release criada e guardada como segredo no CI; `summary.sig` e commits assinados; cliente a validar sem a flag | M |
+| 25 ✅ | Assinar o repositório Flatpak com GPG | Deixa de precisar de `--no-gpg-verify` na instalação | Feito na 0.20.13: chave ed25519 `81F5CFA1…F80AC`, `summary.sig` e commits assinados, cliente a validar sem a flag | M |
 | 27 | Publicar na Flathub | Instalação a um clique para qualquer pessoa | Metainfo e capturas válidos (já validados), builds reprodutíveis, pedido de revisão aceite | G |
 
-A assinatura GPG ficou feita na 0.20.13 (chave ed25519, pública em `docs/`). A Flathub é uma revisão
-externa: o trabalho aqui é preparar o pacote, responder aos revisores e manter os builds reprodutíveis.
+**Migração para .NET 10 (feita nesta versão).** Era pré-requisito: o .NET 8 sai de suporte a
+2026-11-10 e a Flathub recusa submissões com runtime/extensão em fim de vida. Projecto, testes e
+workflows passaram a `net10.0`; ver o CHANGELOG da 0.20.15.
+
+**Flathub — três bloqueios identificados antes de escrever o manifesto:**
+
+1. **App-ID não verificável.** `pt.linuxexplode.LinuxExplode` implica o domínio `linuxexplode.pt`,
+   que não existe (sem registo A/AAAA nem whois). A Flathub exige que o domínio do ID seja
+   alcançável por HTTPS (ou que se ponha lá o token de verificação), senão o ID tem de ser de
+   code-hosting: `io.github.nbtech_prox.LinuxExplode` (4 componentes, `-` → `_`). O ID é permanente
+   depois de aceite.
+2. **Política de IA.** "Flathub manifests must not contain AI-generated or AI-assisted content" e
+   "AI tools or agents must not open or automate Flathub submission pull requests, or generate
+   their commit messages, descriptions, review comments, or replies". O manifesto e o PR têm de ser
+   escritos pelo autor; código da aplicação gerado com IA tem de ser divulgado.
+3. **Dependência do anfitrião.** `smartctl`, `cc`, `pw-top`, `pci.ids` e `df` são chamados via
+   `flatpak-spawn --host`, o que obriga a `--talk-name=org.freedesktop.Flatpak`; a política diz que
+   "host-dependent applications ... will not be accepted", com exceções caso a caso. O
+   `--own-name=org.kde.StatusNotifierItem-2-0` (pid 2 do sandbox) também é frágil aos olhos da
+   revisão.
+
+A decisão sobre o app-id e sobre reduzir (ou justificar) o acesso ao anfitrião fica para quando se
+retomar a submissão; a assinatura GPG e a migração para .NET 10 já não são obstáculo.
 
 ## Fora de âmbito (por agora)
 

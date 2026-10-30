@@ -91,6 +91,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.15" date="2026-10-30">
+      <description>
+        <p>Migração para .NET 10 (LTS até 2028): o .NET 8 chegava ao fim do suporte a 10 de
+        novembro de 2026. Projecto, testes e CI passaram a net10.0, o Microsoft.Data.Sqlite
+        acompanhou para a 10.0.14 e deixou de ser necessário copiar à mão o System.Text.Json
+        depois do publish. 125 testes.</p>
+      </description>
+    </release>
     <release version="0.20.13" date="2026-10-29">
       <description>
         <p>Fase 6 (dados e integração): relatório completo em HTML com sistema, sensores, discos,

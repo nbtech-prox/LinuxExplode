@@ -2,14 +2,14 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>LinuxExplode</AssemblyName>
     <Product>LINUX EXPLODE</Product>
-    <Version>0.20.13</Version>
+    <Version>0.20.15</Version>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- O EXPLODE BENCH mede desempenho real: JIT otimizado mesmo em Debug -->
@@ -27,30 +27,22 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.33" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.23.0" />
-    <!-- O Silk.NET.Core traz System.Text.Json/Encodings.Web 9.x; sem referência DIRECTA o
-         publish self-contained copia a versão 8.0 do runtime pack e a app falha com
-         "Could not load file or assembly System.Text.Json, Version=9.0.0.0". -->
-    <PackageReference Include="System.Text.Json" Version="9.0.9" />
-    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.9" />
+    <!-- No .NET 10, System.Text.Json e System.Text.Encodings.Web vêm do próprio runtime
+         (referência implícita); declará-los dá NU1510 e voltaria a arrastar o pacote em vez
+         do framework. -->
+
   </ItemGroup>
 
   <!--
-    O Silk.NET.Core depende de System.Text.Json 9.x. No publish self-contained o runtime pack
-    do .NET 8 repõe a versão 8.0 e a app rebenta com "Could not load file or assembly
-    System.Text.Json, Version=9.0.0.0" mal toque em JSON (S.M.A.R.T.). Nem PackageConflict-
-    PreferredPackages nem referência directa resolvem; copia-se o DLL do pacote no fim.
+    No .NET 8 o publish self-contained repunha o System.Text.Json 8.0 do runtime pack por cima do
+    9.x exigido pelo Silk.NET.Core ("Could not load file or assembly System.Text.Json,
+    Version=9.0.0.0") e era preciso copiar à mão o DLL do pacote depois do Publish. No .NET 10 o
+    runtime traz a 10.x, que satisfaz a dependência, e a cópia passou a ser desnecessária — e seria
+    errada, porque copiava o build net8.0 do pacote por cima do runtime 10.
   -->
-  <Target Name="CorrigirSystemTextJson" AfterTargets="Publish">
-    <ItemGroup>
-      <StjDoPacote Include="$(NuGetPackageRoot)system.text.json/*/lib/net8.0/System.Text.Json.dll" />
-      <StjEncDoPacote Include="$(NuGetPackageRoot)system.text.encodings.web/*/lib/net8.0/System.Text.Encodings.Web.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(StjDoPacote)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="false" />
-    <Copy SourceFiles="@(StjEncDoPacote)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="false" />
-  </Target>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/*.png" />

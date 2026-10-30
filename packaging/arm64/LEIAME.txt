@@ -1,7 +1,7 @@
 LINUX EXPLODE — pacote linux-arm64 (aarch64)
 ==========================================
 
-Binário self-contained: leva o runtime .NET 8 dentro. Não precisa de .NET
+Binário self-contained: leva o runtime .NET 10 dentro. Não precisa de .NET
 instalado, nem de Flatpak, nem de root. Único requisito para a interface
 gráfica: driver de vídeo com Vulkan (Mesa RADV, ANV ou NVIDIA). A CLI
 (--cli) funciona sem Vulkan.
