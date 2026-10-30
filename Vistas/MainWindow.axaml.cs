@@ -244,7 +244,7 @@ public partial class MainWindow : Window
         Config.Atual.Guardar();
     }
 
-    /// <summary>Ctrl+1…7 muda de página, Ctrl+= / Ctrl+- muda a escala, Ctrl+0 repõe, Ctrl+Q fecha.</summary>
+    /// <summary>Ctrl+1…8 muda de página, Ctrl+= / Ctrl+- muda a escala, Ctrl+0 repõe, Ctrl+Q fecha.</summary>
     private void LigarAtalhos()
     {
         KeyDown += (_, e) =>

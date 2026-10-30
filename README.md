@@ -11,7 +11,8 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.15](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**
+Última release publicada: **[v0.20.13](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**.
+O `main` já está na **0.20.15** (traduções completas) — a release dessa versão ainda não foi publicada.
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -52,10 +53,12 @@ que ainda a tenham — e repete-se o pedido de importação.
 |---|---|
 | `linux-explode.flatpak` (33 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (29 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
+| `linux-explode-0.20.13-linux-arm64.tar.gz` (39 MB) | binário ARM64 self-contained, sem Flatpak — precisa de `libicu` no destino |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
-A distribuição é **só Flatpak**: não há instalador solto nem `.tar.gz`. O runtime traz glibc, ICU e o
-loader Vulkan, por isso o mesmo pacote corre em qualquer distro — em x86_64 e em aarch64.
+A via normal é o **Flatpak**: o runtime traz glibc, ICU e o loader Vulkan, por isso o mesmo pacote
+corre em qualquer distro — em x86_64 e em aarch64. O `.tar.gz` existe só para ARM64 sem Flatpak e é
+o único artefacto que depende de bibliotecas do sistema (`libicu`).
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
 chega a anunciar uma actualização que falha. Para actualizar por aí, usa o repositório acima.
@@ -68,7 +71,6 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 |---|---|---|
 | **Sistema** | distribuição, kernel, arquitetura, máquina, placa-mãe, BIOS, CPU (núcleos/threads/frequências/cache L3), RAM e módulos (fabricante, part number, velocidade), GPUs e **teste de suspender/retomar** | `/etc/os-release`, `/proc/cpuinfo`, `/proc/meminfo`, `/sys/class/dmi/id`, `/sys/class/drm`, `/sys/bus/nvmem` (SPD) |
 | **Sensores** | temperatura, ventoinhas, potência, tensão, corrente e frequência, ao vivo (1 s), com filtro por tipo — no filtro **Frequência** os núcleos da CPU vêm primeiro e a GPU depois; no filtro **Potência** abre com o cartão **Consumo do PC** (RAPL + GPUs) antes da lista de hwmon | `/sys/class/hwmon`, `/sys/devices/system/cpu`, `/sys/class/powercap` (RAPL) |
-
 | **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. e **auto-teste curto/longo com progresso e histórico** | `/sys/block`, `/proc/mounts`, `smartctl`, `smartctl -t` |
 | **Benchmark** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
@@ -304,12 +306,13 @@ LinuxExplode --cli relatorio --json       # o relatório completo, em JSON
 - **Escala da interface** no cursor da barra lateral (85 % a 135 %). Aplica-se ao conteúdo com
   `LayoutTransformControl`, por isso o texto e os gráficos escalam juntos e as barras de deslocamento
   continuam certas.
-- **Atalhos**: `Ctrl+1`…`Ctrl+7` mudam de página (Sistema, Sensores, Discos, Bench, Stress, Rede,
-  Relatório), `Ctrl+=` / `Ctrl+-` mudam a escala, `Ctrl+0` repõe e `Ctrl+Q` fecha.
+- **Atalhos**: `Ctrl+1`…`Ctrl+8` mudam de página (Sistema, Sensores, Discos, Bench, Stress, Rede,
+  Dispositivos, Relatório), `Ctrl+=` / `Ctrl+-` mudam a escala, `Ctrl+0` repõe e `Ctrl+Q` fecha.
 - **Idiomas**: o selector na barra lateral (abaixo do tema) muda entre **Português**, **Español** e
-  **English** sem reiniciar. A escolha fica em `~/.config/linux-explode/config.json`; na primeira
-  execução segue o idioma do sistema (`LANG`/`LC_ALL`) quando é pt, es ou en, senão fica em pt-PT.
-  A cultura acompanha o idioma, por isso os números e as datas mudam com ele.
+  **English** sem reiniciar. **O português é o idioma principal**: a aplicação abre em pt-PT mesmo
+  com `LANG=en_US`; só muda quando escolhes outro idioma, e a escolha fica em
+  `~/.config/linux-explode/config.json`. A cultura acompanha o idioma, por isso os números e as datas
+  mudam com ele. `LINUXEXPLODE_IDIOMA=pt|es|en` força o idioma (capturas e testes).
 
 ## O que mudou em relação à versão Windows
 
@@ -324,7 +327,7 @@ pelo equivalente do kernel.
 | LibreHardwareMonitorLib | `hwmon` (k10temp, amdgpu, nvme, nct6775…) | substituído |
 | NVML (NVIDIA) | `amdgpu` sysfs (`gpu_busy_percent`, `mem_info_vram_*`, hwmon) | substituído (AMD) |
 | DXGI / Direct3D 11 / D3D12 + DXR | Vulkan compute (`Core/BenchGpu.cs`) e `VK_KHR_ray_query` (`Core/BenchRt.cs`) | substituído |
-| ETW / PresentMon (FPS de jogos) | CSV do MangoHud lidos por `Core/FpsMangohud.cs` (`--cli fps`) — leitura feita, UI por fazer | parcial |
+| ETW / PresentMon (FPS de jogos) | CSV do MangoHud lidos por `Core/FpsMangohud.cs`, com cartão na aba Benchmark e `--cli fps` — falta só o lançador/overlay | substituído (leitura e cartão) |
 | `FILE_FLAG_NO_BUFFERING` | `O_DIRECT` via `open(2)` | substituído |
 | Registo do Windows (tweaks, arranque) | — | não existe |
 | `winget` / instalar apps | — | não existe |
@@ -375,8 +378,9 @@ não "ferver" de fotograma para fotograma.
 No Flatpak esta pasta é persistida (`--persist=.local/share/linux-explode`) e vive em
 `~/.var/app/pt.linuxexplode.LinuxExplode/.local/share/linux-explode` — não se perde ao fechar.
 
-Cada nota fica guardada em `~/.local/share/linux-explode/resultados.json` com a data e a versão do
-programa. Por baixo da nota, o cartão mostra o melhor resultado, a mediana e a variação da última
+Cada nota fica guardada em `~/.local/share/linux-explode/historico.db` (SQLite) com a data e a
+versão do programa — o `resultados.json` antigo é migrado uma vez (ver *Histórico em SQLite*).
+Por baixo da nota, o cartão mostra o melhor resultado, a mediana e a variação da última
 corrida em relação à mediana:
 
 ```
@@ -389,7 +393,7 @@ assim que se comparam dois PCs sem base de dados central.
 
 ### A nota e a resolução
 
-A nota do GPU é milhares de amostras por segundo: **8,59 M** a 320×180, **12,96 M** a 1280×720 e
+A nota do GPU é **amostras por segundo ÷ 1000**: **8,59 M** a 320×180, **12,96 M** a 1280×720 e
 **13,36 M** a 4K nesta máquina (RX 6700 XT). No extremo pequeno cai porque o custo de cada passagem
 (dispatch e sincronização) pesa mais do que os 57 mil píxeis a desenhar; a partir de 720p estabiliza.
 Na CPU a nota não depende da resolução (o teste é sempre 960×540).
@@ -605,13 +609,13 @@ e executado num **compute shader Vulkan** com timestamps de CPU à volta do fenc
 - funcionam as duas GPUs: dedicada e integrada (selector na página; `--cli bench gpu <índice>`)
 - os dispositivos de software (llvmpipe) são filtrados: medir GPU em CPU não diz nada
 
-Valores medidos nesta máquina (Ryzen 7 9700X, RX 6700M Navi 22):
+Valores medidos nesta máquina (Ryzen 7 9700X, RX 6700 XT Navi 22):
 
 | modo | GPU | passagens em 1,5 s | nota |
 |---|---|---|---|
-| compute | Radeon RX 6700M (RADV NAVI22) | 331 | ~13 000 000 |
+| compute | Radeon RX 6700 XT (RADV NAVI22) | 331 | ~13 000 000 |
 | compute | Radeon 610M integrada (RAPHAEL) | 15 | ~585 000 |
-| ray tracing | Radeon RX 6700M | 105 | ~4 100 000 |
+| ray tracing | Radeon RX 6700 XT | 105 | ~4 100 000 |
 | ray tracing | Radeon 610M integrada | 5 | ~186 000 |
 
 ### Modo ray tracing (VK_KHR_ray_query)
@@ -914,7 +918,7 @@ para o inode apagado) e a importação contava zero. A ligação é aberta com `
 O binário é **self-contained**: leva o runtime .NET 10 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
 Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.15-linux-arm64.tar.gz`).
+(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.13-linux-arm64.tar.gz`).
 
 | Situação | O que acontece |
 |---|---|
@@ -943,7 +947,7 @@ O que **não** é portável:
 
 ## Testes
 
-`tests/LinuxExplode.Tests` (xUnit, **125 testes**) cobre as regras que a aplicação promete: histórico
+`tests/LinuxExplode.Tests` (xUnit, **130 testes**) cobre as regras que a aplicação promete: histórico
 sem repetições, mediana e variação, exportar/importar sem duplicar, configuração que sobrevive a um
 reinício, medição de energia, alertas, cargas de CPU do stress, e — desde a 0.20.5 — os parsers de
 dispositivos: GT/s → geração PCIe, débito útil com a codificação certa, classificação de links
@@ -958,7 +962,9 @@ do restante, linha "in progress" fora do histórico, JSON inválido) e a simula�
 falha se o relógio de parede e o monotónico não andarem juntos; na 0.20.13 juntou-se o relatório
 completo (secções, escape do hardware, CSV da sessão, gráficos SVG), o banco (migração única do JSON,
 pesquisa por texto e período, dedupe e o teste da base apagada por fora) e a rede (cliente e servidor
-no loopback, com a recusa de ligação a sair em pt-PT). Os testes correm no CI a cada push:
+no loopback, com a recusa de ligação a sair em pt-PT); na 0.20.15 juntaram-se os idiomas (os dois
+mapas têm exatamente as mesmas chaves, nenhuma tradução vazia, a cultura acompanha o idioma e os
+moldes `TF` substituem valores). Os testes correm no CI a cada push:
 
 ```bash
 dotnet test tests/LinuxExplode.Tests/LinuxExplode.Tests.csproj -c Release
@@ -1011,8 +1017,7 @@ dotnet publish LinuxExplode.csproj -c Release -r linux-x64 --self-contained true
 ## Flatpak
 
 ```bash
-flatpak install --user -y flathub org.flatpak.Builder org.freedesktop.Sdk//25.08 \
-  org.freedesktop.Sdk.Extension.dotnet8//25.08
+flatpak install --user -y flathub org.flatpak.Builder org.freedesktop.Sdk//25.08
 
 flatpak run org.flatpak.Builder --user --install --force-clean build-dir \
   flatpak/pt.linuxexplode.LinuxExplode.json
@@ -1101,7 +1106,7 @@ LinuxExplode/
 │   └── UI.cs             # cartões, linhas, métricas
 ├── Tema/Tema.axaml       # paleta e estilos (monocromático, blocos)
 ├── flatpak/              # manifest, .desktop, metainfo
-├── tests/                # xUnit (125 testes, correm no CI)
+├── tests/                # xUnit (130 testes, correm no CI)
 ├── docs/                 # capturas reais e a chave pública do repositório (`linux-explode-release.gpg`)
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
 └── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
@@ -1121,8 +1126,8 @@ LinuxExplode/
   equivalentes em Vulkan (`Core/BenchGpu.cs`, `Core/BenchRt.cs`); o modo ray tracing exige
   `VK_KHR_ray_query` no driver.
 - **Overlay de FPS** não existe como overlay global: em Wayland nenhuma app vê os frames de outra.
-  A via suportada é o MangoHud (layer Vulkan/OpenGL); a app já lê e resume os CSV dele (`--cli fps`),
-  faltando a interface e o lançador.
+  A via suportada é o MangoHud (layer Vulkan/OpenGL); a app lê os CSV dele, mostra o cartão *FPS ·
+  sessão do MangoHud* na aba Benchmark e o `--cli fps`. Falta só o lançador/overlay.
 - **Memória por módulo**: lida do SPD do próprio módulo, sem root. DDR5 usa o `spd5118` (expõe
   `/sys/bus/nvmem/devices/<bus>-<addr>/nvmem`, legível por todos); DDR4 usa o `ee1004`
   (`/sys/bus/i2c/devices/<bus>-005x/eeprom` ou o mesmo nvmem). Sem SPD, tenta o SMBIOS
