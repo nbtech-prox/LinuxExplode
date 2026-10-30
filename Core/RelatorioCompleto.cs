@@ -212,7 +212,7 @@ public static class RelatorioCompleto
                   $"<div class=\"nota\">{d.Ranking.Count} alvo(s) no ranking</div></div>");
         sb.Append($"<div class=\"destaque\"><div class=\"rot\">Último stress</div><div class=\"num\">" +
                   $"{(ultimoStress is null ? "sem registo" : E(ultimoStress.Resumo))}</div>" +
-                  $"<div class=\"nota\">{(ultimoStress is null ? "corre a aba STRESS" : E($"{d.Stress!.Quando:dd/MM/yyyy HH:mm} · pico CPU {ultimoStress.PicoCpuC:0} °C"))}</div></div>");
+                  $"<div class=\"nota\">{(ultimoStress is null ? "corre a aba Stress" : E($"{d.Stress!.Quando:dd/MM/yyyy HH:mm} · pico CPU {ultimoStress.PicoCpuC:0} °C"))}</div></div>");
         sb.Append("</div>");
 
         // ---------------------------------------------------------------- sistema
@@ -299,7 +299,7 @@ public static class RelatorioCompleto
         if (d.Ranking.Count == 0)
         {
             sb.Append("<div class=\"cartao nota\">Sem corridas registadas. O ranking aparece depois do primeiro " +
-                      "benchmark (aba EXPLODE BENCH ou <span class=\"mono\">--cli bench …</span>).</div>");
+                      "benchmark (aba Benchmark ou <span class=\"mono\">--cli bench …</span>).</div>");
         }
         else
         {
@@ -340,7 +340,7 @@ public static class RelatorioCompleto
         sb.Append("<h2>Stress, ciclos e VRAM</h2>");
         if (d.Stress is null && d.Ciclos is null && d.Vram is null)
         {
-            sb.Append("<div class=\"cartao nota\">Sem stress registado. Corre um teste na aba STRESS — o último " +
+            sb.Append("<div class=\"cartao nota\">Sem stress registado. Corre um teste na aba Stress — o último " +
                       "resultado de cada tipo fica aqui para o relatório.</div>");
         }
 

@@ -735,13 +735,29 @@ public sealed class PaginaSensores : UserControl
         _limiteGpu.ValueChanged += (_, e) => Guardar("gpu", e.NewValue);
         _espacoMin.ValueChanged += (_, e) => Guardar("disco", e.NewValue);
 
-        var limites = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        limites.Children.Add(UI.Texto("CPU °C", "chave"));
-        limites.Children.Add(_limiteCpu);
-        limites.Children.Add(UI.Texto("GPU °C", "chave"));
-        limites.Children.Add(_limiteGpu);
-        limites.Children.Add(UI.Texto("disco GB", "chave"));
-        limites.Children.Add(_espacoMin);
+        // Limites e notificações num WrapPanel: com a janela estreita (ou a escala a 135 %) a caixa
+        // das notificações desce para a linha seguinte em vez de ser cortada na margem direita.
+        var limites = new WrapPanel { Orientation = Orientation.Horizontal };
+
+        Control GrupoLimite(string rotulo, Control campo)
+        {
+            var grupo = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                Margin = new Avalonia.Thickness(0, 0, 18, 8),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            grupo.Children.Add(UI.Texto(rotulo, "chave"));
+            grupo.Children.Add(campo);
+            return grupo;
+        }
+
+        limites.Children.Add(GrupoLimite("CPU °C", _limiteCpu));
+        limites.Children.Add(GrupoLimite("GPU °C", _limiteGpu));
+        limites.Children.Add(GrupoLimite("disco GB", _espacoMin));
+        _notificacoes.VerticalAlignment = VerticalAlignment.Center;
+        _notificacoes.Margin = new Avalonia.Thickness(0, 0, 0, 8);
         limites.Children.Add(_notificacoes);
 
         var pilha = new StackPanel { Spacing = 10 };

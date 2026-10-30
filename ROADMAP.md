@@ -7,7 +7,7 @@ instaladores, repositório Flatpak actualizado e CI verde.
 - **Estado actual:** 0.20.15 (migração para .NET 10 LTS; relatório completo em HTML, histórico em
   SQLite com pesquisa/período, débito real cliente/servidor, ciclos de stress, auto-teste S.M.A.R.T.,
   VRAM, suspender/retomar, ranking com mediana, latência de memória, tarefa real, sessões em CSV,
-  Dispositivos, placa-mãe, bandeja, STRESS, gráficos ao vivo, throttling, energia, temas, `--json`,
+  Dispositivos, placa-mãe, bandeja, Stress, gráficos ao vivo, throttling, energia, temas, `--json`,
   alertas e 125 testes).
 
 ## Fase 1 — 0.20.1 (feito)

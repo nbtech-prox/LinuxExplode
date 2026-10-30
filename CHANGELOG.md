@@ -7,6 +7,13 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 
 ### Alterado
 
+- **Rótulos da navegação**: *EXPLODE BENCH* passou a **Benchmark** e *STRESS* a **Stress** — na barra
+  lateral, no cabeçalho das páginas, no pop do benchmark, nos títulos do `--cli bench` e no relatório
+  HTML. *Benchmark* fica como empréstimo corrente em pt-PT; a alternativa era "teste de desempenho".
+- **Cartão *Alertas* sem cortes**: os três limites e a caixa *Notificações do sistema* passaram a um
+  `WrapPanel` — com a janela estreita ou a escala a 135 % a caixa desce para a linha seguinte em vez
+  de sair pela margem direita (era o que acontecia a 980 px, com o texto cortado em "Notificações do
+  sis…").
 - **Migração para .NET 10** (`net10.0`, LTS até 14 de novembro de 2028). O .NET 8 entra em fim de
   suporte a **10 de novembro de 2026** — o último patch foi o 8.0.33, a 25 de outubro — e a extensão
   `org.freedesktop.Sdk.Extension.dotnet8` da Flathub acompanha o mesmo ciclo. Projecto principal,

@@ -1321,7 +1321,7 @@ public static class Cli
         // de 3 é o que se pode comparar, e a variação diz se a máquina estava estável.
         int repeticoes = LerInteiro(args, "--repeticoes", 1, 1, 9);
 
-        Console.WriteLine($"EXPLODE BENCH — CPU com {threads} thread(s), {BenchRenderer.Width}x{BenchRenderer.Height}, {BenchRenderer.Spp} spp" +
+        Console.WriteLine($"BENCHMARK — CPU com {threads} thread(s), {BenchRenderer.Width}x{BenchRenderer.Height}, {BenchRenderer.Spp} spp" +
                           (repeticoes > 1 ? $" · {repeticoes} corridas" : ""));
 
         var notas = new List<double>();
@@ -1432,7 +1432,7 @@ public static class Cli
     /// <summary>Curva de latência de memória por tamanho de bloco (4 KB → 256 MB).</summary>
     private static int BenchLatenciaCli()
     {
-        Console.WriteLine("EXPLODE BENCH — latência de memória por tamanho de bloco (4 KB → 256 MB)");
+        Console.WriteLine("BENCHMARK — latência de memória por tamanho de bloco (4 KB → 256 MB)");
         var curva = BenchMemoria.Curva(t => Console.Write($"\r  {t,-58}"));
 
         Console.WriteLine("\r  tamanho   fase   latência");
@@ -1446,7 +1446,7 @@ public static class Cli
     /// <summary>Carga "do mundo real": descomprimir um bloco fixo e compilar C, sem rede.</summary>
     private static int BenchRealCli()
     {
-        Console.WriteLine($"EXPLODE BENCH — tarefa real: descomprimir {TarefaReal.BytesPayload / (1024 * 1024)} MB e compilar {TarefaReal.FuncoesC} funções C");
+        Console.WriteLine($"BENCHMARK — tarefa real: descomprimir {TarefaReal.BytesPayload / (1024 * 1024)} MB e compilar {TarefaReal.FuncoesC} funções C");
         var r = TarefaReal.Correr(t => Console.Write($"\r  {t,-58}"));
 
         Console.WriteLine($"\r  descompressão  {r.DescompressaoMBs,8:N0} MB/s   (SHA-256 {r.Sha256[..16]}… verificado)");

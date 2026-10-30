@@ -16,7 +16,7 @@
     <ul>
       <li>Sensores ao vivo (temperaturas, ventoinhas, potência, tensões e frequências) via hwmon.</li>
       <li>Discos com ocupação por partição e saúde S.M.A.R.T. quando o smartctl está disponível.</li>
-      <li>EXPLODE BENCH: path tracer determinístico para CPU (nota comparável entre máquinas),
+      <li>Benchmark: path tracer determinístico para CPU (nota comparável entre máquinas),
           banda e latência de memória, e disco com O_DIRECT (sem cache).</li>
       <li>Diagnóstico de rede: latência, jitter, perda de pacotes, DNS e velocidade.</li>
       <li>Dispositivos: links PCI Express (em uso vs máximo), USB com a velocidade negociada e
@@ -41,11 +41,11 @@
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-sensores.png</image>
     </screenshot>
     <screenshot>
-      <caption>EXPLODE BENCH: nota, histórico comparado e detalhe por GPU</caption>
+      <caption>Benchmark: nota, histórico comparado e detalhe por GPU</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-bench.png</image>
     </screenshot>
     <screenshot>
-      <caption>STRESS: CPU, RAM, GPU e disco com guarda térmica</caption>
+      <caption>Stress: CPU, RAM, GPU e disco com guarda térmica</caption>
       <image type="source">https://raw.githubusercontent.com/nbtech-prox/LinuxExplode/main/docs/captura-stress.png</image>
     </screenshot>
     <screenshot>

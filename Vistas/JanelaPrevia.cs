@@ -17,7 +17,7 @@ public enum ModalidadePrevia { Cpu, Gpu, Rt }
 public sealed record ResultadoPrevia(string Modalidade, string Nota, string Detalhe, bool CorridaConcluida = false);
 
 /// <summary>
-/// O "pop" do EXPLODE BENCH: abrir a partir de Testar GPU / Testar ray tracing / Multi-core /
+/// O "pop" do Benchmark: abrir a partir de Testar GPU / Testar ray tracing / Multi-core /
 /// Single-core mostra a cena a renderizar ao vivo, com escolha de resolução (até 4K) nos testes de
 /// GPU, ao mesmo tempo que mede e mostra a nota. No CPU há uma barra por core.
 /// </summary>
@@ -78,9 +78,9 @@ public sealed class JanelaPrevia : Window
 
         Title = modalidade switch
         {
-            ModalidadePrevia.Cpu => "EXPLODE BENCH — CPU a renderizar",
-            ModalidadePrevia.Gpu => "EXPLODE BENCH — GPU a renderizar",
-            _ => "EXPLODE BENCH — ray tracing a renderizar"
+            ModalidadePrevia.Cpu => "Benchmark — CPU a renderizar",
+            ModalidadePrevia.Gpu => "Benchmark — GPU a renderizar",
+            _ => "Benchmark — ray tracing a renderizar"
         };
         Width = 1040;
         Height = 760;

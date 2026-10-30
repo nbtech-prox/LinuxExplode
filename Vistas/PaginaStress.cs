@@ -76,7 +76,7 @@ public sealed class PaginaStress : UserControl
         _guardar.IsEnabled = false;
 
         Content = UI.Pagina(
-            UI.Cabecalho("STRESS", "Aquece CPU, RAM, GPU e disco — com guarda térmica e valores medidos", _parar),
+            UI.Cabecalho("Stress", "Aquece CPU, RAM, GPU e disco — com guarda térmica e valores medidos", _parar),
             _corpo);
 
         // gancho de captura: LINUXEXPLODE_SECAO=testes|ciclos|vram|ao-vivo|resultado|registo deixa

@@ -59,7 +59,7 @@ public sealed class PaginaBench : UserControl
     public PaginaBench()
     {
         Content = UI.Pagina(
-            UI.Cabecalho("EXPLODE BENCH", "Path tracing de CPU e GPU · banda de memória · disco"),
+            UI.Cabecalho("Benchmark", "Path tracing de CPU e GPU · banda de memória · disco"),
             _corpo);
 
         // gancho de captura: LINUXEXPLODE_SECAO=latencia|real|ranking|cpu|ram|gpu|disco deixa só esse
@@ -136,7 +136,7 @@ public sealed class PaginaBench : UserControl
         linhaNota.Children.Add(_gpuComparacao);
         conteudo.Children.Add(linhaNota);
 
-        return UI.Cartao("GPU · EXPLODE BENCH (Vulkan)", conteudo);
+        return UI.Cartao("GPU · Benchmark (Vulkan)", conteudo);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public sealed class PaginaBench : UserControl
 
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
-            "O mesmo renderizador do EXPLODE BENCH original: path tracer determinístico, 960×540, 1024 amostras por pixel. " +
+            "O mesmo renderizador do benchmark da versão Windows: path tracer determinístico, 960×540, 1024 amostras por pixel. " +
             "A nota é amostras por segundo ÷ 10.000 — comparável entre máquinas.", "sub"));
         conteudo.Children.Add(botoes);
         conteudo.Children.Add(_estado);
@@ -257,7 +257,7 @@ public sealed class PaginaBench : UserControl
         linhaNota.Children.Add(hist);
         conteudo.Children.Add(linhaNota);
 
-        return UI.Cartao("CPU · EXPLODE BENCH", conteudo);
+        return UI.Cartao("CPU · Benchmark", conteudo);
     }
 
     // ------------------------------------------------------------------ RAM

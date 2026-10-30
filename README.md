@@ -68,7 +68,7 @@ As versões sobem de **2 em 2** no último número: 0.20.1 → 0.20.3 → 0.20.5
 | **Sensores** | temperatura, ventoinhas, potência, tensão, corrente e frequência, ao vivo (1 s), com filtro por tipo — no filtro **Frequência** os núcleos da CPU vêm primeiro e a GPU depois; no filtro **Potência** abre com o cartão **Consumo do PC** (RAPL + GPUs) antes da lista de hwmon | `/sys/class/hwmon`, `/sys/devices/system/cpu`, `/sys/class/powercap` (RAPL) |
 
 | **Discos** | modelo, tamanho, SSD/HDD, partições com ocupação, temperatura, saúde S.M.A.R.T. e **auto-teste curto/longo com progresso e histórico** | `/sys/block`, `/proc/mounts`, `smartctl`, `smartctl -t` |
-| **EXPLODE BENCH** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
+| **Benchmark** | nota de CPU (path tracer determinístico 960×540, 1024 spp), nota de GPU (o mesmo path tracer em compute shader Vulkan 1280×720), banda e latência de RAM, **curva de latência por tamanho de bloco**, **tarefa real (descomprimir + compilar)**, **ranking local com mediana de 3 corridas**, disco sequencial e 4K | CPU do próprio processo, GPU via Vulkan + SPIR-V embutido, `O_DIRECT`, `gzip` do .NET e `cc` do sistema |
 | **Dispositivos** | links PCI Express (geração, largura em uso vs máximo, débito útil teórico), USB (o que está ligado, velocidade negociada, classes, driver, potência) e áudio (placas, fluxos PCM, latência de período/buffer e xruns do PipeWire) | `/sys/bus/pci/devices`, `/sys/bus/usb/devices`, `/proc/asound`, `pw-top`, `pw-metadata` |
 | **Rede** | latência TCP (router e internet), jitter, perda, DNS, download/upload e **débito real cliente/servidor** entre dois PC com a aplicação | sockets + Cloudflare; TCP próprio no débito real |
 | **Relatório** | um HTML autónomo com sistema, sensores, discos, ranking de benchmarks, último stress/ciclos/VRAM e a última sessão gravada (com gráficos), ou JSON para automação | `/sys`, `/proc`, DMI e as medições guardadas |
@@ -566,7 +566,7 @@ continua vivo; `MostrarEm()` volta a mostrá-la; `Sair()` termina o processo.
 
 ## FPS por aplicação — cartão do MangoHud
 
-No fim da página **EXPLODE BENCH** há um cartão que lê as sessões que o
+No fim da página **Benchmark** há um cartão que lê as sessões que o
 [MangoHud](https://github.com/flightlessmango/MangoHud) grava em CSV. Em Wayland o compositor não
 expõe os frames de outras aplicações, por isso esta é a única forma honesta de ter FPS de jogos —
 e a app diz isso em vez de inventar números.
@@ -625,9 +625,9 @@ o que serve de prova visual de que o trabalho foi mesmo feito na GPU.
 Requisitos: driver Vulkan (`vulkan-radeon` no Arch/CachyOS). Sem ele a app diz que não
 encontrou GPU em vez de inventar uma nota.
 
-## STRESS — até onde a máquina aguenta
+## Stress — até onde a máquina aguenta
 
-A aba **STRESS** aquece tudo o que se pode aquecer num PC e mostra o que está a acontecer em tempo
+A aba **Stress** aquece tudo o que se pode aquecer num PC e mostra o que está a acontecer em tempo
 real (temperaturas, potência, ritmo) com uma guarda térmica que corta o teste antes de ser tarde.
 
 | Alvo | O que faz | O que mede |
@@ -888,7 +888,7 @@ duas vezes.
 | Período | `--cli historico --desde 2026-10-01 --ate 2026-10-31` |
 | Exportar/importar | os mesmos CSV/JSON de sempre; a importação junta sem duplicar |
 
-Na interface, o cartão *Histórico de resultados* (aba EXPLODE BENCH) tem a caixa **Procurar**, o
+Na interface, o cartão *Histórico de resultados* (aba Benchmark) tem a caixa **Procurar**, o
 filtro **Período** (tudo, 7, 30 ou 90 dias), a lista filtrada e um **gráfico** da série tipo/alvo mais
 recente com pelo menos duas corridas — sem normalizar notas de tipos diferentes, que não seriam
 comparáveis.
