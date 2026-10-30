@@ -1,8 +1,32 @@
 # Linha de comandos
 
 A aplicação tem um modo sem janela, útil para scripts, servidores e para quem gosta de terminal.
-Todos os comandos se chamam `LinuxExplode` (fora do Flatpak) ou
-`flatpak run pt.linuxexplode.LinuxExplode` (dentro do Flatpak).
+
+## Duas formas de a chamar
+
+Instalada por Flatpak — o caso normal — o executável não fica no `PATH`, por isso o comando completo é:
+
+```bash
+flatpak run pt.linuxexplode.LinuxExplode --cli info
+```
+
+Para poder escrever só `LinuxExplode`, cria um atalho (a pasta `~/.local/bin` já está no `PATH` em
+quase todas as distribuições):
+
+```bash
+mkdir -p ~/.local/bin
+printf '#!/bin/sh\nexec flatpak run pt.linuxexplode.LinuxExplode "$@"\n' > ~/.local/bin/LinuxExplode
+chmod +x ~/.local/bin/LinuxExplode
+```
+
+Se preferires um `alias` na shell:
+
+```bash
+echo "alias LinuxExplode='flatpak run pt.linuxexplode.LinuxExplode'" >> ~/.zshrc
+```
+
+Os exemplos desta página usam a forma curta `LinuxExplode`. Se não criaste o atalho, substitui
+`LinuxExplode` por `flatpak run pt.linuxexplode.LinuxExplode` em qualquer linha.
 
 ## Ver o sistema
 

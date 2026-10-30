@@ -37,6 +37,20 @@ flatpak run pt.linuxexplode.LinuxExplode
 > **Em linguagem simples:** o `remote-add` é como dizer ao teu sistema "esta loja existe e é de
 > confiança"; o ficheiro `.gpg` é a assinatura que prova que os pacotes são mesmo deste projecto.
 
+### Atalho para o terminal (opcional)
+
+No Flatpak o programa **não fica no `PATH`**: `LinuxExplode` responde "command not found". O comando
+completo é `flatpak run pt.linuxexplode.LinuxExplode`. Para usar a forma curta, cria um atalho:
+
+```bash
+mkdir -p ~/.local/bin
+printf '#!/bin/sh\nexec flatpak run pt.linuxexplode.LinuxExplode "$@"\n' > ~/.local/bin/LinuxExplode
+chmod +x ~/.local/bin/LinuxExplode
+```
+
+A partir daí, `LinuxExplode --cli info` funciona como qualquer outro comando. (Se `~/.local/bin` não
+estiver no `PATH`, acrescenta `export PATH="$HOME/.local/bin:$PATH"` ao teu `~/.zshrc` ou `~/.bashrc`.)
+
 ### Actualizar
 
 ```bash

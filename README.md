@@ -257,6 +257,18 @@ energia é **integrada no tempo** pela aplicação e não copiada de uma leitura
 
 Útil para scripts e servidores (não abre janela):
 
+Com a aplicação instalada por Flatpak — o caso normal — o prefixo é
+`flatpak run pt.linuxexplode.LinuxExplode`. Para escrever apenas `LinuxExplode`, criar um atalho em
+`~/.local/bin` (a pasta tem de estar no `PATH`):
+
+```bash
+mkdir -p ~/.local/bin
+printf '#!/bin/sh\nexec flatpak run pt.linuxexplode.LinuxExplode "$@"\n' > ~/.local/bin/LinuxExplode
+chmod +x ~/.local/bin/LinuxExplode
+```
+
+Os exemplos seguintes usam a forma curta:
+
 ```bash
 LinuxExplode --cli info                    # resumo do sistema
 LinuxExplode --cli freq                    # frequência por núcleo/thread e relógios da GPU

@@ -3,6 +3,17 @@
 Respostas curtas para o que costuma correr mal. Se o problema não estiver aqui, abre um _issue_ no
 repositório com o resultado de `LinuxExplode --cli info` e, se possível, o relatório HTML.
 
+## `command not found: LinuxExplode`
+
+O Flatpak não põe o programa no `PATH`. Usa o comando completo:
+
+```bash
+flatpak run pt.linuxexplode.LinuxExplode --cli info
+```
+
+Ou cria o atalho descrito em [Instalar](Instalar) (um ficheiro em `~/.local/bin`), e passa a poder
+escrever `LinuxExplode --cli info`.
+
 ## A aplicação abriu noutra língua
 
 Carrega no selector em baixo, à esquerda (**Português / Español / English**) e escolhe **Português**.

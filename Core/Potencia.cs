@@ -49,7 +49,7 @@ public sealed record LeituraPotencia
         get
         {
             var t = TotalW;
-            return t is null ? "—" : $"{t.Value.ToString("0.0", CultureInfo.InvariantCulture)} W";
+            return t is null ? "—" : Potencia.Watts(t);
         }
     }
 }
