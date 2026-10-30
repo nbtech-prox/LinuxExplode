@@ -732,6 +732,207 @@ public static partial class Textos
             "/sys/bus/pci, /sys/bus/usb and /proc/asound — no root, no external tools",
         ["/sys/block + smartctl — ocupação, temperatura, S.M.A.R.T. e auto-teste"] =
             "/sys/block + smartctl — usage, temperature, S.M.A.R.T. and self-test",
+        ["GPU · Benchmark (Vulkan)"] = "GPU · Benchmark (Vulkan)",
+        ["CPU · Benchmark"] = "CPU · Benchmark",
+        ["1% low"] = "1% low",
+        ["0,1% low"] = "0.1% low",
+        // valores que vêm do Core (nomes de sensores, estados, etapas)
+        ["CPU (k10temp)"] = "CPU (k10temp)",
+        ["CPU (coretemp)"] = "CPU (coretemp)",
+        ["GPU (amdgpu)"] = "GPU (amdgpu)",
+        ["GPU (Intel)"] = "GPU (Intel)",
+        ["GPU (NVIDIA)"] = "GPU (NVIDIA)",
+        ["Chassis (ACPI)"] = "Chassis (ACPI)",
+        ["Placa-mãe (IT87)"] = "Motherboard (IT87)",
+        ["Placa-mãe (NCT6683D)"] = "Motherboard (NCT6683D)",
+        ["Placa-mãe (NCT6686D)"] = "Motherboard (NCT6686D)",
+        ["Placa-mãe (NCT6687D)"] = "Motherboard (NCT6687D)",
+        ["Placa-mãe (NCT6775)"] = "Motherboard (NCT6775)",
+        ["plataforma (psys)"] = "platform (psys)",
+        ["CPU + GPU dedicada"] = "CPU + discrete GPU",
+        ["sem throttling"] = "no throttling",
+        ["sem leitura de potência (RAPL)"] = "no power reading (RAPL)",
+        ["misturas inteiras"] = "integer mixes",
+        ["blocos transcendentais"] = "transcendental blocks",
+        ["blocos de 8 bytes (leitura + escrita)"] = "8-byte blocks (read + write)",
+        ["a escrever blocos de 4 KB (aleatório)…"] = "writing 4 KB blocks (random)…",
+        ["a preparar…"] = "preparing…",
+        ["RAM · {0} da memória"] = "RAM · {0} of memory",
+        ["RAM · {0}"] = "RAM · {0}",
+        ["GPU · compute contínuo"] = "GPU · continuous compute",
+        ["GPU · {0}"] = "GPU · {0}",
+        ["Disco · sequencial e 4 KB"] = "Disk · sequential and 4 KB",
+        ["Disco · {0}"] = "Disk · {0}",
+        ["Tudo · CPU + RAM + GPU + disco"] = "Everything · CPU + RAM + GPU + disk",
+        ["FMA vetorial"] = "Vector FMA",
+        ["CPU (M/s)"] = "CPU (M/s)",
+        ["CPU (GFLOP/s)"] = "CPU (GFLOP/s)",
+        ["CPU↔RAM (GB/s)"] = "CPU↔RAM (GB/s)",
+        ["GPU (M pts/s)"] = "GPU (M pts/s)",
+        ["RAM escrita (GB/s)"] = "RAM write (GB/s)",
+        ["RAM leitura (GB/s)"] = "RAM read (GB/s)",
+        ["disco escrita (MB/s)"] = "disk write (MB/s)",
+        ["disco leitura (MB/s)"] = "disk read (MB/s)",
+        ["4 KB (IOPS)"] = "4 KB (IOPS)",
+        ["erros de RAM"] = "RAM errors",
+        ["falhas de GPU"] = "GPU failures",
+        ["tarefas falhadas"] = "failed tasks",
+        ["mediana"] = "median",
+        ["a máquina não repetiu o resultado; vale a mediana e a causa (térmica, turbo, outro processo) tem de ser vista"] =
+            "the machine did not repeat the result; the median stands and the cause (thermal, turbo, another process) must be looked at",
+        ["já há uma série de ciclos a correr"] = "a cycle series is already running",
+        ["o ciclo não devolveu resultado"] = "the cycle returned no result",
+        ["bytes diferentes na releitura"] = "bytes differ on re-read",
+        ["Disco: dados relidos iguais aos escritos (sem corrupção)"] =
+            "Disk: data re-read matches what was written (no corruption)",
+        ["Falhou: "] = "Failed: ",
+        ["já há uma sessão de stress a correr"] = "a stress session is already running",
+        ["memória livre insuficiente para o stress de RAM"] = "not enough free memory for the RAM stress test",
+        ["cancelado antes de alocar memória"] = "cancelled before allocating memory",
+        ["CPU quente"] = "CPU hot",
+        ["GPU quente"] = "GPU hot",
+        ["{0} °C (limite {1} °C)"] = "{0} °C (limit {1} °C)",
+        ["Ventoinhas a zero com a CPU a {0} °C"] = "Fans at zero with the CPU at {0} °C",
+        ["{0} ventoinha(s) lidas a 0 RPM — verifica cabo/curva ou o sensor"] =
+            "{0} fan(s) read at 0 RPM — check the cable/curve or the sensor",
+        ["Pouco espaço em {0}"] = "Low space on {0}",
+        ["{0} GB livres (mínimo {1} GB) · {2}"] = "{0} GB free (minimum {1} GB) · {2}",
+        ["concluído sem erros"] = "completed without error",
+        ["concluído com falha de leitura"] = "completed: read failure",
+        ["concluído com falha de servo"] = "completed: servo/seek failure",
+        ["concluído com falha eléctrica"] = "completed: electrical failure",
+        ["concluído com danos"] = "completed: handling damage",
+        ["interrompido (reset do anfitrião)"] = "interrupted (host reset)",
+        ["abortado pelo utilizador"] = "aborted by the user",
+        ["erro fatal"] = "fatal error",
+        ["sem problemas registados"] = "no problems logged",
+        ["auto-teste abortado"] = "self-test aborted",
+        ["sem dados S.M.A.R.T."] = "no S.M.A.R.T. data",
+        ["smartctl não instalado (pacote smartmontools)"] = "smartctl not installed (smartmontools package)",
+        ["smartctl não instalado — saúde S.M.A.R.T. indisponível "] =
+            "smartctl not installed — S.M.A.R.T. health unavailable ",
+        ["smartctl sem resposta"] = "smartctl not responding",
+        ["este disco não expõe log de auto-teste (o smartctl não o reporta)"] =
+            "this disk exposes no self-test log (smartctl does not report it)",
+        ["o controlador não publica a percentagem deste teste"] =
+            "the controller does not publish a percentage for this test",
+        ["Internet (1.1.1.1)"] = "Internet (1.1.1.1)",
+        ["Internet (8.8.8.8)"] = "Internet (8.8.8.8)",
+        ["Perda de pacotes"] = "Packet loss",
+        ["Sem internet"] = "No internet",
+        ["a medir DNS…"] = "measuring DNS…",
+        ["a medir download…"] = "measuring download…",
+        ["a medir latência até ao router…"] = "measuring latency to the router…",
+        ["a medir latência até à internet…"] = "measuring latency to the internet…",
+        ["a medir upload…"] = "measuring upload…",
+        ["não foi possível ligar a nenhum destino externo"] = "could not connect to any external target",
+        ["a medir escrita sequencial…"] = "measuring sequential write…",
+        ["a medir leitura sequencial…"] = "measuring sequential read…",
+        ["a medir 4K aleatório (leitura)…"] = "measuring random 4K (read)…",
+        ["a medir 4K aleatório (escrita)…"] = "measuring random 4K (write)…",
+        ["a medir cópia…"] = "measuring copy…",
+        ["a medir latência…"] = "measuring latency…",
+        ["a ler sequencialmente…"] = "reading sequentially…",
+        ["sem tipo de memória adequado"] = "no suitable memory type",
+        ["sem tipo de memória para o buffer"] = "no memory type for the buffer",
+        ["shader path.comp.spv não embutido"] = "path.comp.spv shader not embedded",
+        ["shader rt.comp.spv não embutido"] = "rt.comp.spv shader not embedded",
+        ["sem compilador C (cc/gcc/clang) neste sistema — a tarefa de compilação fica de fora"] =
+            "no C compiler (cc/gcc/clang) on this system — the compilation task is left out",
+        ["a descompressão não devolveu os dados originais (SHA-256 diferente)"] =
+            "decompression did not return the original data (SHA-256 differs)",
+        ["o compilador não terminou em 5 minutos"] = "the compiler did not finish within 5 minutes",
+        ["(sem mensagem)"] = "(no message)",
+        ["A máquina não está estável: fecha o que estiver a correr e repete."] =
+            "The machine is not stable: close what is running and repeat.",
+        ["(amostra pequena)"] = "(small sample)",
+        ["variação —"] = "spread —",
+        ["1,5 Mbps (low speed)"] = "1.5 Mbps (low speed)",
+        ["12 Mbps (full speed)"] = "12 Mbps (full speed)",
+        ["480 Mbps (high speed)"] = "480 Mbps (high speed)",
+        ["5 Gbps (USB 3.0)"] = "5 Gbps (USB 3.0)",
+        ["10 Gbps (USB 3.1)"] = "10 Gbps (USB 3.1)",
+        ["20 Gbps (USB 3.2 2x2)"] = "20 Gbps (USB 3.2 2x2)",
+        ["velocidade não exposta"] = "speed not exposed",
+        ["Dispositivo HID (sem descritor)"] = "HID device (no descriptor)",
+        ["Armazenamento USB (sem descritor)"] = "USB storage (no descriptor)",
+        ["Câmara USB (sem descritor)"] = "USB camera (no descriptor)",
+        ["Interface de áudio USB (sem descritor)"] = "USB audio interface (no descriptor)",
+        ["Adaptador Bluetooth (sem descritor)"] = "Bluetooth adapter (no descriptor)",
+        ["específico do fabricante"] = "vendor-specific",
+        ["específico da aplicação"] = "application-specific",
+        ["sem fios"] = "wireless",
+        ["smart card"] = "smart card",
+        ["suspensão e despertar automático disponíveis"] = "suspend and automatic wake available",
+        ["acorda quando alguém lhe toca"] = "wakes when touched",
+        ["não testado — "] = "not tested — ",
+        ["simulação: a ler os relógios sem suspender…"] = "simulation: reading the clocks without suspending…",
+        ["a suspender — acorda a máquina com uma tecla para continuar o teste…"] =
+            "suspending — wake the machine with a key to continue the test…",
+        ["a máquina não dormiu: o pedido não teve efeito (um inibidor ou o compositor bloqueou o suspend)"] =
+            "the machine did not sleep: the request had no effect (an inhibitor or the compositor blocked suspend)",
+        ["este kernel não anuncia suspensão em /sys/power/state (máquina virtual?)"] =
+            "this kernel does not advertise suspend in /sys/power/state (virtual machine?)",
+        ["falta permissão para suspender sem password: acrescenta systemctl ao sudoers "] =
+            "missing permission to suspend without a password: add systemctl to sudoers ",
+        ["o despertar automático precisa do rtcwake no sudoers; sem ele a máquina só "] =
+            "automatic wake needs rtcwake in sudoers; without it the machine only ",
+        ["pedido de suspensão aceite (systemctl) — acorda a máquina para continuar"] =
+            "suspend request accepted (systemctl) — wake the machine to continue",
+        ["sem permissão para suspender: "] = "no permission to suspend: ",
+        ["pedido: "] = "request: ",
+        ["/sys/class/hwmon e /sys/devices/system/cpu — leitura direta, sem root"] =
+            "/sys/class/hwmon and /sys/devices/system/cpu — direct reading, no root",
+        ["CPU °C"] = "CPU °C",
+        ["GPU °C"] = "GPU °C",
+        ["disco GB"] = "disk GB",
+        ["abortado"] = "aborted",
+        ["Sessão"] = "Session",
+        ["Placa gráfica"] = "Graphics card",
+        ["Armazenamento"] = "Storage",
+        ["Rede"] = "Network",
+        ["Barramento série (USB)"] = "Serial bus (USB)",
+        ["Controlador de cifra"] = "Cipher controller",
+        ["Ponte PCIe"] = "PCIe bridge",
+        ["Ponte do sistema"] = "System bridge",
+        ["Ponte do sistema (host)"] = "System bridge (host)",
+        ["Acelerador de I/O"] = "I/O accelerator",
+        ["Processamento de sinais"] = "Signal processing",
+        ["Dispositivo PCI"] = "PCI device",
+        ["Dispositivo PCI "] = "PCI device ",
+        ["VRM (fases de alimentação)"] = "VRM (power stages)",
+        ["Audio"] = "Audio",
+        ["Cache L3"] = "L3 cache",
+        ["sem leitura de sensores (hwmon vazio?)"] = "no sensor readings (hwmon empty?)",
+        ["Duas tarefas fixas e repetíveis: descomprimir {0} MB " +
+         "(o resultado é conferido por SHA-256) e compilar um ficheiro C com " +
+         "{1} funções, com o compilador do sistema. " +
+         "Não usa a rede nem o disco além do próprio trabalho — é o que um utilizador faz a compilar ou a instalar."] =
+            "Two fixed, repeatable tasks: decompress {0} MB " +
+            "(the result is checked with SHA-256) and compile a C file with " +
+            "{1} functions using the system compiler. " +
+            "No network and no disk beyond the work itself — it is what a user does when compiling or installing.",
+        ["Mediana das últimas {0} corridas de cada alvo, com a variação entre elas. " +
+         "Acima de {1} % de variação a máquina não estava estável e o número vale pouco — " +
+         "o aviso aparece na linha. Para a mediana ser de 3, corre `--cli bench multi --repeticoes 3`."] =
+            "Median of the last {0} runs of each target, with the spread between them. " +
+            "Above {1} % spread the machine was not stable and the number is worth little — " +
+            "the warning shows on the row. For a median of 3, run `--cli bench multi --repeticoes 3`.",
+        ["corrida {0} · {1} pts — concluída; a recomeçar em {2} s"] =
+            "run {0} · {1} pts — finished; restarting in {2} s",
+        ["corrida {0} em curso · {1} thread(s) · {2}% · {3} s · {4} amostras"] =
+            "run {0} in progress · {1} thread(s) · {2}% · {3} s · {4} samples",
+        ["{0} — concluída; a recomeçar em 2.5 s"] = "{0} — finished; restarting in 2.5 s",
+        ["O mesmo path tracer da CPU, agora em compute shader Vulkan: {0} amostras por pixel, " +
+         "repetido até {1} s para a nota ser estável — a resolução escolhe-se no pop-up, de 320×180 até 4K. " +
+         "O modo ray tracing usa VK_KHR_ray_query com 64 esferas em BVH — a nota não é comparável com a de compute."] =
+            "The same CPU path tracer, now as a Vulkan compute shader: {0} samples per pixel, " +
+            "repeated until {1} s so the score stays stable — the resolution is chosen in the pop-up, from 320×180 up to 4K. " +
+            "Ray tracing mode uses VK_KHR_ray_query with 64 spheres in a BVH — its score is not comparable with compute.",
+        ["O mesmo renderizador do benchmark da versão Windows: path tracer determinístico, 960×540, 1024 amostras por pixel. " +
+         "A nota é amostras por segundo ÷ 10.000 — comparável entre máquinas."] =
+            "The same renderer as the Windows benchmark: deterministic path tracer, 960×540, 1024 samples per pixel. " +
+            "The score is samples per second ÷ 10,000 — comparable across machines.",
         ["O teste suspende a máquina a sério e mede o tempo de três formas independentes: relógio de parede " +
          "menos relógio monotónico (que pára no suspend), e o uptime (CLOCK_BOOTTIME). No fim verifica se " +
          "os sensores e a potência voltaram a responder — num portátil é aqui que se vê se o wake deixou " +

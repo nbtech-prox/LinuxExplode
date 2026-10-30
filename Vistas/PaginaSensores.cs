@@ -41,15 +41,15 @@ public sealed class PaginaSensores : UserControl
     private readonly TextBlock _vPotencia = new() { Text = "—", Classes = { "valor" } };
     private readonly TextBlock _vFreq = new() { Text = "—", Classes = { "valor" } };
     private readonly ProgressBar _barraThrottle = new() { Minimum = 0, Maximum = 1, Value = 0, Height = 8 };
-    private readonly TextBlock _throttleEstado = new() { Text = "a medir…", Classes = { "mono" } };
+    private readonly TextBlock _throttleEstado = new() { Text = Textos.T("a medir…"), Classes = { "mono" } };
     private readonly TextBlock _throttleDetalhe = new() { Text = "", Classes = { "sub" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBlock _energiaTexto = new() { Text = "—", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly StackPanel _alertasLista = new() { Spacing = 6 };
-    private readonly TextBlock _alertasEstado = new() { Text = "sem alertas", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _alertasEstado = new() { Text = Textos.T("sem alertas"), Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     // Sessão gravada (0.20.7)
     private readonly GravadorSessao _gravador = new();
     private readonly Button _botaoGravar = new();
-    private readonly TextBlock _sessaoEstado = new() { Text = "sem gravação", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _sessaoEstado = new() { Text = Textos.T("sem gravação"), Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly StackPanel _sessaoGraficos = new() { Spacing = 6 };
     private readonly TextBlock _sessaoResumo = new() { Text = "", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private DateTime? _sessaoFimPedido;
@@ -105,7 +105,7 @@ public sealed class PaginaSensores : UserControl
             _ => null
         };
 
-        var online = new TextBlock { Text = "ao vivo · 1 s", Classes = { "sub" }, VerticalAlignment = VerticalAlignment.Center };
+        var online = new TextBlock { Text = Textos.T("ao vivo · 1 s"), Classes = { "sub" }, VerticalAlignment = VerticalAlignment.Center };
 
         var cabecalho = UI.Cabecalho("Sensores", "/sys/class/hwmon e /sys/devices/system/cpu — leitura direta, sem root");
 
@@ -455,7 +455,7 @@ public sealed class PaginaSensores : UserControl
         }
         else
         {
-            _vTempCpu.Text = "sem sensor";
+            _vTempCpu.Text = Textos.T("sem sensor");
         }
 
         if (gpu is double g)
@@ -465,7 +465,7 @@ public sealed class PaginaSensores : UserControl
         }
         else
         {
-            _vTempGpu.Text = "sem sensor";
+            _vTempGpu.Text = Textos.T("sem sensor");
         }
 
         if (watts is double w)
@@ -475,7 +475,7 @@ public sealed class PaginaSensores : UserControl
         }
         else
         {
-            _vPotencia.Text = "sem RAPL";
+            _vPotencia.Text = Textos.T("sem RAPL");
         }
 
         if (throttle.MediaMhz > 0)
@@ -491,7 +491,7 @@ public sealed class PaginaSensores : UserControl
                 $"{throttle.Percentagem:0}", $"{throttle.MediaMhz:0}", $"{throttle.MaximoMhz:0}",
                 $"{throttle.MinimoMhz:0}", $"{throttle.CargaCpu * 100:0}");
 
-        var notas = new List<string> { throttle.Veredito };
+        var notas = new List<string> { Textos.T(throttle.Veredito) };
         if (throttle.ContadorFirmware is long fw) notas.Add(Textos.TF("contador de firmware {0}", $"{fw:N0}"));
         else notas.Add(Textos.T("o firmware não expõe contadores de throttle (normal em AMD)"));
         _throttleDetalhe.Text = string.Join(" · ", notas);
@@ -552,7 +552,7 @@ public sealed class PaginaSensores : UserControl
             var fonte = UI.Texto(t.Fonte, "rotulo");
             fonte.VerticalAlignment = VerticalAlignment.Center;
 
-            var nome = UI.Texto($"{t.Chip} · {t.Nome}", "chave");
+            var nome = UI.Texto(Textos.TF("{0} · {1}", Textos.T(t.Chip), Textos.T(t.Nome)), "chave");
             nome.TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis;
             nome.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(nome, 1);
@@ -646,7 +646,7 @@ public sealed class PaginaSensores : UserControl
         _sessaoEstado.Text = Textos.TF("{0} amostras em {1} s · {2}", amostras.Count, $"{resumo.Duracao.TotalSeconds:0}", _gravador.Caminho);
         if (resumo.Amostras == 0)
         {
-            _sessaoResumo.Text = "nada gravado";
+            _sessaoResumo.Text = Textos.T("nada gravado");
             return;
         }
 
@@ -754,9 +754,9 @@ public sealed class PaginaSensores : UserControl
             return grupo;
         }
 
-        limites.Children.Add(GrupoLimite("CPU °C", _limiteCpu));
-        limites.Children.Add(GrupoLimite("GPU °C", _limiteGpu));
-        limites.Children.Add(GrupoLimite("disco GB", _espacoMin));
+        limites.Children.Add(GrupoLimite(Textos.T("CPU °C"), _limiteCpu));
+        limites.Children.Add(GrupoLimite(Textos.T("GPU °C"), _limiteGpu));
+        limites.Children.Add(GrupoLimite(Textos.T("disco GB"), _espacoMin));
         _notificacoes.VerticalAlignment = VerticalAlignment.Center;
         _notificacoes.Margin = new Avalonia.Thickness(0, 0, 0, 8);
         limites.Children.Add(_notificacoes);
@@ -776,7 +776,7 @@ public sealed class PaginaSensores : UserControl
         Notificacoes.AvisarAlertas(alertas);
 
         _alertasEstado.Text = alertas.Count == 0
-            ? "sem alertas — temperaturas, ventoinhas e espaço dentro dos limites"
+            ? Textos.T("sem alertas — temperaturas, ventoinhas e espaço dentro dos limites")
             : Textos.TF("{0} alerta(s) activo(s)", alertas.Count);
 
         string chave = string.Join("|", alertas.Select(a => a.Chave));
@@ -789,8 +789,8 @@ public sealed class PaginaSensores : UserControl
             var linha = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
             linha.Children.Add(UI.Pilula(a.Grave ? "grave" : "aviso", a.Grave ? "Mau" : "Atencao"));
             var texto = new StackPanel { Spacing = 2 };
-            texto.Children.Add(UI.Texto(a.Titulo, "valor"));
-            texto.Children.Add(UI.Texto(a.Detalhe, "sub"));
+            texto.Children.Add(UI.Texto(Textos.T(a.Titulo), "valor"));
+            texto.Children.Add(UI.Texto(Textos.T(a.Detalhe), "sub"));
             linha.Children.Add(texto);
             _alertasLista.Children.Add(linha);
         }

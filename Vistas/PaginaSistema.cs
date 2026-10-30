@@ -12,7 +12,7 @@ public sealed class PaginaSistema : UserControl
     private readonly StackPanel _corpo = new() { Spacing = 14 };
 
     // suspender e retomar
-    private readonly TextBlock _suspEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _suspEstado = new() { Text = Textos.T("pronto"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _suspLinhas = new() { Spacing = 2 };
     private readonly ComboBox _suspSegundos = new() { Width = 130 };
     private readonly List<Button> _suspBotoes = new();

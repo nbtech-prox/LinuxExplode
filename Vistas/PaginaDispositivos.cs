@@ -132,10 +132,10 @@ public sealed class PaginaDispositivos : UserControl
         _mostrarPontes.IsEnabled = pontes.Count > 0;
 
         _pciResumo.Text = links.Count == 0
-            ? "Nenhum link PCI Express legível em /sys/bus/pci/devices."
+            ? Textos.T("Nenhum link PCI Express legível em /sys/bus/pci/devices.")
             : Textos.TF("{0} dispositivo(s) final(is) e {1} ponte(s). ", finais.Count, pontes.Count) +
               (reduzidos.Count == 0
-                  ? "Todos os dispositivos finais negociaram o máximo que anunciam."
+                  ? Textos.T("Todos os dispositivos finais negociaram o máximo que anunciam.")
                   : Textos.TF("{0} dispositivo(s) abaixo do máximo anunciado (assinalados).", reduzidos.Count));
 
         // a assinatura inclui o toggle: ligar/desligar as pontes volta a desenhar a tabela
@@ -160,7 +160,7 @@ public sealed class PaginaDispositivos : UserControl
                 link.VerticalAlignment = VerticalAlignment.Center;
                 Grid.SetColumn(link, 1);
 
-                var classe = UI.Texto(l.Classe, "rotulo");
+                var classe = UI.Texto(Textos.T(l.Classe), "rotulo");
                 classe.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
                 classe.TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis;
                 classe.VerticalAlignment = VerticalAlignment.Center;
@@ -232,9 +232,9 @@ public sealed class PaginaDispositivos : UserControl
             }
         }
 
-        _pciNota.Text = "A largura e a velocidade são as negociadas agora (LnkSta do kernel). O máximo é o que o " +
-                        "próprio dispositivo anuncia; nas pontes o valor é o link que estão a servir, por isso não " +
-                        "é comparável e ficam escondidas até as pedires.";
+        _pciNota.Text = Textos.T("A largura e a velocidade são as negociadas agora (LnkSta do kernel). O máximo é o que o " +
+                                 "próprio dispositivo anuncia; nas pontes o valor é o link que estão a servir, por isso não " +
+                                 "é comparável e ficam escondidas até as pedires.");
     }
 
     // ------------------------------------------------------------------ USB
@@ -245,9 +245,9 @@ public sealed class PaginaDispositivos : UserControl
         var hubs = todos.Where(d => d.Hub || d.Id.StartsWith("usb", StringComparison.Ordinal)).ToList();
 
         _usbResumo.Text = todos.Count == 0
-            ? "Nenhum dispositivo USB legível em /sys/bus/usb/devices."
+            ? Textos.T("Nenhum dispositivo USB legível em /sys/bus/usb/devices.")
             : Textos.TF("{0} dispositivo(s) ligado(s) e {1} concentrador(es)/controlador(es). ", dispositivos.Count, hubs.Count) +
-              "A velocidade é a negociada com o kernel, não um teste de débito.";
+              Textos.T("A velocidade é a negociada com o kernel, não um teste de débito.");
 
         var assinatura = string.Join("|", todos.Select(d => d.Id + d.IdVendor + d.IdProduto + d.TextoVelocidade + d.Nome));
         if (assinatura == _assinaturaUsb) return;

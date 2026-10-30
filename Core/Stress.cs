@@ -118,10 +118,10 @@ public static class StressCpu
 
         string unidade = carga switch
         {
-            CargaCpu.Inteiro => "misturas inteiras",
-            CargaCpu.Flutuante => "blocos transcendentais",
+            CargaCpu.Inteiro => Textos.T("misturas inteiras"),
+            CargaCpu.Flutuante => Textos.T("blocos transcendentais"),
             CargaCpu.Vector => $"FMA de {Vector<float>.Count} floats",
-            _ => "blocos de 8 bytes (leitura + escrita)"
+            _ => Textos.T("blocos de 8 bytes (leitura + escrita)")
         };
 
         aoProgresso?.Invoke(u);
@@ -402,7 +402,7 @@ public static class StressDisco
             double alvoAleatorio = Math.Min(3, Math.Max(0, restante));
             if (alvoAleatorio > 0.2 && !ct.IsCancellationRequested)
             {
-                progresso?.Invoke("a escrever blocos de 4 KB (aleatório)…");
+                progresso?.Invoke(Textos.T("a escrever blocos de 4 KB (aleatório)…"));
                 relogio.Restart();
                 using var rw = new FileStream(ficheiro, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite,
                     4096, FileOptions.RandomAccess);
@@ -486,7 +486,7 @@ public sealed class SessaoStress : IDisposable
     private Thread? _thread;
     private Timer? _vigia;
 
-    private string _fase = "a preparar…";
+    private string _fase = Textos.T("a preparar…");
     private long _ritmo;
     private readonly Stopwatch _relogio = Stopwatch.StartNew();
 
@@ -605,8 +605,8 @@ public sealed class SessaoStress : IDisposable
 
                 case AlvoStress.Ram:
                     {
-                        _fase = $"RAM · {_fracaoRam:P0} da memória";
-                        var r = StressRam.Correr(_fracaoRam, _duracao, token, m => _fase = "RAM · " + m);
+                        _fase = Textos.TF("RAM · {0} da memória", $"{_fracaoRam:P0}");
+                        var r = StressRam.Correr(_fracaoRam, _duracao, token, m => _fase = Textos.TF("RAM · {0}", Textos.T(m)));
                         linhas.Add($"RAM: {Util.Gb(r.BytesAlocados)} × {r.Passagens} passagem(ns) em {r.Segundos:0.0} s");
                         linhas.Add($"RAM: escrita {r.EscritaGbs:0.0} GB/s · leitura {r.LeituraGbs:0.0} GB/s");
                         linhas.Add(r.Erros == 0
@@ -620,8 +620,8 @@ public sealed class SessaoStress : IDisposable
 
                 case AlvoStress.Gpu:
                     {
-                        _fase = "GPU · compute contínuo";
-                        var r = StressGpu.Correr(_indiceGpu, _duracao, token, m => _fase = "GPU · " + m);
+                        _fase = Textos.T("GPU · compute contínuo");
+                        var r = StressGpu.Correr(_indiceGpu, _duracao, token, m => _fase = Textos.TF("GPU · {0}", Textos.T(m)));
                         linhas.Add($"GPU ({r.Nome}): {r.Pontos / 1e6:0.0} M pontos em {r.Segundos:0.0} s" +
                                    $" → {r.Pontos / r.Segundos / 1e6:0.0} M pts/s");
                         if (r.Falhas > 0) linhas.Add($"GPU: {r.Falhas} dispatch(es) falharam — ver o registo");
@@ -632,8 +632,8 @@ public sealed class SessaoStress : IDisposable
 
                 case AlvoStress.Disco:
                     {
-                        _fase = "Disco · sequencial e 4 KB";
-                        var r = StressDisco.Correr(_pastaDisco, _tamanhoDisco, _duracao, token, m => _fase = "Disco · " + m);
+                        _fase = Textos.T("Disco · sequencial e 4 KB");
+                        var r = StressDisco.Correr(_pastaDisco, _tamanhoDisco, _duracao, token, m => _fase = Textos.TF("Disco · {0}", Textos.T(m)));
                         linhas.Add($"Disco: {Util.Bytes(r.BytesPorPassagem)} × {r.Passagens} passagem(ns) em {r.Segundos:0.0} s");
                         linhas.Add($"Disco: escrita {r.EscritaMbs:0} MB/s · leitura {r.LeituraMbs:0} MB/s · 4 KB {r.Iops4K:0} IOPS");
                         linhas.Add(r.Erros == 0
@@ -648,7 +648,7 @@ public sealed class SessaoStress : IDisposable
 
                 default: // Tudo
                     {
-                        _fase = "Tudo · CPU + RAM + GPU + disco";
+                        _fase = Textos.T("Tudo · CPU + RAM + GPU + disco");
                         // Sem token no Task.Run: os motores já param sozinhos e devolvem o que fizeram,
                         // e um trabalho cancelado no arranque perdia a linha toda do resultado.
                         var cpu = Task.Run(() => StressCpu.Correr(_threads, _carga, token, n => _ritmo = n));
@@ -784,7 +784,7 @@ public sealed class SessaoStress : IDisposable
     {
         CargaCpu.Inteiro => "inteiro",
         CargaCpu.Flutuante => "vírgula flutuante",
-        CargaCpu.Vector => "FMA vetorial",
+        CargaCpu.Vector => Textos.T("FMA vetorial"),
         _ => "memória"
     };
 

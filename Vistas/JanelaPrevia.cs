@@ -232,7 +232,7 @@ public sealed class JanelaPrevia : Window
             : (1280, 720);
 
         CriarBitmap(largura, altura, PixelFormat.Rgba8888);
-        _estado.Text = "a preparar o dispositivo Vulkan e a medir…";
+        _estado.Text = Textos.T("a preparar o dispositivo Vulkan e a medir…");
         _nota.Text = "—";
 
         try
@@ -295,7 +295,7 @@ public sealed class JanelaPrevia : Window
         }
         catch (Exception e)
         {
-            if (!_fechada) _estado.Text = "falhou: " + e.Message;
+            if (!_fechada) _estado.Text = Textos.T("falhou: ") + e.Message;
         }
     }
 
@@ -322,7 +322,7 @@ public sealed class JanelaPrevia : Window
         CriarBitmap(BenchRenderer.Width, BenchRenderer.Height, PixelFormat.Bgra8888);
         _estado.Text = _threads == 1
             ? "a renderizar numa só thread…"
-            : $"a renderizar com {_threads} threads…";
+            : Textos.TF("a renderizar com {0} threads…", _threads);
         _nota.Text = "—";
 
         var bench = new BenchRenderer();
@@ -342,15 +342,15 @@ public sealed class JanelaPrevia : Window
                 long ate = Interlocked.Read(ref _reinicioAte);
                 if (ate == 0) return;
                 double falta = Math.Max(0, (ate - Stopwatch.GetTimestamp()) / (double)Stopwatch.Frequency);
-                _estado.Text = $"corrida {Volatile.Read(ref _corridas)} · {_ultimaNotaCpu} pts — concluída; " +
-                               $"a recomeçar em {falta:0.0} s";
+                _estado.Text = Textos.TF("corrida {0} · {1} pts — concluída; a recomeçar em {2} s",
+                    Volatile.Read(ref _corridas), _ultimaNotaCpu, $"{falta:0.0}");
                 return;
             }
 
             double segundos = Desde(Interlocked.Read(ref _inicioCorrida));
             double pct = bench.BucketsTotal > 0 ? 100.0 * bench.BucketsDone / bench.BucketsTotal : 0;
-            _estado.Text = $"corrida {Volatile.Read(ref _corridas) + 1} em curso · {_threads} thread(s) · " +
-                           $"{pct:0}% · {segundos:0.0} s · {bench.SamplesDone:N0} amostras";
+            _estado.Text = Textos.TF("corrida {0} em curso · {1} thread(s) · {2}% · {3} s · {4} amostras",
+                Volatile.Read(ref _corridas) + 1, _threads, $"{pct:0}", $"{segundos:0.0}", $"{bench.SamplesDone:N0}");
         };
         _vigia.Start();
 
@@ -372,13 +372,13 @@ public sealed class JanelaPrevia : Window
                     int n = Interlocked.Increment(ref _corridas);
                     Console.WriteLine($"[previa] cpu corrida {n}: {resultado.Score:N0} pts em {resultado.Seconds:0.0} s ({resultado.Samples:N0} amostras, {_threads} thread(s))");
                     string nota = resultado.Score.ToString("N0");
-                    string detalhe = $"corrida {n} · {_threads} thread(s) · {resultado.Seconds:0.0} s · {resultado.Samples:N0} amostras";
+                    string detalhe = Textos.TF("corrida {0} · {1} thread(s) · {2} s · {3} amostras", n, _threads, $"{resultado.Seconds:0.0}", $"{resultado.Samples:N0}");
                     Dispatcher.UIThread.Post(() =>
                     {
                         if (_fechada) return;
                         _ultimaNotaCpu = nota;
                         _nota.Text = nota;
-                        _estado.Text = $"{detalhe} — concluída; a recomeçar em 2.5 s";
+                        _estado.Text = Textos.TF("{0} — concluída; a recomeçar em 2.5 s", detalhe);
                         Interlocked.Exchange(ref _reinicioAte, Stopwatch.GetTimestamp() + (long)(2.5 * Stopwatch.Frequency));
                         _aoAtualizar?.Invoke(new ResultadoPrevia("Cpu", nota, detalhe, true));
                     });
@@ -509,7 +509,7 @@ public sealed class JanelaPrevia : Window
             _relogio.Restart();
         }
 
-        string ritmo = _ultimoFps >= 0.5 ? $"{_ultimoFps:0} fotogramas/s" : "a contar fotogramas…";
-        _estado.Text = $"{_largura}×{_altura} · {_amostras} amostras/pixel · {ritmo} · câmara em órbita";
+        string ritmo = _ultimoFps >= 0.5 ? Textos.TF("{0} fotogramas/s", $"{_ultimoFps:0}") : Textos.T("a contar fotogramas…");
+        _estado.Text = Textos.TF("{0}×{1} · {2} amostras/pixel · {3} · câmara em órbita", _largura, _altura, _amostras, ritmo);
     }
 }

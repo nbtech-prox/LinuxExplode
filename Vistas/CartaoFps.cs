@@ -38,9 +38,9 @@ public sealed class CartaoFps : UserControl
             metricas.Children.Add(c);
         }
         Colocar(BlocoMetrica(_media, "FPS médio"), 0);
-        Colocar(BlocoMetrica(_low1, "1% low"), 1);
-        Colocar(BlocoMetrica(_low01, "0,1% low"), 2);
-        Colocar(BlocoMetrica(_frametime, "frametime médio"), 3);
+        Colocar(BlocoMetrica(_low1, Textos.T("1% low")), 1);
+        Colocar(BlocoMetrica(_low01, Textos.T("0,1% low")), 2);
+        Colocar(BlocoMetrica(_frametime, Textos.T("frametime médio")), 3);
 
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
@@ -114,18 +114,18 @@ public sealed class CartaoFps : UserControl
 
         if (_ficheiros.Count == 0)
         {
-            _estado.Text = "Sem sessões do MangoHud. Para gravar, corre o jogo/programa assim:  " +
+            _estado.Text = Textos.T("Sem sessões do MangoHud. Para gravar, corre o jogo/programa assim:  ") +
                            "MANGOHUD_CONFIG=\"output_folder=$HOME/mangologs,autostart_log=2\" mangohud <programa>  " +
-                           "(e instala o mangohud). O comando `LinuxExplode --cli fps` lê o mesmo formato.";
+                           Textos.T("(e instala o mangohud). O comando `LinuxExplode --cli fps` lê o mesmo formato.");
             _sessoes.IsEnabled = false;
             return;
         }
 
         if (_ficheiros.Count == 0)
         {
-            _estado.Text = "Sem sessões do MangoHud. Corre o jogo com MANGOHUD=1 (Steam: nas opções de " +
-                           "lançamento) e a pasta ~/mangologs recebe um CSV por sessão; o comando " +
-                           "`LinuxExplode --cli fps` lê o mesmo formato.";
+            _estado.Text = Textos.T("Sem sessões do MangoHud. Corre o jogo com MANGOHUD=1 (Steam: nas opções de " +
+                                    "lançamento) e a pasta ~/mangologs recebe um CSV por sessão; o comando " +
+                                    "`LinuxExplode --cli fps` lê o mesmo formato.");
             return;
         }
 
@@ -142,7 +142,7 @@ public sealed class CartaoFps : UserControl
         var s = FpsMangohud.Analisar(_ficheiros[indice]);
         if (!s.Valida)
         {
-            _estado.Text = "Esse ficheiro não tem amostras válidas: " + _ficheiros[indice];
+            _estado.Text = Textos.T("Esse ficheiro não tem amostras válidas: ") + _ficheiros[indice];
             return;
         }
 
@@ -156,7 +156,7 @@ public sealed class CartaoFps : UserControl
 
         var partes = new List<string> { s.App };
         if (s.Sistema.Length > 0) partes.Add(s.Sistema);
-        if (s.DuracaoSegundos > 0) partes.Add($"{s.DuracaoSegundos:0.0} s · {s.Amostras} amostras");
+        if (s.DuracaoSegundos > 0) partes.Add(Textos.TF("{0} s · {1} amostras", $"{s.DuracaoSegundos:0.0}", s.Amostras));
         if (s.GpuLoad > 0) partes.Add($"GPU {s.GpuLoad:0}%");
         if (s.GpuTemp > 0) partes.Add($"{s.GpuTemp:0} °C");
         _estado.Text = string.Join("   ·   ", partes);

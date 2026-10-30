@@ -140,7 +140,7 @@ public sealed class Bandeja : IDisposable
         }
         catch
         {
-            _icone.ToolTipText = "LINUX EXPLODE";
+            _icone.ToolTipText = Textos.T("LINUX EXPLODE");
         }
         finally { _aActualizar = false; }
     }

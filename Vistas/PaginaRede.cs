@@ -14,14 +14,14 @@ public sealed class PaginaRede : UserControl
 {
     private readonly StackPanel _corpo = new() { Spacing = 14 };
     private readonly StackPanel _resultado = new() { Spacing = 0 };
-    private readonly TextBlock _estado = new() { Text = "pronto para testar", Classes = { "sub" } };
+    private readonly TextBlock _estado = new() { Text = Textos.T("pronto para testar"), Classes = { "sub" } };
 
     // débito real (cliente/servidor)
     private readonly ComboBox _nbModo = new() { Width = 260 };
-    private readonly TextBox _nbHost = new() { Text = "127.0.0.1", Width = 200 };
+    private readonly TextBox _nbHost = new() { Text = Textos.T("127.0.0.1"), Width = 200 };
     private readonly TextBox _nbPorta = new() { Text = BenchRede.PortaPadrao.ToString(), Width = 110 };
     private readonly ComboBox _nbMb = new() { Width = 130 };
-    private readonly TextBlock _nbEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBlock _nbEstado = new() { Text = Textos.T("pronto"), Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly StackPanel _nbResultado = new() { Spacing = 2 };
     private readonly List<Button> _nbBotoes = new();
     private CancellationTokenSource? _nbCancelar;
@@ -162,11 +162,11 @@ public sealed class PaginaRede : UserControl
         }
         catch (OperationCanceledException)
         {
-            _nbEstado.Text = "parado pelo utilizador";
+            _nbEstado.Text = Textos.T("parado pelo utilizador");
         }
         catch (Exception ex)
         {
-            _nbEstado.Text = "falhou: " + ex.Message;
+            _nbEstado.Text = Textos.T("falhou: ") + ex.Message;
         }
         finally
         {
@@ -189,7 +189,7 @@ public sealed class PaginaRede : UserControl
     {
         if (_nbCancelar is null) return;
         _nbCancelar.Cancel();
-        _nbEstado.Text = "a parar…";
+        _nbEstado.Text = Textos.T("a parar…");
     }
 
     private void TerminarNetbench()
@@ -205,7 +205,7 @@ public sealed class PaginaRede : UserControl
     private async Task Testar()
     {
         _resultado.Children.Clear();
-        _estado.Text = "a testar…";
+        _estado.Text = Textos.T("a testar…");
         try
         {
             var r = await Task.Run(() => Rede.Correr(t => Dispatcher.UIThread.Post(() => _estado.Text = t)));
@@ -219,7 +219,7 @@ public sealed class PaginaRede : UserControl
 
             var cab = new StackPanel { Spacing = 4 };
             var linha = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-            linha.Children.Add(UI.Texto(r.Veredito, "valor", 18));
+            linha.Children.Add(UI.Texto(Textos.T(r.Veredito), "valor", 18));
             var pilula = UI.Pilula(r.Detalhe, vereditoCor);
             Grid.SetColumn(pilula, 1);
             linha.Children.Add(pilula);
@@ -230,7 +230,7 @@ public sealed class PaginaRede : UserControl
             {
                 var linhaAlvo = new StackPanel { Spacing = 2 };
                 var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-                g.Children.Add(UI.Texto(a.Nome, "chave"));
+                g.Children.Add(UI.Texto(Textos.T(a.Nome), "chave"));
                 var v = UI.Texto($"{a.Media:0.0} ms", "valor");
                 v.HorizontalAlignment = HorizontalAlignment.Right;
                 Grid.SetColumn(v, 1);

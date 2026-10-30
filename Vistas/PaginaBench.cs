@@ -12,24 +12,24 @@ public sealed class PaginaBench : UserControl
     private readonly StackPanel _corpo = new() { Spacing = 14 };
 
     // CPU bench
-    private readonly TextBlock _estado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _estado = new() { Text = Textos.T("pronto"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _pontuacao = new() { Text = "—", Classes = { "numero" } };
-    private readonly TextBlock _historico = new() { Text = "sem resultados", Classes = { "mono" } };
+    private readonly TextBlock _historico = new() { Text = Textos.T("sem resultados"), Classes = { "mono" } };
     // Um resultado por tipo de teste — não uma lista: o cartão mostra o último resultado de cada
     // modalidade e substitui-o quando aparece um diferente.
     private readonly Dictionary<string, (string Chave, string Linha)> _resultados = new();
 
     // RAM bench
-    private readonly TextBlock _ramEstado = new() { Text = "pronto", Classes = { "sub" } };
+    private readonly TextBlock _ramEstado = new() { Text = Textos.T("pronto"), Classes = { "sub" } };
     private readonly StackPanel _ramResultado = new() { Spacing = 0 };
 
     // Disco bench
-    private readonly TextBlock _discoEstado = new() { Text = "pronto", Classes = { "sub" } };
+    private readonly TextBlock _discoEstado = new() { Text = Textos.T("pronto"), Classes = { "sub" } };
     private readonly StackPanel _discoResultado = new() { Spacing = 0 };
 
     // GPU bench
     private readonly ComboBox _gpuLista = new() { Width = 560, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly TextBlock _gpuEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _gpuEstado = new() { Text = Textos.T("pronto"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _gpuPontuacao = new() { Text = "—", Classes = { "numero" } };
     private readonly TextBlock _gpuComparacao = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _comparacao = new() { Text = "", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
@@ -45,11 +45,11 @@ public sealed class PaginaBench : UserControl
 
     // Latência de memória (0.20.7)
     private readonly CurvaLatencia _curva = new();
-    private readonly TextBlock _latEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _latResumo = new() { Text = "sem medições", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _latEstado = new() { Text = Textos.T("pronto"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _latResumo = new() { Text = Textos.T("sem medições"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
 
     // Tarefa do mundo real (0.20.7)
-    private readonly TextBlock _realEstado = new() { Text = "pronto", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _realEstado = new() { Text = Textos.T("pronto"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _realResultado = new() { Spacing = 2 };
 
     // Ranking local (0.20.7)
@@ -104,7 +104,7 @@ public sealed class PaginaBench : UserControl
 
         if (_gpus.Count == 0)
         {
-            _gpuEstado.Text = "nenhuma GPU Vulkan com fila de computação — verifica o driver (vulkan-radeon / mesa)";
+            _gpuEstado.Text = Textos.T("nenhuma GPU Vulkan com fila de computação — verifica o driver (vulkan-radeon / mesa)");
             return;
         }
 
@@ -118,10 +118,10 @@ public sealed class PaginaBench : UserControl
     {
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
-            "O mesmo path tracer da CPU, agora em compute shader Vulkan: " +
-            $"{BenchGpu.AmostrasPadrao} amostras por pixel, repetido até {BenchGpu.AlvoSegundos:0.0} s para a nota " +
-            "ser estável — a resolução escolhe-se no pop-up, de 320×180 até 4K. " +
-            "O modo ray tracing usa VK_KHR_ray_query com 64 esferas em BVH — a nota não é comparável com a de compute.", "sub"));
+            Textos.TF("O mesmo path tracer da CPU, agora em compute shader Vulkan: {0} amostras por pixel, " +
+                      "repetido até {1} s para a nota ser estável — a resolução escolhe-se no pop-up, de 320×180 até 4K. " +
+                      "O modo ray tracing usa VK_KHR_ray_query com 64 esferas em BVH — a nota não é comparável com a de compute.",
+                      BenchGpu.AmostrasPadrao, $"{BenchGpu.AlvoSegundos:0.0}"), "sub"));
         conteudo.Children.Add(_gpuLista);
 
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -207,9 +207,9 @@ public sealed class PaginaBench : UserControl
         var linhas = new List<string>();
 
         if (_resultados.TryGetValue("multi", out var multi))
-            linhas.Add($"{"Multi-core",-12} {multi.Linha}");
+            linhas.Add($"{Textos.T("Multi-core"),-12} {multi.Linha}");
         if (_resultados.TryGetValue("single", out var single))
-            linhas.Add($"{"Single-core",-12} {single.Linha}");
+            linhas.Add($"{Textos.T("Single-core"),-12} {single.Linha}");
 
         _historico.Text = linhas.Count == 0 ? "sem resultados" : string.Join("\n", linhas);
     }
@@ -268,7 +268,7 @@ public sealed class PaginaBench : UserControl
         conteudo.Children.Add(UI.Texto("Banda de escrita, leitura, cópia e latência real de acesso à RAM.", "sub"));
         conteudo.Children.Add(UI.Botao("Testar memória", true, async () =>
         {
-            _ramEstado.Text = "a testar…";
+            _ramEstado.Text = Textos.T("a testar…");
             _ramResultado.Children.Clear();
             try
             {
@@ -286,7 +286,7 @@ public sealed class PaginaBench : UserControl
                 _ramResultado.Children.Add(UI.Texto(
                     "· " + (Historico.Comparacao("ram", Util.Bytes(r.Tamanho), r.EscritaMBs) ?? "primeira corrida"), "sub"));
             }
-            catch (Exception ex) { _ramEstado.Text = "falhou: " + ex.Message; }
+            catch (Exception ex) { _ramEstado.Text = Textos.T("falhou: ") + ex.Message; }
         }));
         conteudo.Children.Add(_ramEstado);
         conteudo.Children.Add(_ramResultado);
@@ -324,7 +324,7 @@ public sealed class PaginaBench : UserControl
 
     private async Task MedirLatencia()
     {
-        _latEstado.Text = "a medir 4 KB → 256 MB (alguns segundos)…";
+        _latEstado.Text = Textos.T("a medir 4 KB → 256 MB (alguns segundos)…");
         _curva.Definir(Array.Empty<LatenciaBloco>());
 
         try
@@ -351,10 +351,11 @@ public sealed class PaginaBench : UserControl
     {
         var conteudo = new StackPanel { Spacing = 12 };
         conteudo.Children.Add(UI.Texto(
-            $"Duas tarefas fixas e repetíveis: descomprimir {TarefaReal.BytesPayload / (1024 * 1024)} MB " +
-            "(o resultado é conferido por SHA-256) e compilar um ficheiro C com " +
-            $"{TarefaReal.FuncoesC} funções, com o compilador do sistema. " +
-            "Não usa a rede nem o disco além do próprio trabalho — é o que um utilizador faz a compilar ou a instalar.", "sub"));
+            Textos.TF("Duas tarefas fixas e repetíveis: descomprimir {0} MB " +
+                      "(o resultado é conferido por SHA-256) e compilar um ficheiro C com " +
+                      "{1} funções, com o compilador do sistema. " +
+                      "Não usa a rede nem o disco além do próprio trabalho — é o que um utilizador faz a compilar ou a instalar.",
+                      TarefaReal.BytesPayload / (1024 * 1024), TarefaReal.FuncoesC), "sub"));
 
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         botoes.Children.Add(UI.Botao("Correr tarefa real", true, () => _ = CorrerTarefaReal()));
@@ -370,7 +371,7 @@ public sealed class PaginaBench : UserControl
 
     private async Task CorrerTarefaReal()
     {
-        _realEstado.Text = "a correr (descomprimir + compilar)…";
+        _realEstado.Text = Textos.T("a correr (descomprimir + compilar)…");
         _realResultado.Children.Clear();
 
         try
@@ -409,9 +410,10 @@ public sealed class PaginaBench : UserControl
     {
         var conteudo = new StackPanel { Spacing = 10 };
         conteudo.Children.Add(UI.Texto(
-            $"Mediana das últimas {Historico.CorridasRanking} corridas de cada alvo, com a variação entre elas. " +
-            $"Acima de {RankingLocal.ToleranciaPct:0} % de variação a máquina não estava estável e o número vale pouco — " +
-            "o aviso aparece na linha. Para a mediana ser de 3, corre `--cli bench multi --repeticoes 3`.", "sub"));
+            Textos.TF("Mediana das últimas {0} corridas de cada alvo, com a variação entre elas. " +
+                      "Acima de {1} % de variação a máquina não estava estável e o número vale pouco — " +
+                      "o aviso aparece na linha. Para a mediana ser de 3, corre `--cli bench multi --repeticoes 3`.",
+                      Historico.CorridasRanking, $"{RankingLocal.ToleranciaPct:0}"), "sub"));
 
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         botoes.Children.Add(UI.Botao("Actualizar", false, ActualizarRanking));
@@ -430,7 +432,7 @@ public sealed class PaginaBench : UserControl
         var linhas = Historico.Rankings();
         if (linhas.Count == 0)
         {
-            _rankingEstado.Text = "sem corridas guardadas — corre um teste para começar o ranking";
+            _rankingEstado.Text = Textos.T("sem corridas guardadas — corre um teste para começar o ranking");
             return;
         }
 
@@ -445,7 +447,7 @@ public sealed class PaginaBench : UserControl
             if (l.Aviso is not null)
                 bloco.Children.Add(new TextBlock
                 {
-                    Text = "! " + l.Aviso,
+                    Text = Textos.T("! ") + l.Aviso,
                     Classes = { "sub" },
                     Foreground = UI.Cor("Mau"),
                     TextWrapping = TextWrapping.Wrap
@@ -463,7 +465,7 @@ public sealed class PaginaBench : UserControl
             "com O_DIRECT (sem passar pelo cache do sistema). O ficheiro é apagado no fim.", "sub"));
         conteudo.Children.Add(UI.Botao("Testar disco", true, async () =>
         {
-            _discoEstado.Text = "a testar…";
+            _discoEstado.Text = Textos.T("a testar…");
             _discoResultado.Children.Clear();
             try
             {
@@ -482,7 +484,7 @@ public sealed class PaginaBench : UserControl
                 _discoResultado.Children.Add(UI.Texto(
                     "· " + (Historico.Comparacao("disco", "sequencial (escrita)", r.SeqEscritaMBs) ?? "primeira corrida"), "sub"));
             }
-            catch (Exception ex) { _discoEstado.Text = "falhou: " + ex.Message; }
+            catch (Exception ex) { _discoEstado.Text = Textos.T("falhou: ") + ex.Message; }
         }));
         conteudo.Children.Add(_discoEstado);
         conteudo.Children.Add(_discoResultado);
@@ -630,7 +632,7 @@ public sealed class PaginaBench : UserControl
         }
         catch (Exception ex)
         {
-            _historicoEstado.Text = "não consegui exportar: " + ex.Message;
+            _historicoEstado.Text = Textos.T("não consegui exportar: ") + ex.Message;
         }
     }
 
@@ -661,7 +663,7 @@ public sealed class PaginaBench : UserControl
         }
         catch (Exception ex)
         {
-            _historicoEstado.Text = "não consegui importar: " + ex.Message;
+            _historicoEstado.Text = Textos.T("não consegui importar: ") + ex.Message;
         }
     }
 

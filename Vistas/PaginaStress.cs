@@ -442,9 +442,9 @@ public sealed class PaginaStress : UserControl
         _ciclosTabela.Children.Clear();
         if (r.Agregado.Count > 0)
         {
-            _ciclosTabela.Children.Add(LinhaCiclos("métrica", "mediana", "mínimo", "máximo", "variação", true));
+            _ciclosTabela.Children.Add(LinhaCiclos(Textos.T("métrica"), Textos.T("mediana"), Textos.T("mínimo"), Textos.T("máximo"), Textos.T("variação"), true));
             foreach (var m in r.Agregado)
-                _ciclosTabela.Children.Add(LinhaCiclos(m.Rotulo,
+                _ciclosTabela.Children.Add(LinhaCiclos(Textos.T(m.Rotulo),
                     m.Contador ? $"{m.Mediana:0}" : $"{m.Mediana:N1}",
                     m.Contador ? Textos.TF("em {0}", m.Amostras) : $"{m.Minimo:N1}",
                     m.Contador ? "—" : $"{m.Maximo:N1}",
@@ -457,7 +457,7 @@ public sealed class PaginaStress : UserControl
             var c = r.Lista[i];
             _ciclosTabela.Children.Add(UI.Texto(
                 Textos.TF("ciclo {0}: {1} em {2} s · ", i + 1, Textos.T(c.Completo ? "completo" : "parado"), $"{c.Segundos:0}") +
-                $"pico CPU {c.PicoCpuC:0} °C · GPU {c.PicoGpuC:0} °C · {c.EnergiaKwh * 1000:0.0} Wh", "mono"));
+                Textos.TF("pico CPU {0} °C · GPU {1} °C · {2} Wh", $"{c.PicoCpuC:0}", $"{c.PicoGpuC:0}", $"{c.EnergiaKwh * 1000:0.0}"), "mono"));
         }
 
         _ciclosEstado.Text = r.Parado ? "série parada" : "série terminada";

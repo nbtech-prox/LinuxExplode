@@ -162,7 +162,7 @@ public sealed class PaginaDiscos : UserControl
 
     private Control BlocoAutoTeste(DiscoInfo d)
     {
-        var estado = new TextBlock { Text = "a ler…", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+        var estado = new TextBlock { Text = Textos.T("a ler…"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
         var barra = new ProgressBar { Minimum = 0, Maximum = 1, Value = 0, IsVisible = false };
 
         var curto = UI.Botao("Teste curto", false, () => _ = Iniciar(d.Dev, TipoAutoTeste.Curto));
@@ -226,7 +226,7 @@ public sealed class PaginaDiscos : UserControl
         if (_autotestes.TryGetValue(dev, out var bloco))
         {
             bloco.Abortar.IsEnabled = false;
-            bloco.Estado.Text = "a abortar o auto-teste…";
+            bloco.Estado.Text = Textos.T("a abortar o auto-teste…");
         }
 
         var (ok, mensagem) = await Task.Run(() => Discos.PararAutoTeste(dev));
@@ -301,7 +301,7 @@ public sealed class PaginaDiscos : UserControl
             else
             {
                 Estado.Text = info.Historico.Count > 0
-                    ? Textos.TF("último resultado: {0}", info.Historico[0].Resultado)
+                    ? Textos.TF("último resultado: {0}", Textos.T(info.Historico[0].Resultado))
                     : "nunca corrido";
                 Barra.IsVisible = false;
                 Curto.IsEnabled = Longo.IsEnabled = true;
@@ -315,7 +315,7 @@ public sealed class PaginaDiscos : UserControl
                 var linha = new Grid { ColumnDefinitions = new ColumnDefinitions("90,*,Auto") };
                 var tipo = UI.Texto(h.Tipo, "mono");
                 tipo.TextWrapping = TextWrapping.NoWrap;
-                var resultado = UI.Texto(h.Resultado, "mono");
+                var resultado = UI.Texto(Textos.T(h.Resultado), "mono");
                 resultado.TextWrapping = TextWrapping.NoWrap;
                 resultado.TextTrimming = TextTrimming.CharacterEllipsis;
                 var horas = UI.Texto(h.HorasLigado is long hs ? $"{hs:N0} h" : "", "sub");

@@ -21,8 +21,9 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
   - Traduzidas nesta versão: moldura (navegação, tema, escala, rodapé, menu da bandeja), **todas as
     oito páginas** (Sistema, Sensores, Discos, Benchmark, Stress, Rede, Dispositivos, Relatório), o
     pop do benchmark e o cartão de FPS. O texto do `--cli` continua em pt-PT.
-  - 512 chaves por idioma; os testes falham se os dois mapas deixarem de ter as mesmas chaves ou se
-    alguma tradução ficar vazia.
+  - 653 chaves por idioma; os testes falham se os dois mapas deixarem de ter as mesmas chaves ou se
+    alguma tradução ficar vazia. Inclui o texto que vem do Core (nomes de sensores, estados de
+    S.M.A.R.T., etapas do stress, alvos de rede, classes PCI/USB, alertas, suspensão).
 
 ### Alterado
 

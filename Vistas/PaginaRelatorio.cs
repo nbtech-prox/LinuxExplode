@@ -7,7 +7,7 @@ namespace LinuxExplode.Vistas;
 public sealed class PaginaRelatorio : UserControl
 {
     private readonly StackPanel _corpo = new() { Spacing = 14 };
-    private readonly TextBlock _estado = new() { Text = "pronto", Classes = { "sub" } };
+    private readonly TextBlock _estado = new() { Text = Textos.T("pronto"), Classes = { "sub" } };
     private readonly TextBlock _caminho = new() { Text = "", Classes = { "mono" } };
     private readonly Button _abrir;
     private string? _ultimoFicheiro;
@@ -66,7 +66,7 @@ public sealed class PaginaRelatorio : UserControl
 
     private async Task Gerar(string formato)
     {
-        _estado.Text = "a recolher dados e histórico…";
+        _estado.Text = Textos.T("a recolher dados e histórico…");
         try
         {
             var (s, sensores, discos) = await Task.Run(() =>
@@ -88,7 +88,7 @@ public sealed class PaginaRelatorio : UserControl
         }
         catch (Exception ex)
         {
-            _estado.Text = "falhou: " + ex.Message;
+            _estado.Text = Textos.T("falhou: ") + ex.Message;
         }
     }
 
@@ -96,12 +96,12 @@ public sealed class PaginaRelatorio : UserControl
     {
         if (_ultimoFicheiro is null) return;
         try { Process.Start(new ProcessStartInfo("xdg-open") { ArgumentList = { _ultimoFicheiro } }); }
-        catch (Exception ex) { _estado.Text = "não foi possível abrir: " + ex.Message; }
+        catch (Exception ex) { _estado.Text = Textos.T("não foi possível abrir: ") + ex.Message; }
     }
 
     private void AbrirPasta()
     {
         try { Process.Start(new ProcessStartInfo("xdg-open") { ArgumentList = { Pasta() } }); }
-        catch (Exception ex) { _estado.Text = "não foi possível abrir: " + ex.Message; }
+        catch (Exception ex) { _estado.Text = Textos.T("não foi possível abrir: ") + ex.Message; }
     }
 }

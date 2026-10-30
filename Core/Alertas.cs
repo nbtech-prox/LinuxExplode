@@ -26,20 +26,20 @@ public static class Alertas
         catch { }
 
         if (cpu is double c && c >= cfg.LimiteCpuAviso)
-            alertas.Add(new Alerta("cpu-temp", "CPU quente",
-                $"{c:0} °C (limite {cfg.LimiteCpuAviso:0} °C)", true));
+            alertas.Add(new Alerta("cpu-temp", Textos.T("CPU quente"),
+                Textos.TF("{0} °C (limite {1} °C)", $"{c:0}", $"{cfg.LimiteCpuAviso:0}"), true));
 
         if (gpu is double g && g >= cfg.LimiteGpuAviso)
-            alertas.Add(new Alerta("gpu-temp", "GPU quente",
-                $"{g:0} °C (limite {cfg.LimiteGpuAviso:0} °C)", true));
+            alertas.Add(new Alerta("gpu-temp", Textos.T("GPU quente"),
+                Textos.TF("{0} °C (limite {1} °C)", $"{g:0}", $"{cfg.LimiteGpuAviso:0}"), true));
 
         // ventoinha a zero com a CPU quente: ou está desligada, ou o sensor não a vê
         if (sensores is not null && cpu is double c2 && c2 >= 65)
         {
             var ventoinhas = sensores.Where(s => s.Tipo == TipoSensor.Ventoinha).ToList();
             if (ventoinhas.Count > 0 && ventoinhas.All(v => v.Valor <= 0))
-                alertas.Add(new Alerta("ventoinha", "Ventoinhas a zero com a CPU a " + $"{c2:0} °C",
-                    $"{ventoinhas.Count} ventoinha(s) lidas a 0 RPM — verifica cabo/curva ou o sensor", true));
+                alertas.Add(new Alerta("ventoinha", Textos.TF("Ventoinhas a zero com a CPU a {0} °C", $"{c2:0}"),
+                    Textos.TF("{0} ventoinha(s) lidas a 0 RPM — verifica cabo/curva ou o sensor", ventoinhas.Count), true));
         }
 
         // espaço em disco (mesma fonte da aba Discos: /proc/mounts + statvfs)
@@ -66,8 +66,8 @@ public static class Alertas
                 double livreGb = espaco.Livre / 1073741824.0;
 
                 if (livreGb < cfg.EspacoMinimoGb)
-                    alertas.Add(new Alerta("disco-" + nome, "Pouco espaço em " + nome,
-                        $"{livreGb:0.0} GB livres (mínimo {cfg.EspacoMinimoGb:0} GB) · {fs}", false));
+                    alertas.Add(new Alerta("disco-" + nome, Textos.TF("Pouco espaço em {0}", nome),
+                        Textos.TF("{0} GB livres (mínimo {1} GB) · {2}", $"{livreGb:0.0}", $"{cfg.EspacoMinimoGb:0}", fs), false));
             }
         }
         catch { }
