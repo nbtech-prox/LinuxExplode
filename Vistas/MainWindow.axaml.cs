@@ -11,6 +11,7 @@ public partial class MainWindow : Window
 {
     private readonly Dictionary<string, Control> _paginas = new();
     private Button? _ativo;
+    private string _chaveAtual = "sistema";
 
     public MainWindow()
     {
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
         Paleta.Aplicar(Config.Atual.Tema == "claro");
         LigarAparencia();
         LigarAtalhos();
+        AplicarTextos();
 
         _ativo = this.FindControl<Button>("NavSistema");
         Navegar((Environment.GetEnvironmentVariable("LINUXEXPLODE_PAGINA") ?? "sistema").ToLowerInvariant());
@@ -56,7 +58,7 @@ public partial class MainWindow : Window
             }
             catch
             {
-                estado.Text = "leitura de hardware indisponível";
+                estado.Text = Core.Textos.T("leitura de hardware indisponível");
             }
         };
     }
@@ -107,6 +109,7 @@ public partial class MainWindow : Window
     {
         var conteudo = this.FindControl<ContentControl>("Conteudo");
         if (conteudo is null) return;
+        _chaveAtual = chave;
 
         if (!_paginas.TryGetValue(chave, out var pagina))
         {
@@ -135,6 +138,65 @@ public partial class MainWindow : Window
         }
     }
 
+    // ------------------------------------------------------------------ idioma
+
+    /// <summary>Aplica o idioma escolhido a tudo o que é estático e reconstrói a página actual.</summary>
+    private void MudarIdioma(object? s, SelectionChangedEventArgs e)
+    {
+        if (_aAplicarIdioma) return;
+        if (this.FindControl<ComboBox>("Idioma") is not { } combo) return;
+        var idioma = combo.SelectedIndex switch
+        {
+            1 => Core.Idioma.Es,
+            2 => Core.Idioma.En,
+            _ => Core.Idioma.Pt
+        };
+        if (idioma == Textos.Atual) return;
+
+        Textos.Aplicar(idioma, guardar: true);
+        // as páginas constroem o texto no construtor: limpar a cache é o que as traduz
+        _paginas.Clear();
+        AplicarTextos();
+        Navegar(_chaveAtual);
+    }
+
+    /// <summary>Textos que vivem no XAML (navegação, tema, rodapé) e não passam pelos construtores de UI.</summary>
+    private void AplicarTextos()
+    {
+        void Nav(string nome, string chave)
+        {
+            if (this.FindControl<Button>(nome) is { } b) b.Content = Textos.T(chave);
+        }
+
+        Nav("NavSistema", "Sistema");
+        Nav("NavSensores", "Sensores");
+        Nav("NavDiscos", "Discos e saúde");
+        Nav("NavBench", "Benchmark");
+        Nav("NavStress", "Stress");
+        Nav("NavRede", "Rede");
+        Nav("NavDispositivos", "Dispositivos");
+        Nav("NavRelatorio", "Relatório");
+
+        if (this.FindControl<TextBlock>("Subtitulo") is { } sub)
+            sub.Text = Textos.T("hardware · sensores · bench");
+
+        if (this.FindControl<Slider>("Escala") is { } escala)
+            Avalonia.Controls.ToolTip.SetTip(escala, Textos.T("Escala da interface (Ctrl+- e Ctrl++)"));
+
+        if (this.FindControl<ComboBox>("Idioma") is { } combo && combo.SelectedIndex != (int)Textos.Atual)
+        {
+            // mudar o índice dispara SelectionChanged: a guarda acima impede o ciclo
+            _aAplicarIdioma = true;
+            combo.SelectedIndex = (int)Textos.Atual;
+            _aAplicarIdioma = false;
+        }
+
+        AtualizarBotaoTema();
+        Bandeja.AplicarTextos();
+    }
+
+    private bool _aAplicarIdioma;
+
     // ------------------------------------------------------------------ aparência e atalhos
 
     private void LigarAparencia()
@@ -157,7 +219,7 @@ public partial class MainWindow : Window
     private void AtualizarBotaoTema()
     {
         if (this.FindControl<Button>("BotaoTema") is { } botao)
-            botao.Content = Paleta.Claro ? "Tema escuro" : "Tema claro";
+            botao.Content = Textos.T(Paleta.Claro ? "Tema escuro" : "Tema claro");
     }
 
     private void AlternarTema(object? s, RoutedEventArgs e)

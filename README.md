@@ -52,8 +52,10 @@ que ainda a tenham — e repete-se o pedido de importação.
 |---|---|
 | `linux-explode.flatpak` (33 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (29 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.15-linux-arm64.tar.gz` (42 MB) | ARM64 com `install.sh` sem root (`~/.local`) |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
+
+A distribuição é **só Flatpak**: não há instalador solto nem `.tar.gz`. O runtime traz glibc, ICU e o
+loader Vulkan, por isso o mesmo pacote corre em qualquer distro — em x86_64 e em aarch64.
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
 chega a anunciar uma actualização que falha. Para actualizar por aí, usa o repositório acima.
@@ -304,6 +306,10 @@ LinuxExplode --cli relatorio --json       # o relatório completo, em JSON
   continuam certas.
 - **Atalhos**: `Ctrl+1`…`Ctrl+7` mudam de página (Sistema, Sensores, Discos, Bench, Stress, Rede,
   Relatório), `Ctrl+=` / `Ctrl+-` mudam a escala, `Ctrl+0` repõe e `Ctrl+Q` fecha.
+- **Idiomas**: o selector na barra lateral (abaixo do tema) muda entre **Português**, **Español** e
+  **English** sem reiniciar. A escolha fica em `~/.config/linux-explode/config.json`; na primeira
+  execução segue o idioma do sistema (`LANG`/`LC_ALL`) quando é pt, es ou en, senão fica em pt-PT.
+  A cultura acompanha o idioma, por isso os números e as datas mudam com ele.
 
 ## O que mudou em relação à versão Windows
 
@@ -913,9 +919,7 @@ Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm
 | Situação | O que acontece |
 |---|---|
 | Outra distro (Debian, Fedora, openSUSE, NixOS) | funciona; não há nada específico do Arch |
-| Flatpak em qualquer distro | o runtime `org.freedesktop.Platform` 25.08 traz glibc, ICU, X11/Wayland e Vulkan loader — é o caminho sem dependências |
-| `.tar.gz` sem `libicu` instalada | **não arranca**: `Couldn't find a valid ICU package installed on the system`. Medido em Debian 12, Ubuntu 24.04 e Fedora 41 mínimos. Instalar `libicu` (nome do pacote varia: `libicu72`, `libicu74`, `icu`) ou usar o Flatpak |
-| `.tar.gz` com `libicu` | correu em Debian 12 (glibc 2.36) com um binário compilado aqui em glibc 2.44 — o piso testado é 2.36, não o build host |
+| Flatpak em qualquer distro | o runtime `org.freedesktop.Platform` 25.08 traz glibc, ICU, X11/Wayland e Vulkan loader — é a única via de distribuição, por isso não há dependências da distro |
 | GPU AMD, Intel ou NVIDIA | Vulkan é genérico; a lista de GPUs é enumerada em runtime |
 | GPU NVIDIA ou Intel | temperatura e nome vêm da hwmon/pci.ids; **uso (%) e VRAM só no amdgpu** (`gpu_busy_percent`, `mem_info_vram_*`), porque é o único driver que os expõe em sysfs |
 | CPU ARM (SoC, Raspberry Pi) | sem `k10temp`/`coretemp` a app não elege uma temperatura de CPU; lista todos os canais hwmon que o kernel expuser |
@@ -1030,26 +1034,20 @@ flatpak install --user linux-explode.flatpak
 
 ```bash
 ./empacotar.sh --arm64
-#   linux-explode-0.20.15-linux-arm64.tar.gz  42 MB  instalador sem root
-#   linux-explode-aarch64.flatpak            29 MB  precisa do runtime aarch64
+#   linux-explode-aarch64.flatpak  29 MB  precisa do runtime aarch64
 ```
 
-No destino ARM, a via mais simples (não precisa de Flatpak nem de root):
-
-```bash
-tar -xzf linux-explode-0.20.15-linux-arm64.tar.gz
-cd linux-explode-0.20.15-linux-arm64 && ./install.sh
-# ~/.local/share/linux-explode + ~/.local/bin/linux-explode + entrada de menu
-# outro prefixo:  PREFIXO=/usr/local sudo ./install.sh
-```
-
-Ou, com Flatpak instalado (o runtime vem do Flathub):
+No destino ARM, instala-se o bundle (o runtime vem do Flathub):
 
 ```bash
 flatpak install --user flathub org.freedesktop.Platform/aarch64/25.08
 flatpak install --user ./linux-explode-aarch64.flatpak
 flatpak run pt.linuxexplode.LinuxExplode
 ```
+
+O bundle traz as mesmas finish-args do manifesto x86_64 — incluindo
+`--persist=.local/share/linux-explode` (sem ela o histórico e as sessões perdiam-se a cada arranque) e
+as pastas do MangoHud.
 
 Como o bundle é construído sem correr nada em ARM: o build dir é montado à mão
 (`files/bin/linuxexplode`, `.desktop`, metainfo, ícone) e tem de ser finalizado com

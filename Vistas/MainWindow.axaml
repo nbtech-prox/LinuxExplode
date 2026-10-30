@@ -17,7 +17,7 @@
         <StackPanel Grid.Row="0" Spacing="2" Margin="6,0,6,18">
           <TextBlock Text="LINUX" FontSize="19" FontWeight="Bold" LetterSpacing="3" Foreground="{DynamicResource Muted}" />
           <TextBlock Text="EXPLODE" FontSize="19" FontWeight="Bold" LetterSpacing="3" />
-          <TextBlock Text="hardware · sensores · bench" FontSize="10" Foreground="{DynamicResource Faint}" Margin="0,6,0,0" />
+          <TextBlock Name="Subtitulo" Text="hardware · sensores · bench" FontSize="10" Foreground="{DynamicResource Faint}" Margin="0,6,0,0" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -35,6 +35,12 @@
 
         <StackPanel Grid.Row="2" Spacing="6" Margin="6,14,6,0">
           <Button Name="BotaoTema" Content="Tema claro" FontSize="11" HorizontalAlignment="Stretch" Click="AlternarTema" />
+          <ComboBox Name="Idioma" HorizontalAlignment="Stretch" FontSize="11" Margin="0,4,0,0"
+                    SelectionChanged="MudarIdioma" ToolTip.Tip="Idioma da interface">
+            <ComboBoxItem Content="Português" />
+            <ComboBoxItem Content="Español" />
+            <ComboBoxItem Content="English" />
+          </ComboBox>
           <Grid ColumnDefinitions="Auto,*,Auto">
             <TextBlock Grid.Column="0" Text="A" FontSize="10" Foreground="{DynamicResource Faint}" VerticalAlignment="Center" />
             <Slider Grid.Column="1" Name="Escala" Minimum="0.85" Maximum="1.35" TickFrequency="0.05"

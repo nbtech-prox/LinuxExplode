@@ -12,6 +12,9 @@ public sealed class Config
     public string Tema { get; set; } = "escuro";
     public double Escala { get; set; } = 1.0;
 
+    // idioma da interface: "pt", "es" ou "en". Vazio = seguir o sistema na primeira execução.
+    public string Idioma { get; set; } = "";
+
     // alertas
     public double LimiteCpuAviso { get; set; } = 90;
     public double LimiteGpuAviso { get; set; } = 90;

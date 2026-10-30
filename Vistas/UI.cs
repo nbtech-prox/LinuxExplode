@@ -14,7 +14,7 @@ public static class UI
 
     public static TextBlock Texto(string texto, string classe = "", double tamanho = 0)
     {
-        var t = new TextBlock { Text = texto, TextWrapping = TextWrapping.Wrap };
+        var t = new TextBlock { Text = Core.Textos.T(texto), TextWrapping = TextWrapping.Wrap };
         if (classe.Length > 0) t.Classes.Add(classe);
         if (tamanho > 0) t.FontSize = tamanho;
         return t;
@@ -24,7 +24,7 @@ public static class UI
     {
         var pilha = new StackPanel { Spacing = compacto ? 8 : 12 };
         if (titulo is not null)
-            pilha.Children.Add(Texto(titulo.ToUpperInvariant(), "rotulo"));
+            pilha.Children.Add(Texto(Core.Textos.T(titulo).ToUpperInvariant(), "rotulo"));
         pilha.Children.Add(conteudo);
 
         var b = new Border { Child = pilha };
@@ -99,7 +99,7 @@ public static class UI
 
     public static Button Botao(string texto, bool primario, Action aoClicar)
     {
-        var b = new Button { Content = texto };
+        var b = new Button { Content = Core.Textos.T(texto) };
         b.Classes.Add(primario ? "primario" : "secundario");
         b.Click += (_, _) => aoClicar();
         return b;
@@ -120,7 +120,7 @@ public static class UI
             VerticalAlignment = VerticalAlignment.Center,
             Child = new TextBlock
             {
-                Text = texto,
+                Text = Core.Textos.T(texto),
                 FontSize = 11,
                 Foreground = Cor(corChave),
                 FontFamily = (FontFamily)Application.Current!.FindResource("Mono")!

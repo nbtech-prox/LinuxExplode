@@ -1,5 +1,6 @@
 using System.Globalization;
 using Avalonia;
+using LinuxExplode.Core;
 
 namespace LinuxExplode;
 
@@ -8,14 +9,16 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // A aplicação é pt-PT: sem isto os números saem com o formato do sistema (12,969,144 em vez de
-        // 12 969 144). Todas as leituras de /proc e /sys usam InvariantCulture, por isso a mudança não
-        // afecta a interpretação de valores — só a apresentação.
-        var portugues = new CultureInfo("pt-PT");
-        CultureInfo.DefaultThreadCurrentCulture = portugues;
-        CultureInfo.DefaultThreadCurrentUICulture = portugues;
-        CultureInfo.CurrentCulture = portugues;
-        CultureInfo.CurrentUICulture = portugues;
+        // A língua vem da configuração; na primeira execução segue a do sistema (pt/es/en) e o resto
+        // fica em pt-PT. A cultura acompanha o idioma para os números e as datas mudarem com ele.
+        // LINUXEXPLODE_IDIOMA=pt|es|en força a escolha (capturas e testes).
+        var forcar = Environment.GetEnvironmentVariable("LINUXEXPLODE_IDIOMA");
+        var idioma = !string.IsNullOrWhiteSpace(forcar)
+            ? Core.Textos.DeCodigo(forcar)
+            : string.IsNullOrWhiteSpace(Core.Config.Atual.Idioma)
+                ? Core.Textos.DoSistema()
+                : Core.Textos.DeCodigo(Core.Config.Atual.Idioma);
+        Core.Textos.Aplicar(idioma);
 
         if (args.Length > 0 && args[0] == "--cli")
         {

@@ -51,7 +51,7 @@ public sealed class PaginaSistema : UserControl
         catch (Exception ex)
         {
             _corpo.Children.Clear();
-            _corpo.Children.Add(UI.Texto("Falha a ler o hardware: " + ex.Message, "sub"));
+            _corpo.Children.Add(UI.Texto(Textos.T("Falha a ler o hardware: ") + ex.Message, "sub"));
             return;
         }
 
@@ -82,9 +82,9 @@ public sealed class PaginaSistema : UserControl
 
         var celulas = new Control[]
         {
-            UI.Metrica(s.Threads.ToString(), "threads", $"{s.NucleosFisicos} núcleos"),
-            UI.Metrica(Util.Gb(s.RamTotal), "RAM", $"{Util.Gb(ramUsada)} em uso"),
-            UI.Metrica(s.CpuFreqAtual, "frequência", $"máx {s.CpuFreqMax}"),
+            UI.Metrica(s.Threads.ToString(), "threads", Textos.TF("{0} núcleos", s.NucleosFisicos)),
+            UI.Metrica(Util.Gb(s.RamTotal), "RAM", Textos.TF("{0} em uso", Util.Gb(ramUsada))),
+            UI.Metrica(s.CpuFreqAtual, "frequência", Textos.TF("máx {0}", s.CpuFreqMax)),
             UI.Metrica(s.Uptime, "ligado há", s.Hostname)
         };
         for (int i = 0; i < celulas.Length; i++)
@@ -135,7 +135,7 @@ public sealed class PaginaSistema : UserControl
         p.Children.Add(UI.Linha("Instalada", Util.Gb(s.RamTotal)));
         p.Children.Add(UI.Linha("Em uso", $"{Util.Gb(usada)} ({(s.RamTotal > 0 ? usada * 100.0 / s.RamTotal : 0):0}%)"));
         p.Children.Add(UI.Linha("Disponível", Util.Gb(s.RamLivre)));
-        p.Children.Add(UI.Linha("Swap", s.SwapTotal > 0 ? $"{Util.Gb(s.SwapUsada)} de {Util.Gb(s.SwapTotal)}" : "sem swap", false));
+        p.Children.Add(UI.Linha("Swap", s.SwapTotal > 0 ? Textos.TF("{0} de {1}", Util.Gb(s.SwapUsada), Util.Gb(s.SwapTotal)) : "sem swap", false));
         p.Children.Add(new Border
         {
             Margin = new Thickness(0, 10, 0, 0),
@@ -186,7 +186,7 @@ public sealed class PaginaSistema : UserControl
         if (g.VramTotal is long vt)
             p.Children.Add(UI.Linha("VRAM", $"{Util.Bytes(g.VramUsada ?? 0)} de {Util.Bytes(vt)}"));
         if (g.Temp is not null || g.Uso is not null)
-            p.Children.Add(UI.Linha("Agora", $"{g.Temp ?? "—"}   ·   uso {g.Uso ?? "—"}", false));
+            p.Children.Add(UI.Linha("Agora", Textos.TF("{0}   ·   uso {1}", g.Temp ?? "—", g.Uso ?? "—"), false));
         return p;
     }
 
@@ -236,7 +236,7 @@ public sealed class PaginaSistema : UserControl
         pilha.Children.Add(_suspLinhas);
 
         if (Suspender.LerUltimo() is { } ultimo)
-            pilha.Children.Add(UI.Texto($"último teste: {ultimo.Quando:yyyy-MM-dd HH:mm} · {ultimo.Veredito}", "sub"));
+            pilha.Children.Add(UI.Texto(Textos.TF("último teste: {0} · {1}", $"{ultimo.Quando:yyyy-MM-dd HH:mm}", ultimo.Veredito), "sub"));
 
         pilha.Children.Add(UI.Texto(
             "O teste suspende a máquina a sério e mede o tempo de três formas independentes: relógio de parede " +
@@ -254,7 +254,7 @@ public sealed class PaginaSistema : UserControl
         _suspACorrer = true;
 
         foreach (var b in _suspBotoes) b.IsEnabled = false;
-        _suspEstado.Text = simular ? "simulação: a ler os relógios…" : "a suspender…";
+        _suspEstado.Text = simular ? Textos.T("simulação: a ler os relógios…") : Textos.T("a suspender…");
         _suspLinhas.Children.Clear();
 
         int segundos = _suspSegundos.SelectedIndex switch { 0 => 10, 2 => 30, 3 => 60, _ => 15 };
@@ -267,7 +267,7 @@ public sealed class PaginaSistema : UserControl
         }
         catch (Exception ex)
         {
-            _suspEstado.Text = "o teste falhou: " + ex.Message;
+            _suspEstado.Text = Textos.TF("o teste falhou: {0}", ex.Message);
         }
         finally
         {
@@ -285,11 +285,12 @@ public sealed class PaginaSistema : UserControl
         _suspLinhas.Children.Clear();
 
         _suspLinhas.Children.Add(UI.Texto(
-            $"relógio de parede {r.RelogioParedeS:0.00} s · suspend medido {r.DormiuS:0.00} s · " +
-            $"uptime confirma {r.DiferencaUptimeS:0.00} s", "mono"));
+            Textos.TF("relógio de parede {0} s · suspend medido {1} s · uptime confirma {2} s",
+                $"{r.RelogioParedeS:0.00}", $"{r.DormiuS:0.00}", $"{r.DiferencaUptimeS:0.00}"), "mono"));
         _suspLinhas.Children.Add(UI.Texto(
-            $"sensores CPU {Snap(r.Antes.CpuC)} → {Snap(r.Depois.CpuC)} · GPU {Snap(r.Antes.GpuC)} → {Snap(r.Depois.GpuC)} · " +
-            $"potência {SnapW(r.Antes.Watts)} → {SnapW(r.Depois.Watts)}", "mono"));
+            Textos.TF("sensores CPU {0} → {1} · GPU {2} → {3} · potência {4} → {5}",
+                Snap(r.Antes.CpuC), Snap(r.Depois.CpuC), Snap(r.Antes.GpuC), Snap(r.Depois.GpuC),
+                SnapW(r.Antes.Watts), SnapW(r.Depois.Watts)), "mono"));
         _suspLinhas.Children.Add(UI.Texto(
             r.SensoresOk && r.EnergiaOk
                 ? "sensores e potência voltaram a responder depois do wake"

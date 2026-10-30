@@ -224,7 +224,7 @@ public static class MemoriaModulos
         int? xmp = VelocidadeDdr5(d[0x2C6] << 8 | d[0x2C5]) ?? VelocidadeDdr5(d[0x306] << 8 | d[0x305]);
 
         return new ModuloRam(
-            Posicao: $"Módulo {indice}",
+            Posicao: Textos.TF("Módulo {0}", indice),
             PartNumber: Ascii(d, 0x209, 30),
             Fabricante: Fabricante(d[0x200], d[0x201]),
             CapacidadeBytes: mb * 1024L * 1024L,
@@ -273,7 +273,7 @@ public static class MemoriaModulos
         var fabricante = d.Length > 0x141 ? Fabricante(d[0x140], d[0x141]) : "—";
 
         return new ModuloRam(
-            Posicao: $"Módulo {indice}",
+            Posicao: Textos.TF("Módulo {0}", indice),
             PartNumber: part,
             Fabricante: fabricante,
             CapacidadeBytes: mb * 1024L * 1024L,
@@ -353,7 +353,7 @@ public static class MemoriaModulos
         var fabricante = Texto(0x17);
 
         return new ModuloRam(
-            Posicao: posicao.Length > 0 ? posicao : $"Módulo {indice}",
+            Posicao: posicao.Length > 0 ? posicao : Textos.TF("Módulo {0}", indice),
             PartNumber: Texto(0x1A),
             Fabricante: fabricante.Length > 0 ? fabricante : "—",
             CapacidadeBytes: mb * 1024L * 1024L,
@@ -422,7 +422,7 @@ public static class MemoriaModulos
     {
         int a = 2000 + ((ano >> 4) * 10 + (ano & 0x0F));
         int s = (semana >> 4) * 10 + (semana & 0x0F);
-        return s is >= 1 and <= 53 && a >= 2000 && a <= 2100 ? $"fabrico {a}-W{s:00}" : "";
+        return s is >= 1 and <= 53 && a >= 2000 && a <= 2100 ? Textos.TF("fabrico {0}-W{1}", a, $"{s:00}") : "";
     }
 
     private static string Ascii(byte[] d, int inicio, int comprimento)

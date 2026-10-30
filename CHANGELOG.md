@@ -5,6 +5,21 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 
 ## [0.20.15] — 2026-10-30
 
+### Adicionado
+
+- **Interface em português, espanhol e inglês**, com selector na barra lateral (abaixo do tema). A
+  escolha fica em `config.json` (`"Idioma": "pt" | "es" | "en"`); na primeira execução segue
+  `LC_ALL`/`LANG` quando é pt, es ou en, e fica em pt-PT nos restantes casos. A cultura acompanha o
+  idioma (pt-PT, es-ES, en-GB), por isso os números, datas e decimais mudam com ele.
+  - Arquitectura: o texto em pt-PT é a chave de um dicionário (`Core/Textos.cs`,
+    `Textos.Es.cs`, `Textos.En.cs`) e os construtores de UI traduzem-no ao construir. Uma tradução em
+    falta aparece em português em vez de rebentar ou mostrar uma chave.
+  - `LINUXEXPLODE_IDIOMA=pt|es|en` força o idioma (capturas e testes). 5 testes novos cobrem mapas
+    com as mesmas chaves, traduções não vazias, cultura por idioma e moldes com valores.
+  - Traduzidos nesta versão: moldura (navegação, tema, escala, rodapé, menu da bandeja) e a página
+    **Sistema** completa. As restantes páginas e o `--cli` continuam em pt-PT e entram na próxima
+    ronda de tradução — o fallback é explícito, não há texto em falta a aparecer como chave.
+
 ### Alterado
 
 - **Rótulos da navegação**: *EXPLODE BENCH* passou a **Benchmark** e *STRESS* a **Stress** — na barra
