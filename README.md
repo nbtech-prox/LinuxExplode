@@ -11,8 +11,8 @@ O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](
 
 ## Descarregar e actualizar
 
-Última release publicada: **[v0.20.13](https://github.com/nbtech-prox/LinuxExplode/releases/latest)**.
-O `main` já está na **0.20.15** (traduções completas) — a release dessa versão ainda não foi publicada.
+Última versão: **[v0.20.15](https://github.com/nbtech-prox/LinuxExplode/releases/latest)** — interface em
+português, espanhol e inglês.
 
 ### Pelo gestor de aplicações (recomendado)
 
@@ -53,12 +53,10 @@ que ainda a tenham — e repete-se o pedido de importação.
 |---|---|
 | `linux-explode.flatpak` (33 MB) | Flatpak x86_64 — `flatpak install --user linux-explode.flatpak` |
 | `linux-explode-aarch64.flatpak` (29 MB) | Flatpak ARM64 (precisa do runtime aarch64) |
-| `linux-explode-0.20.13-linux-arm64.tar.gz` (39 MB) | binário ARM64 self-contained, sem Flatpak — precisa de `libicu` no destino |
 | `SHA256SUMS` | `sha256sum -c SHA256SUMS` |
 
-A via normal é o **Flatpak**: o runtime traz glibc, ICU e o loader Vulkan, por isso o mesmo pacote
-corre em qualquer distro — em x86_64 e em aarch64. O `.tar.gz` existe só para ARM64 sem Flatpak e é
-o único artefacto que depende de bibliotecas do sistema (`libicu`).
+A distribuição é **só Flatpak**: não há instalador solto nem `.tar.gz`. O runtime traz glibc, ICU e o
+loader Vulkan, por isso o mesmo pacote corre em qualquer distro — em x86_64 e em aarch64.
 
 Um bundle instalado deste modo fica ligado a uma origem local **sem URL** — o gestor de aplicações
 chega a anunciar uma actualização que falha. Para actualizar por aí, usa o repositório acima.
@@ -917,8 +915,8 @@ para o inode apagado) e a importação contava zero. A ligação é aberta com `
 
 O binário é **self-contained**: leva o runtime .NET 10 dentro, não precisa de nada instalado
 além do driver de vídeo. Tudo o resto é lido de `/proc`, `/sys` e DMI, sem root.
-Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
-(`linux-explode-aarch64.flatpak` + `linux-explode-0.20.13-linux-arm64.tar.gz`).
+Há dois alvos publicados, ambos Flatpak: **linux-x64** (`linux-explode.flatpak`) e **linux-arm64**
+(`linux-explode-aarch64.flatpak`).
 
 | Situação | O que acontece |
 |---|---|
@@ -939,8 +937,7 @@ Há dois alvos publicados: **linux-x64** (`linux-explode.flatpak`) e **linux-arm
 O que **não** é portável:
 
 - **arquitetura**: há build para x86_64 e para aarch64, mas são binários distintos — um bundle
-  x86_64 não instala em ARM. Para ARM usa `linux-explode-aarch64.flatpak` ou o `.tar.gz`
-  (ver secção ARM64).
+  x86_64 não instala em ARM. Para ARM usa `linux-explode-aarch64.flatpak` (ver secção ARM64).
 - **S.M.A.R.T.**: precisa de root em qualquer máquina; a regra sudoers é por máquina.
 - **Super I/O da placa**: depende do chip (nesta é `nct6683`, noutra pode ser `it87`, `nct6775`,
   `f71882fg` ou não existir, como nos portáteis). A app mostra o que o kernel expuser — não carrega módulos.
@@ -1063,8 +1060,8 @@ O bundle foi validado importando-o de volta para um repo `ostree`:
 `app/pt.linuxexplode.LinuxExplode/aarch64/stable`, 222 ficheiros, `LinuxExplode` e as `.so` nativas
 confirmadas como `ELF ARM aarch64`.
 
-**Não executado em hardware ARM.** O que está provado: o payload é ARM válido, o bundle e o
-`.tar.gz` são bem formados e o instalador cria a árvore correcta numa instalação isolada.
+**Não executado em hardware ARM.** O que está provado: o payload é ARM válido, o bundle é bem
+formado e, importado de volta num repo `ostree`, tem a árvore correcta.
 O que não está: arranque real em Raspberry Pi/Asahi/Snapdragon — em especial Vulkan, que na
 maioria dessas máquinas não tem fila de computação (a página de benchmark diz "indisponível",
 a benchmark de CPU e disco funciona).
@@ -1109,7 +1106,7 @@ LinuxExplode/
 ├── tests/                # xUnit (130 testes, correm no CI)
 ├── docs/                 # capturas reais e a chave pública do repositório (`linux-explode-release.gpg`)
 ├── permitir-energia.sh   # (root, uma vez) torna os contadores RAPL legíveis
-└── packaging/arm64/      # install.sh, uninstall.sh e LEIAME do pacote ARM64
+└── packaging/arm64/      # scripts antigos do pacote ARM64 (já não publicados — a via é o Flatpak)
 ```
 
 ## Limitações conhecidas

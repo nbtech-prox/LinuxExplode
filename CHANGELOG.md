@@ -8,9 +8,9 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 ### Adicionado
 
 - **Interface em português, espanhol e inglês**, com selector na barra lateral (abaixo do tema). A
-  escolha fica em `config.json` (`"Idioma": "pt" | "es" | "en"`); na primeira execução segue
-  `LC_ALL`/`LANG` quando é pt, es ou en, e fica em pt-PT nos restantes casos. A cultura acompanha o
-  idioma (pt-PT, es-ES, en-GB), por isso os números, datas e decimais mudam com ele.
+  escolha fica em `config.json` (`"Idioma": "pt" | "es" | "en"`) e a aplicação abre sempre em pt-PT —
+  mesmo com `LANG=en_US` — até o utilizador escolher outro idioma. A cultura acompanha o idioma
+  (pt-PT, es-ES, en-GB), por isso os números, datas e decimais mudam com ele.
   - Arquitectura: o texto em pt-PT é a chave de um dicionário (`Core/Textos.cs`,
     `Textos.Es.cs`, `Textos.En.cs`) e os construtores de UI traduzem-no ao construir. Uma tradução em
     falta aparece em português em vez de rebentar ou mostrar uma chave.
@@ -58,14 +58,15 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
   - As referências explícitas a `System.Text.Json` e `System.Text.Encodings.Web` saíram: em net10.0
     são referências implícitas do framework (declará-las dá `NU1510` e volta a arrastar o pacote).
   - Verificação nesta máquina: build sem erros e com os 6 avisos conhecidos do `BenchRt.cs`,
-    **125 testes verdes** em `net10.0`, `--cli info`, `--cli sensores`, `--cli historico`,
+    **125 testes verdes** em `net10.0` (130 no fim da versão, com os testes dos idiomas), `--cli info`, `--cli sensores`, `--cli historico`,
     `--cli discos --json` (caminho S.M.A.R.T.) e `--cli bench gpu` (**12 869 755 pts**, dentro do
     valor habitual), tanto no build de Release como no binário self-contained publicado. Dentro do
     Flatpak instalado: `--cli info` diz 0.20.15, o S.M.A.R.T. continua a chegar ao anfitrião por
     `flatpak-spawn` (2 discos, estado `live`) e o mesmo bench deu **12 888 786 pts**.
-  - O cross-publish ARM64 foi refeito: binário ELF aarch64 confirmado, **42 MB** de tar.gz (era
-    39 MB) e **29 MB** de bundle (era 27 MB); o bundle x86_64 passou a **33 MB** (era 30 MB). O
-    runtime .NET 10 é maior do que o 8 — os números do README foram medidos, não estimados.
+  - O cross-publish ARM64 foi refeito: binário ELF aarch64 confirmado e **29 MB** de bundle (era
+    27 MB); o bundle x86_64 passou a **33 MB** (era 30 MB). O runtime .NET 10 é maior do que o 8 —
+    os números foram medidos, não estimados. O `.tar.gz` deixou de ser publicado nesta versão: a
+    distribuição passou a ser só Flatpak.
 
 ## [0.20.13] — 2026-10-29
 
