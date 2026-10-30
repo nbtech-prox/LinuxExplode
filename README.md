@@ -12,8 +12,8 @@ O guia de utilização, página a página e em linguagem simples, está na **[wi
 
 ## Descarregar e actualizar
 
-Última versão: **[v0.20.15](https://github.com/nbtech-prox/LinuxExplode/releases/latest)** — interface em
-português, espanhol e inglês.
+Última versão: **[v0.20.16](https://github.com/nbtech-prox/LinuxExplode/releases/latest)** — correcção da
+formatação do total medido e documentação da linha de comandos.
 
 ### Pelo gestor de aplicações (recomendado)
 

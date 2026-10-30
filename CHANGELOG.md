@@ -3,6 +3,23 @@
 Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
 [versão semântica](https://semver.org/lang/pt/).
 
+## [0.20.16] — 2026-10-30
+
+### Corrigido
+
+- **A linha "total medido" do `--cli potencia` usava `InvariantCulture`**: saía `21.0 W` com ponto,
+  imediatamente abaixo de linhas com vírgula (`16,0 W`), na mesma listagem. Passa a usar o mesmo
+  `Potencia.Watts` das outras linhas — a cultura do idioma (pt-PT `23,0 W`, en-GB `23.0 W`) e
+  miliwatts abaixo de 1 W. Não muda nenhum valor medido: é a apresentação.
+
+### Documentação
+
+- **Como chamar a linha de comandos com a aplicação instalada por Flatpak.** O executável não fica no
+  `PATH`, por isso `LinuxExplode --cli info` respondia `command not found: LinuxExplode`. README e
+  wiki passam a mostrar o comando completo (`flatpak run pt.linuxexplode.LinuxExplode --cli info`), o
+  atalho em `~/.local/bin/LinuxExplode` e o `alias` na shell; a wiki ganhou a entrada correspondente
+  em *Problemas comuns*.
+
 ## [0.20.15] — 2026-10-30
 
 ### Adicionado

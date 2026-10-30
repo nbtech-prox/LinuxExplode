@@ -91,6 +91,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.20.16" date="2026-10-30">
+      <description>
+        <p>Correcção: a linha "total medido" do <code>--cli potencia</code> saía com ponto decimal
+        ("21.0 W") ao lado de linhas com vírgula ("16,0 W"); passa a usar a cultura do idioma e a
+        mostrar mW abaixo de 1 W, como as restantes. Documentação: como chamar a linha de comandos
+        com a aplicação instalada por Flatpak.</p>
+      </description>
+    </release>
     <release version="0.20.15" date="2026-10-30">
       <description>
         <p>Migração para .NET 10 (LTS até 2028): o .NET 8 chegava ao fim do suporte a 10 de
