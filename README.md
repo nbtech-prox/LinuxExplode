@@ -8,6 +8,7 @@ em Linux (e empacotada em Flatpak). Toda a informação de hardware é lida dire
 [![CI](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml/badge.svg)](https://github.com/nbtech-prox/LinuxExplode/actions/workflows/ci.yml)
 
 O plano de evolução (o que vem a seguir, por versão) está em **[ROADMAP.md](ROADMAP.md)**.
+O guia de utilização, página a página e em linguagem simples, está na **[wiki](../../wiki)**.
 
 ## Descarregar e actualizar
 
