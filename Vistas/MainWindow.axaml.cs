@@ -17,6 +17,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // A janela só grava a escolha de idioma depois de aberta: o índice inicial do ComboBox é
+        // definido por código e não pode ser confundido com uma escolha do utilizador.
+        Opened += (_, _) => _idiomaPronto = true;
+
         // a versão no rodapé vem do Relatorio (antes era texto fixo no .axaml e ficava desactualizada)
         if (this.FindControl<TextBlock>("RodapeVersao") is { } rodape)
             rodape.Text = "v" + Core.Relatorio.Versao;
@@ -143,7 +147,7 @@ public partial class MainWindow : Window
     /// <summary>Aplica o idioma escolhido a tudo o que é estático e reconstrói a página actual.</summary>
     private void MudarIdioma(object? s, SelectionChangedEventArgs e)
     {
-        if (_aAplicarIdioma) return;
+        if (_aAplicarIdioma || !_idiomaPronto) return;
         if (this.FindControl<ComboBox>("Idioma") is not { } combo) return;
         var idioma = combo.SelectedIndex switch
         {
@@ -196,6 +200,7 @@ public partial class MainWindow : Window
     }
 
     private bool _aAplicarIdioma;
+    private bool _idiomaPronto;
 
     // ------------------------------------------------------------------ aparência e atalhos
 

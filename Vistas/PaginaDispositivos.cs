@@ -17,7 +17,7 @@ public sealed class PaginaDispositivos : UserControl
     private readonly TextBlock _pciResumo = new() { Classes = { "sub" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBlock _pciNota = new() { Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly Border _cartaoPci;
-    private readonly CheckBox _mostrarPontes = new() { Content = "Mostrar as pontes", FontSize = 12, IsChecked = false };
+    private readonly CheckBox _mostrarPontes = new() { Content = Textos.T("Mostrar as pontes"), FontSize = 12, IsChecked = false };
 
     private readonly StackPanel _usb = new() { Spacing = 0 };
     private readonly TextBlock _usbResumo = new() { Classes = { "sub" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
@@ -128,15 +128,15 @@ public sealed class PaginaDispositivos : UserControl
         var reduzidos = finais.Where(l => l.Reduzido).ToList();
 
         var verPontes = _mostrarPontes.IsChecked == true;
-        _mostrarPontes.Content = pontes.Count > 0 ? $"Mostrar as pontes ({pontes.Count})" : "Sem pontes";
+        _mostrarPontes.Content = pontes.Count > 0 ? Textos.TF("Mostrar as pontes ({0})", pontes.Count) : Textos.T("Sem pontes");
         _mostrarPontes.IsEnabled = pontes.Count > 0;
 
         _pciResumo.Text = links.Count == 0
             ? "Nenhum link PCI Express legível em /sys/bus/pci/devices."
-            : $"{finais.Count} dispositivo(s) final(is) e {pontes.Count} ponte(s). " +
+            : Textos.TF("{0} dispositivo(s) final(is) e {1} ponte(s). ", finais.Count, pontes.Count) +
               (reduzidos.Count == 0
                   ? "Todos os dispositivos finais negociaram o máximo que anunciam."
-                  : $"{reduzidos.Count} dispositivo(s) abaixo do máximo anunciado (assinalados).");
+                  : Textos.TF("{0} dispositivo(s) abaixo do máximo anunciado (assinalados).", reduzidos.Count));
 
         // a assinatura inclui o toggle: ligar/desligar as pontes volta a desenhar a tabela
         var assinatura = string.Join("|", finais.Select(l => l.Endereco + l.TextoLink + l.Nome)) +
@@ -172,7 +172,7 @@ public sealed class PaginaDispositivos : UserControl
                 nome.VerticalAlignment = VerticalAlignment.Center;
                 Grid.SetColumn(nome, 3);
 
-                var banda = UI.Texto(l.BandaTeoricaGbS is double b ? $"≈ {Placa.Numero(b)} GB/s" : "—", "mono");
+                var banda = UI.Texto(l.BandaTeoricaGbS is double b ? Textos.TF("≈ {0} GB/s", Placa.Numero(b)) : "—", "mono");
                 banda.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
                 banda.TextAlignment = Avalonia.Media.TextAlignment.Right;
                 banda.VerticalAlignment = VerticalAlignment.Center;
@@ -190,8 +190,8 @@ public sealed class PaginaDispositivos : UserControl
 
                 if (l.Reduzido)
                 {
-                    var nota = UI.Texto($"anuncia {l.TextoMaximo} — o link em uso é mais estreito/lento " +
-                                        "(slot, riser ou poupança de energia do driver)", "sub");
+                    var nota = UI.Texto(Textos.TF("anuncia {0} — o link em uso é mais estreito/lento ", l.TextoMaximo) +
+                                        Textos.T("(slot, riser ou poupança de energia do driver)"), "sub");
                     nota.Margin = new Avalonia.Thickness(96, 2, 0, 8);
                     _pci.Children.Add(nota);
                 }
@@ -246,7 +246,7 @@ public sealed class PaginaDispositivos : UserControl
 
         _usbResumo.Text = todos.Count == 0
             ? "Nenhum dispositivo USB legível em /sys/bus/usb/devices."
-            : $"{dispositivos.Count} dispositivo(s) ligado(s) e {hubs.Count} concentrador(es)/controlador(es). " +
+            : Textos.TF("{0} dispositivo(s) ligado(s) e {1} concentrador(es)/controlador(es). ", dispositivos.Count, hubs.Count) +
               "A velocidade é a negociada com o kernel, não um teste de débito.";
 
         var assinatura = string.Join("|", todos.Select(d => d.Id + d.IdVendor + d.IdProduto + d.TextoVelocidade + d.Nome));
@@ -262,7 +262,7 @@ public sealed class PaginaDispositivos : UserControl
             if (d.Drivers.Count > 0) detalhe.Add("driver " + string.Join("/", d.Drivers));
             if (d.Potencia is { Length: > 0 } p) detalhe.Add("pede " + p);
             if (d.Serie is { Length: > 0 } s) detalhe.Add("série " + s);
-            if (d.Barramento > 0) detalhe.Add($"bus {d.Barramento}, dispositivo {d.Dispositivo}");
+            if (d.Barramento > 0) detalhe.Add(Textos.TF("bus {0}, dispositivo {1}", d.Barramento, d.Dispositivo));
 
             if (detalhe.Count > 0)
             {
@@ -366,12 +366,12 @@ public sealed class PaginaDispositivos : UserControl
 
             foreach (var f in activos)
             {
-                var texto = $"{f.Placa} · {f.Pcm} ({f.Dispositivo}) — {f.Direcao}" +
-                            (f.Taxa is int t ? $", {t} Hz" : "") +
-                            (f.Canais is int c ? $", {c} canais" : "") +
+                var texto = Textos.TF("{0} · {1} ({2}) — {3}", f.Placa, f.Pcm, f.Dispositivo, Textos.T(f.Direcao)) +
+                            (f.Taxa is int t ? Textos.TF(", {0} Hz", t) : "") +
+                            (f.Canais is int c ? Textos.TF(", {0} canais", c) : "") +
                             (f.Formato is { Length: > 0 } fo ? $", {fo}" : "") +
-                            (f.LatenciaMs is double l ? $" · período {l:0.00} ms" : "") +
-                            (f.BufferMs is double b ? $" · buffer {b:0.0} ms" : "");
+                            (f.LatenciaMs is double l ? Textos.TF(" · período {0} ms", $"{l:0.00}") : "") +
+                            (f.BufferMs is double b ? Textos.TF(" · buffer {0} ms", $"{b:0.0}") : "");
                 var linha = UI.Texto(texto, "valor");
                 linha.Margin = new Avalonia.Thickness(0, 2, 0, 2);
                 _audio.Children.Add(linha);
@@ -400,7 +400,7 @@ public sealed class PaginaDispositivos : UserControl
             : "Xruns não medidos: o PipeWire não respondeu ao pw-top.", "sub"));
 
         _audioNota.Children.Add(UI.Texto(a.LatenciaPadraoMs is double lat
-            ? $"Quantum de {lat:0.00} ms — é o período com que o servidor acorda. Buffers maiores toleram mais jitter; " +
+            ? Textos.TF("Quantum de {0} ms — é o período com que o servidor acorda. Buffers maiores toleram mais jitter; ", $"{lat:0.00}") +
               "buffers menores dão menos latência."
             : "Quantum não lido: sem nó activo o pw-top não mostra o período e o pw-metadata não respondeu.", "sub"));
 

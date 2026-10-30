@@ -83,8 +83,8 @@ public sealed class PaginaRelatorio : UserControl
             _ultimoFicheiro = caminho;
             _abrir.IsEnabled = true;
             _caminho.Text = caminho;
-            _estado.Text = $"gravado ({new FileInfo(caminho).Length / 1024.0:0.0} KB)" +
-                           (formato == "html" ? " — relatório completo" : "");
+            _estado.Text = Textos.TF("gravado ({0} KB)", $"{new FileInfo(caminho).Length / 1024.0:0.0}") +
+                           (formato == "html" ? Textos.T(" — relatório completo") : "");
         }
         catch (Exception ex)
         {

@@ -16,9 +16,13 @@ Formato segundo [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/) e
     falta aparece em português em vez de rebentar ou mostrar uma chave.
   - `LINUXEXPLODE_IDIOMA=pt|es|en` força o idioma (capturas e testes). 5 testes novos cobrem mapas
     com as mesmas chaves, traduções não vazias, cultura por idioma e moldes com valores.
-  - Traduzidos nesta versão: moldura (navegação, tema, escala, rodapé, menu da bandeja) e a página
-    **Sistema** completa. As restantes páginas e o `--cli` continuam em pt-PT e entram na próxima
-    ronda de tradução — o fallback é explícito, não há texto em falta a aparecer como chave.
+  - **O português é o idioma principal**: a aplicação abre sempre em pt-PT, mesmo com `LANG=en_US`.
+    Só muda quando o utilizador escolhe outro idioma no selector.
+  - Traduzidas nesta versão: moldura (navegação, tema, escala, rodapé, menu da bandeja), **todas as
+    oito páginas** (Sistema, Sensores, Discos, Benchmark, Stress, Rede, Dispositivos, Relatório), o
+    pop do benchmark e o cartão de FPS. O texto do `--cli` continua em pt-PT.
+  - 512 chaves por idioma; os testes falham se os dois mapas deixarem de ter as mesmas chaves ou se
+    alguma tradução ficar vazia.
 
 ### Alterado
 

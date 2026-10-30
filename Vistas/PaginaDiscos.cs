@@ -69,7 +69,7 @@ public sealed class PaginaDiscos : UserControl
             var topo = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
             var nome = new StackPanel { Spacing = 2 };
             nome.Children.Add(UI.Texto(d.Modelo, "valor", 15));
-            nome.Children.Add(UI.Texto($"/dev/{d.Dev} · {Util.Bytes(d.Tamanho)} · {(d.Ssd ? "SSD" : "HDD")} · estado {d.Estado}", "sub"));
+            nome.Children.Add(UI.Texto(Textos.TF("/dev/{0} · {1} · {2} · estado {3}", d.Dev, Util.Bytes(d.Tamanho), d.Ssd ? "SSD" : "HDD", Textos.T(d.Estado)), "sub"));
             topo.Children.Add(nome);
 
             var pilhaPilulas = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
@@ -97,7 +97,7 @@ public sealed class PaginaDiscos : UserControl
             {
                 // detalhes SMART
                 var detalhes = new StackPanel { Spacing = 0 };
-                if (d.Smart.HorasLigado is long h) detalhes.Children.Add(UI.Linha("Horas ligado", $"{h:N0} h  ({h / 24.0:N0} dias)"));
+                if (d.Smart.HorasLigado is long h) detalhes.Children.Add(UI.Linha("Horas ligado", Textos.TF("{0} h  ({1} dias)", $"{h:N0}", $"{h / 24.0:N0}")));
                 if (d.Smart.Ciclos is long c) detalhes.Children.Add(UI.Linha("Ciclos de energia", $"{c:N0}"));
                 if (d.Smart.Desgaste is double des) detalhes.Children.Add(UI.Linha("Desgaste", $"{des:0} %"));
                 if (d.Smart.SetoresRealocados is long sr) detalhes.Children.Add(UI.Linha("Setores realocados", $"{sr:N0}"));
@@ -122,7 +122,7 @@ public sealed class PaginaDiscos : UserControl
                         var cab = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
                         cab.Children.Add(UI.Texto($"/dev/{p.Nome}", "mono"));
                         var txt = p.Total > 0
-                            ? $"{Util.Bytes(p.Livre)} livres de {Util.Bytes(p.Total)}"
+                            ? Textos.TF("{0} livres de {1}", Util.Bytes(p.Livre), Util.Bytes(p.Total))
                             : "não montada";
                         var dir = UI.Texto(txt, "mono");
                         dir.HorizontalAlignment = HorizontalAlignment.Right;
@@ -205,7 +205,7 @@ public sealed class PaginaDiscos : UserControl
     {
         if (_autotestes.TryGetValue(dev, out var bloco))
         {
-            bloco.Estado.Text = $"a pedir o auto-teste {(tipo == TipoAutoTeste.Curto ? "curto" : "longo")}…";
+            bloco.Estado.Text = Textos.TF("a pedir o auto-teste {0}…", Textos.T(tipo == TipoAutoTeste.Curto ? "curto" : "longo"));
             bloco.Curto.IsEnabled = bloco.Longo.IsEnabled = false;
         }
 
@@ -291,8 +291,8 @@ public sealed class PaginaDiscos : UserControl
             if (info.EmCurso)
             {
                 Estado.Text = info.Percentagem is int pct
-                    ? $"a correr · {pct} % · {info.TipoCorrida}"
-                    : $"a correr · {info.TipoCorrida} (o controlador não publica a percentagem)";
+                    ? Textos.TF("a correr · {0} % · {1}", $"{pct}", info.TipoCorrida)
+                    : Textos.TF("a correr · {0} (o controlador não publica a percentagem)", info.TipoCorrida);
                 Barra.Value = (info.Percentagem ?? 0) / 100.0;
                 Barra.IsVisible = info.Percentagem is not null;
                 Curto.IsEnabled = Longo.IsEnabled = false;
@@ -301,7 +301,7 @@ public sealed class PaginaDiscos : UserControl
             else
             {
                 Estado.Text = info.Historico.Count > 0
-                    ? $"último resultado: {info.Historico[0].Resultado}"
+                    ? Textos.TF("último resultado: {0}", info.Historico[0].Resultado)
                     : "nunca corrido";
                 Barra.IsVisible = false;
                 Curto.IsEnabled = Longo.IsEnabled = true;

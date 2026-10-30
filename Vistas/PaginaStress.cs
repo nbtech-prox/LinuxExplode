@@ -28,12 +28,12 @@ public sealed class PaginaStress : UserControl
     private readonly TextBlock _tempCpu = new() { Text = "—", Classes = { "numero" } };
     private readonly TextBlock _tempGpu = new() { Text = "—", Classes = { "numero" } };
     private readonly TextBlock _potencia = new() { Text = "—", Classes = { "numero" } };
-    private readonly TextBlock _fase = new() { Text = "pronto para começar", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _fase = new() { Text = Core.Textos.T("pronto para começar"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _barra = new() { Minimum = 0, Maximum = 1, Value = 0 };
 
     // resultado e registo
     private readonly StackPanel _resultado = new() { Spacing = 2 };
-    private readonly TextBlock _resumo = new() { Text = "sem resultados", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _resumo = new() { Text = Core.Textos.T("sem resultados"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _registo = new() { Text = "", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<string> _eventos = new();
     private readonly Button _parar;
@@ -50,8 +50,8 @@ public sealed class PaginaStress : UserControl
     private readonly ComboBox _ciclosN = new() { Width = 110 };
     private readonly ComboBox _ciclosDuracao = new() { Width = 130 };
     private readonly ComboBox _ciclosPausa = new() { Width = 130 };
-    private readonly TextBlock _ciclosEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _ciclosResumo = new() { Text = "sem série registada", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _ciclosEstado = new() { Text = Core.Textos.T("pronto"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _ciclosResumo = new() { Text = Core.Textos.T("sem série registada"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _ciclosTabela = new() { Spacing = 4 };
     private readonly List<Button> _botoesCiclos = new();
     private SessaoCiclos? _serie;
@@ -61,8 +61,8 @@ public sealed class PaginaStress : UserControl
     private readonly ComboBox _vramGpu = new();
     private readonly ComboBox _vramLimite = new() { Width = 160 };
     private readonly ComboBox _vramBloco = new() { Width = 130 };
-    private readonly TextBlock _vramEstado = new() { Text = "pronto", Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _vramResumo = new() { Text = "sem teste de VRAM", Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _vramEstado = new() { Text = Core.Textos.T("pronto"), Classes = { "mono" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _vramResumo = new() { Text = Core.Textos.T("sem teste de VRAM"), Classes = { "sub" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _vramLinhas = new() { Spacing = 2 };
     private readonly List<Button> _botoesVram = new();
     private CancellationTokenSource? _vramCancelar;
@@ -141,11 +141,11 @@ public sealed class PaginaStress : UserControl
             _vramGpus = await Task.Run(StressVram.Dispositivos);
             _vramGpu.Items.Clear();
             foreach (var g in _vramGpus)
-                _vramGpu.Items.Add($"[{g.Indice}] {g.Nome} · {g.Tipo} · {Util.Bytes(g.HeapBytes)}");
+                _vramGpu.Items.Add(Textos.TF("[{0}] {1} · {2} · {3}", g.Indice, g.Nome, Textos.T(g.Tipo), Util.Bytes(g.HeapBytes)));
 
             if (_vramGpus.Count == 0)
             {
-                _vramGpu.Items.Add("nenhuma GPU Vulkan — falta o driver");
+                _vramGpu.Items.Add(Textos.T("nenhuma GPU Vulkan — falta o driver"));
                 _vramGpu.SelectedIndex = 0;
                 foreach (var b in _botoesVram) b.IsEnabled = false;
             }
@@ -162,29 +162,29 @@ public sealed class PaginaStress : UserControl
 
     private Control CartaoConfiguracao()
     {
-        _duracao.Items.Add("1 minuto");
-        _duracao.Items.Add("2 minutos");
-        _duracao.Items.Add("5 minutos");
-        _duracao.Items.Add("10 minutos");
-        _duracao.Items.Add("20 minutos");
-        _duracao.Items.Add("30 minutos");
+        _duracao.Items.Add(Textos.T("1 minuto"));
+        _duracao.Items.Add(Textos.T("2 minutos"));
+        _duracao.Items.Add(Textos.T("5 minutos"));
+        _duracao.Items.Add(Textos.T("10 minutos"));
+        _duracao.Items.Add(Textos.T("20 minutos"));
+        _duracao.Items.Add(Textos.T("30 minutos"));
         _duracao.SelectedIndex = 2;
 
         int nucleos = Environment.ProcessorCount;
-        _threads.Items.Add($"todos ({nucleos})");
+        _threads.Items.Add(Textos.TF("todos ({0})", nucleos));
         _threads.Items.Add("1");
         foreach (int n in new[] { 2, 4, 8 }.Where(n => n < nucleos)) _threads.Items.Add($"{n}");
         _threads.SelectedIndex = 0;
 
-        _carga.Items.Add("FMA vetorial (SIMD)");
-        _carga.Items.Add("inteiro");
-        _carga.Items.Add("vírgula flutuante");
-        _carga.Items.Add("memória");
+        _carga.Items.Add(Textos.T("FMA vetorial (SIMD)"));
+        _carga.Items.Add(Textos.T("inteiro"));
+        _carga.Items.Add(Textos.T("vírgula flutuante"));
+        _carga.Items.Add(Textos.T("memória"));
         _carga.SelectedIndex = 0;
 
-        _memoria.Items.Add("25 % da RAM");
-        _memoria.Items.Add("50 % da RAM");
-        _memoria.Items.Add("75 % da RAM");
+        _memoria.Items.Add(Textos.T("25 % da RAM"));
+        _memoria.Items.Add(Textos.T("50 % da RAM"));
+        _memoria.Items.Add(Textos.T("75 % da RAM"));
         _memoria.SelectedIndex = 1;
 
         _limite.Items.Add("85 °C");
@@ -220,7 +220,7 @@ public sealed class PaginaStress : UserControl
     private static Control Campo(string rotulo, Control controlo)
     {
         var p = new StackPanel { Spacing = 4 };
-        p.Children.Add(UI.Texto(rotulo.ToUpperInvariant(), "rotulo"));
+        p.Children.Add(UI.Texto(Textos.T(rotulo).ToUpperInvariant(), "rotulo"));
         p.Children.Add(controlo);
         return p;
     }
@@ -263,25 +263,25 @@ public sealed class PaginaStress : UserControl
         _ciclosAlvo.Items.Add("RAM");
         _ciclosAlvo.Items.Add("GPU");
         _ciclosAlvo.Items.Add("disco");
-        _ciclosAlvo.Items.Add("tudo (burn-in)");
+        _ciclosAlvo.Items.Add(Textos.T("tudo (burn-in)"));
         _ciclosAlvo.SelectedIndex = 0;
 
-        _ciclosN.Items.Add("3 ciclos");
-        _ciclosN.Items.Add("5 ciclos");
-        _ciclosN.Items.Add("10 ciclos");
-        _ciclosN.Items.Add("20 ciclos");
+        _ciclosN.Items.Add(Textos.T("3 ciclos"));
+        _ciclosN.Items.Add(Textos.T("5 ciclos"));
+        _ciclosN.Items.Add(Textos.T("10 ciclos"));
+        _ciclosN.Items.Add(Textos.T("20 ciclos"));
         _ciclosN.SelectedIndex = 0;
 
         _ciclosDuracao.Items.Add("30 s");
-        _ciclosDuracao.Items.Add("1 minuto");
-        _ciclosDuracao.Items.Add("2 minutos");
-        _ciclosDuracao.Items.Add("5 minutos");
+        _ciclosDuracao.Items.Add(Textos.T("1 minuto"));
+        _ciclosDuracao.Items.Add(Textos.T("2 minutos"));
+        _ciclosDuracao.Items.Add(Textos.T("5 minutos"));
         _ciclosDuracao.SelectedIndex = 1;
 
         _ciclosPausa.Items.Add("10 s");
         _ciclosPausa.Items.Add("30 s");
-        _ciclosPausa.Items.Add("1 minuto");
-        _ciclosPausa.Items.Add("2 minutos");
+        _ciclosPausa.Items.Add(Textos.T("1 minuto"));
+        _ciclosPausa.Items.Add(Textos.T("2 minutos"));
         _ciclosPausa.SelectedIndex = 1;
 
         var iniciar = UI.Botao("Iniciar série", true, () => ComecarCiclos());
@@ -395,20 +395,20 @@ public sealed class PaginaStress : UserControl
 
         _ciclosTabela.Children.Clear();
         _ciclosTerminado = false;
-        _ciclosResumo.Text = $"a correr: {NomeAlvo(alvo)} · {ciclos} ciclo(s) de {duracao.TotalSeconds:0} s";
-        _ciclosEstado.Text = "a arrancar…";
+        _ciclosResumo.Text = Textos.TF("a correr: {0} · {1} ciclo(s) de {2} s", NomeAlvo(alvo), ciclos, $"{duracao.TotalSeconds:0}");
+        _ciclosEstado.Text = Textos.T("a arrancar…");
 
         foreach (var b in _botoes) b.IsEnabled = false;
         _botoesCiclos[0].IsEnabled = false;
         _botoesCiclos[1].IsEnabled = true;
         AtualizarBotoesParar();
 
-        Evento($"série · {NomeAlvo(alvo)} · {ciclos} × {duracao.TotalSeconds:0} s · pausa {pausa.TotalSeconds:0} s");
+        Evento(Textos.TF("série · {0} · {1} × {2} s · pausa {3} s", NomeAlvo(alvo), ciclos, $"{duracao.TotalSeconds:0}", $"{pausa.TotalSeconds:0}"));
 
         try { _serie.Iniciar(); }
         catch (Exception ex)
         {
-            Evento("a série não arrancou: " + ex.Message);
+            Evento(Textos.T("a série não arrancou: ") + ex.Message);
             TerminarCiclosInterface();
         }
     }
@@ -417,7 +417,7 @@ public sealed class PaginaStress : UserControl
     {
         if (_serie is not { EmCurso: true }) return;
         _serie.Parar();
-        _ciclosEstado.Text = "a parar…";
+        _ciclosEstado.Text = Textos.T("a parar…");
         Evento("pedido de paragem da série de ciclos");
     }
 
@@ -427,17 +427,17 @@ public sealed class PaginaStress : UserControl
         if (_ciclosTerminado) return;
 
         _ciclosEstado.Text = string.IsNullOrEmpty(p.Ritmo)
-            ? $"{p.Segundos:0} s · {p.Fase}"
-            : $"{p.Segundos:0} s · {p.Fase} · {p.Ritmo}";
-        if (!string.IsNullOrEmpty(p.Detalhe)) _ciclosResumo.Text = "a correr · " + p.Detalhe;
+            ? Textos.TF("{0} s · {1}", $"{p.Segundos:0}", Textos.T(p.Fase))
+            : Textos.TF("{0} s · {1} · {2}", $"{p.Segundos:0}", Textos.T(p.Fase), p.Ritmo);
+        if (!string.IsNullOrEmpty(p.Detalhe)) _ciclosResumo.Text = Textos.T("a correr · ") + p.Detalhe;
     }
 
     private void MostrarCiclos(ResultadoCiclos r)
     {
         _ciclosTerminado = true;
         RelatorioCompleto.GuardarUltimosCiclos(r);  // entra no relatório completo
-        _ciclosResumo.Text = $"{r.Resumo} · {r.Segundos:0} s · energia {r.EnergiaKwh * 1000:0,0} Wh · " +
-                             $"picos CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C";
+        _ciclosResumo.Text = Textos.TF("{0} · {1} s · energia {2} Wh · ", Textos.T(r.Resumo), $"{r.Segundos:0}", $"{r.EnergiaKwh * 1000:0,0}") +
+                             Textos.TF("picos CPU {0} °C / GPU {1} °C", $"{r.PicoCpuC:0}", $"{r.PicoGpuC:0}");
 
         _ciclosTabela.Children.Clear();
         if (r.Agregado.Count > 0)
@@ -446,9 +446,9 @@ public sealed class PaginaStress : UserControl
             foreach (var m in r.Agregado)
                 _ciclosTabela.Children.Add(LinhaCiclos(m.Rotulo,
                     m.Contador ? $"{m.Mediana:0}" : $"{m.Mediana:N1}",
-                    m.Contador ? $"em {m.Amostras}" : $"{m.Minimo:N1}",
+                    m.Contador ? Textos.TF("em {0}", m.Amostras) : $"{m.Minimo:N1}",
                     m.Contador ? "—" : $"{m.Maximo:N1}",
-                    m.Contador ? "total" : m.Amostras >= 3 ? $"±{m.VariacaoPct:0.0} %" : $"amostra pequena ({m.Amostras})",
+                    m.Contador ? "total" : m.Amostras >= 3 ? Textos.TF("±{0} %", $"{m.VariacaoPct:0.0}") : Textos.TF("amostra pequena ({0})", m.Amostras),
                     false));
         }
 
@@ -456,12 +456,12 @@ public sealed class PaginaStress : UserControl
         {
             var c = r.Lista[i];
             _ciclosTabela.Children.Add(UI.Texto(
-                $"ciclo {i + 1}: {(c.Completo ? "completo" : "parado")} em {c.Segundos:0} s · " +
+                Textos.TF("ciclo {0}: {1} em {2} s · ", i + 1, Textos.T(c.Completo ? "completo" : "parado"), $"{c.Segundos:0}") +
                 $"pico CPU {c.PicoCpuC:0} °C · GPU {c.PicoGpuC:0} °C · {c.EnergiaKwh * 1000:0.0} Wh", "mono"));
         }
 
         _ciclosEstado.Text = r.Parado ? "série parada" : "série terminada";
-        Evento($"fim da série · {r.Resumo} · pico CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C");
+        Evento(Textos.TF("fim da série · {0} · pico CPU {1} °C / GPU {2} °C", Textos.T(r.Resumo), $"{r.PicoCpuC:0}", $"{r.PicoGpuC:0}"));
         TerminarCiclosInterface();
     }
 
@@ -586,16 +586,16 @@ public sealed class PaginaStress : UserControl
 
         _vramLinhas.Children.Clear();
         _vramResumo.Text = limiteMb == 0
-            ? $"a encher até o driver recusar, blocos de {blocoMb} MB"
-            : $"a encher até {limiteMb} MB, blocos de {blocoMb} MB";
-        _vramEstado.Text = "a alocar blocos…";
+            ? Textos.TF("a encher até o driver recusar, blocos de {0} MB", blocoMb)
+            : Textos.TF("a encher até {0} MB, blocos de {1} MB", limiteMb, blocoMb);
+        _vramEstado.Text = Textos.T("a alocar blocos…");
 
         _botoesVram[0].IsEnabled = false;
         _botoesVram[1].IsEnabled = true;
         foreach (var b in _botoes) b.IsEnabled = false;
         AtualizarBotoesParar();
 
-        Evento($"VRAM · GPU {indice} · limite {(limiteMb == 0 ? "até falhar" : limiteMb + " MB")} · bloco {blocoMb} MB");
+        Evento(Textos.TF("VRAM · GPU {0} · limite {1} · bloco {2} MB", indice, limiteMb == 0 ? Textos.T("até falhar") : Textos.TF("{0} MB", limiteMb), blocoMb));
 
         _ = Task.Run(() =>
         {
@@ -616,7 +616,7 @@ public sealed class PaginaStress : UserControl
     {
         if (_vramCancelar is null) return;
         _vramCancelar.Cancel();
-        _vramEstado.Text = "a parar…";
+        _vramEstado.Text = Textos.T("a parar…");
         Evento("pedido de paragem do teste de VRAM");
     }
 
@@ -635,22 +635,22 @@ public sealed class PaginaStress : UserControl
 
         if (r is null)
         {
-            _vramResumo.Text = "o teste de VRAM falhou: " + (erro ?? "sem resultado");
-            _vramEstado.Text = "terminado com erro";
+            _vramResumo.Text = Textos.T("o teste de VRAM falhou: ") + (erro ?? "sem resultado");
+            _vramEstado.Text = Textos.T("terminado com erro");
             Evento("VRAM falhou: " + erro);
             return;
         }
 
         _vramResumo.Text = r.TotalAlocado == 0 && r.Erro is not null
-            ? $"não alocou nada — {r.Erro}"
-            : $"{r.Blocos} bloco(s) · {Util.Bytes(r.TotalAlocado)} em {r.Segundos:0.0} s" +
-              (r.SysfsPico is long pico ? $" · pico em /sys {Util.Bytes(pico)}" : "");
+            ? Textos.TF("não alocou nada — {0}", r.Erro)
+            : Textos.TF("{0} bloco(s) · {1} em {2} s", r.Blocos, Util.Bytes(r.TotalAlocado), $"{r.Segundos:0.0}") +
+              (r.SysfsPico is long pico ? Textos.TF(" · pico em /sys {0}", Util.Bytes(pico)) : "");
         _vramEstado.Text = r.Parado ? "parado pelo utilizador" : "terminado";
         RelatorioCompleto.GuardarUltimoVram(r);     // entra no relatório completo
 
         foreach (var l in r.Linhas) _vramLinhas.Children.Add(UI.Texto("· " + l, "mono"));
 
-        Evento($"VRAM · {r.Gpu} · {Util.Bytes(r.TotalAlocado)} · {r.ErrosVerificacao} erro(s) de verificação");
+        Evento(Textos.TF("VRAM · {0} · {1} · {2} erro(s) de verificação", r.Gpu, Util.Bytes(r.TotalAlocado), r.ErrosVerificacao));
     }
 
     private void AtualizarBotoesParar()
@@ -778,8 +778,8 @@ public sealed class PaginaStress : UserControl
         _inicio = DateTime.Now;
         _barra.Value = 0;
         _resultado.Children.Clear();
-        _resumo.Text = $"a correr: {NomeAlvo(alvo)}";
-        _fase.Text = "a arrancar…";
+        _resumo.Text = Textos.TF("a correr: {0}", NomeAlvo(alvo));
+        _fase.Text = Textos.T("a arrancar…");
 
         foreach (var b in _botoes) b.IsEnabled = false;
         _parar.IsEnabled = true;
@@ -789,15 +789,15 @@ public sealed class PaginaStress : UserControl
             : $"{_duracaoEscolhida.TotalMinutes:0} min";
 
         string detalhe = alvo is AlvoStress.Cpu or AlvoStress.Tudo
-            ? $" · {threads} thread(s) · carga {NomeCarga(carga)}"
+            ? Textos.TF(" · {0} thread(s) · carga {1}", threads, Textos.T(NomeCarga(carga)))
             : "";
 
-        Evento($"início · {NomeAlvo(alvo)} · {duracaoTexto}{detalhe} · limite {GuardaTermica.LimiteCpu:0} °C");
+        Evento(Textos.TF("início · {0} · {1}{2} · limite {3} °C", NomeAlvo(alvo), duracaoTexto, detalhe, $"{GuardaTermica.LimiteCpu:0}"));
 
         try { _sessao.Iniciar(); }
         catch (Exception ex)
         {
-            Evento("não arrancou: " + ex.Message);
+            Evento(Textos.T("não arrancou: ") + ex.Message);
             TerminarInterface();
         }
     }
@@ -826,7 +826,7 @@ public sealed class PaginaStress : UserControl
             algo = true;
         }
 
-        if (algo) _fase.Text = "a parar…";
+        if (algo) _fase.Text = Textos.T("a parar…");
     }
 
     private void MostrarProgresso(ProgressoStress p)
@@ -834,7 +834,7 @@ public sealed class PaginaStress : UserControl
         if (_sessao is null) return;
 
         _tempo.Text = $"{p.Segundos:0} s";
-        _fase.Text = string.IsNullOrEmpty(p.Ritmo) ? p.Fase : $"{p.Fase} · {p.Ritmo}";
+        _fase.Text = string.IsNullOrEmpty(p.Ritmo) ? Textos.T(p.Fase) : Textos.TF("{0} · {1}", Textos.T(p.Fase), p.Ritmo);
 
         var partes = p.Detalhe.Split(" · ");
         foreach (var parte in partes)
@@ -855,20 +855,20 @@ public sealed class PaginaStress : UserControl
 
         _resumo.Text = r.Resumo.StartsWith("concluído")
             ? r.Resumo
-            : $"{(r.Completo ? "concluído" : "parado")} — {r.Resumo}";
+            : Textos.TF("{0} — {1}", Textos.T(r.Completo ? "concluído" : "parado"), Textos.T(r.Resumo));
 
         foreach (var linha in r.Linhas)
             _resultado.Children.Add(UI.Texto("· " + linha, "mono"));
 
         _resultado.Children.Add(UI.Texto(
-            $"· picos: CPU {r.PicoCpuC:0} °C · GPU {r.PicoGpuC:0} °C · energia {r.EnergiaKwh * 1000:0.0} Wh " +
-            $"em {r.Segundos:0} s", "mono"));
+            Textos.TF("· picos: CPU {0} °C · GPU {1} °C · energia {2} Wh ", $"{r.PicoCpuC:0}", $"{r.PicoGpuC:0}", $"{r.EnergiaKwh * 1000:0.0}") +
+            Textos.TF("em {0} s", $"{r.Segundos:0}"), "mono"));
 
         _barra.Value = 1;
         _guardar.IsEnabled = true;
 
-        Evento($"fim · {NomeAlvo(r.Alvo)} · {r.Resumo} · pico CPU {r.PicoCpuC:0} °C / GPU {r.PicoGpuC:0} °C");
-        _fase.Text = "terminado — podes repetir";
+        Evento(Textos.TF("fim · {0} · {1} · pico CPU {2} °C / GPU {3} °C", NomeAlvo(r.Alvo), Textos.T(r.Resumo), $"{r.PicoCpuC:0}", $"{r.PicoGpuC:0}"));
+        _fase.Text = Textos.T("terminado — podes repetir");
         TerminarInterface();
     }
 
@@ -918,11 +918,11 @@ public sealed class PaginaStress : UserControl
             File.WriteAllText(ficheiro,
                 JsonSerializer.Serialize(documento, new JsonSerializerOptions { WriteIndented = true }));
 
-            Evento("relatório gravado em " + ficheiro);
+            Evento(Textos.T("relatório gravado em ") + ficheiro);
         }
         catch (Exception ex)
         {
-            Evento("não consegui gravar o relatório: " + ex.Message);
+            Evento(Textos.T("não consegui gravar o relatório: ") + ex.Message);
         }
     }
 

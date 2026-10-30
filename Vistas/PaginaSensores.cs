@@ -53,7 +53,7 @@ public sealed class PaginaSensores : UserControl
     private readonly StackPanel _sessaoGraficos = new() { Spacing = 6 };
     private readonly TextBlock _sessaoResumo = new() { Text = "", Classes = { "mono" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private DateTime? _sessaoFimPedido;
-    private readonly CheckBox _notificacoes = new() { Content = "Notificações do sistema" };
+    private readonly CheckBox _notificacoes = new() { Content = Core.Textos.T("Notificações do sistema") };
     private readonly NumericUpDown _limiteCpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
     private readonly NumericUpDown _limiteGpu = new() { Minimum = 50, Maximum = 110, Increment = 1, Width = 118, FormatString = "0" };
     private readonly NumericUpDown _espacoMin = new() { Minimum = 1, Maximum = 200, Increment = 1, Width = 118, FormatString = "0" };
@@ -68,7 +68,7 @@ public sealed class PaginaSensores : UserControl
         var filtros = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         void F(string nome, TipoSensor? t)
         {
-            var b = new Button { Content = nome, FontSize = 12 };
+            var b = new Button { Content = Textos.T(nome), FontSize = 12 };
             b.Classes.Add("secundario");
             b.Click += (_, _) =>
             {
@@ -265,7 +265,7 @@ public sealed class PaginaSensores : UserControl
         if (p.PlataformaW is not null) linhas.Add(("plataforma", "Plataforma (psys, RAPL)", true));
         foreach (var g in gpus)
             linhas.Add(("gpu:" + g.Etiqueta,
-                        $"GPU {g.Etiqueta} · {g.Nome}" + (g.Integrada ? " (integrada, dentro do pacote)" : ""),
+                        Textos.TF("GPU {0} · {1}", g.Etiqueta, g.Nome) + (g.Integrada ? Textos.T(" (integrada, dentro do pacote)") : ""),
                         false));
         linhas.Add(("total", "Total medido", true));
         if (p.EnergiaKWh is not null) linhas.Add(("energia", "Energia desde o arranque", false));
@@ -359,7 +359,7 @@ public sealed class PaginaSensores : UserControl
             foreach (var n in nucleos)
             {
                 var g = new Grid { ColumnDefinitions = new ColumnDefinitions("130,*") };
-                var chave = UI.Texto($"Núcleo {n.Nucleo}", "chave");
+                var chave = UI.Texto(Textos.TF("Núcleo {0}", n.Nucleo), "chave");
                 chave.VerticalAlignment = VerticalAlignment.Center;
                 var valor = UI.Texto("—", "valor");
                 valor.HorizontalAlignment = HorizontalAlignment.Right;
@@ -376,11 +376,11 @@ public sealed class PaginaSensores : UserControl
         }
 
         if (_notaCpu is not null)
-            _notaCpu.Text = $"{f.NucleosFisicos} núcleos · {f.Threads.Count} threads" +
+            _notaCpu.Text = Textos.TF("{0} núcleos · {1} threads", f.NucleosFisicos, f.Threads.Count) +
                             (f.Driver.Length > 0 ? $" · {f.Driver}" : "") +
                             (f.Governador.Length > 0 ? $" · {f.Governador}" : "") +
-                            $"   |   mín {FrequenciaCpu.Ghz(f.MinAtualKHz)} · média {FrequenciaCpu.Ghz(f.MediaAtualKHz)}" +
-                            $" · pico {FrequenciaCpu.Ghz(f.MaxAtualKHz)} · turbo {FrequenciaCpu.Ghz(f.TurboKHz)}";
+                            Textos.TF("   |   mín {0} · média {1}", FrequenciaCpu.Ghz(f.MinAtualKHz), FrequenciaCpu.Ghz(f.MediaAtualKHz)) +
+                            Textos.TF(" · pico {0} · turbo {1}", FrequenciaCpu.Ghz(f.MaxAtualKHz), FrequenciaCpu.Ghz(f.TurboKHz));
 
         foreach (var n in nucleos)
             if (_freqNucleos.TryGetValue(n.Nucleo, out var tb))
@@ -406,7 +406,7 @@ public sealed class PaginaSensores : UserControl
     private static Control BlocoAoVivo(string rotulo, TextBlock valor, Sparkline grafico)
     {
         var p = new StackPanel { Spacing = 4 };
-        p.Children.Add(UI.Texto(rotulo.ToUpperInvariant(), "rotulo"));
+        p.Children.Add(UI.Texto(Textos.T(rotulo).ToUpperInvariant(), "rotulo"));
         p.Children.Add(valor);
         p.Children.Add(grafico);
         return p;
@@ -486,13 +486,14 @@ public sealed class PaginaSensores : UserControl
 
         _barraThrottle.Value = Math.Clamp(throttle.Percentagem / 100.0, 0, 1);
         _throttleEstado.Text = throttle.MediaMhz <= 0
-            ? "sem leitura de cpufreq"
-            : $"{throttle.Percentagem:0} % do máximo ({throttle.MediaMhz:0} de {throttle.MaximoMhz:0} MHz) · " +
-              $"mínimo {throttle.MinimoMhz:0} MHz · carga {throttle.CargaCpu * 100:0} %";
+            ? Textos.T("sem leitura de cpufreq")
+            : Textos.TF("{0} % do máximo ({1} de {2} MHz) · mínimo {3} MHz · carga {4} %",
+                $"{throttle.Percentagem:0}", $"{throttle.MediaMhz:0}", $"{throttle.MaximoMhz:0}",
+                $"{throttle.MinimoMhz:0}", $"{throttle.CargaCpu * 100:0}");
 
         var notas = new List<string> { throttle.Veredito };
-        if (throttle.ContadorFirmware is long fw) notas.Add($"contador de firmware {fw:N0}");
-        else notas.Add("o firmware não expõe contadores de throttle (normal em AMD)");
+        if (throttle.ContadorFirmware is long fw) notas.Add(Textos.TF("contador de firmware {0}", $"{fw:N0}"));
+        else notas.Add(Textos.T("o firmware não expõe contadores de throttle (normal em AMD)"));
         _throttleDetalhe.Text = string.Join(" · ", notas);
 
         _medidorEnergia.Amostrar(potencia.TotalW);
@@ -505,7 +506,7 @@ public sealed class PaginaSensores : UserControl
 
         if (custo.Aviso is not null && custo.EurDia is null)
         {
-            _energiaTexto.Text = "sem leitura de potência — não é possível estimar o custo (" + custo.Aviso + ")";
+            _energiaTexto.Text = Textos.TF("sem leitura de potência — não é possível estimar o custo ({0})", custo.Aviso);
             return;
         }
 
@@ -514,9 +515,9 @@ public sealed class PaginaSensores : UserControl
             : $"{custo.Horas * 3600:0} s";
 
         _energiaTexto.Text =
-            $"nesta sessão: {custo.Wh:0.000} Wh em {tempo} · média {custo.MediaW:0} W\n" +
-            $"projecção a este ritmo: {custo.EurDia:0.00} €/dia · {custo.EurMes:0.00} €/mês\n" +
-            "a média é a do tempo em que a janela esteve aberta (inclui o PC parado)";
+            Textos.TF("nesta sessão: {0} Wh em {1} · média {2} W", $"{custo.Wh:0.000}", tempo, $"{custo.MediaW:0}") + "\n" +
+            Textos.TF("projecção a este ritmo: {0} €/dia · {1} €/mês", $"{custo.EurDia:0.00}", $"{custo.EurMes:0.00}") + "\n" +
+            Textos.T("a média é a do tempo em que a janela esteve aberta (inclui o PC parado)");
     }
 
     // ------------------------------------------------------------------ alertas
@@ -571,7 +572,7 @@ public sealed class PaginaSensores : UserControl
         }
 
         _placaNota.Text = faltas.Count > 0
-            ? $"sem sensor nesta máquina: {string.Join(", ", faltas)} — a aplicação não inventa valores."
+            ? Textos.TF("sem sensor nesta máquina: {0} — a aplicação não inventa valores.", string.Join(", ", faltas))
             : "sensores lidos de /sys/class/hwmon; uma leitura ausente fica em branco em vez de zero.";
 
         if (_cartaoPlaca is null)
@@ -599,7 +600,7 @@ public sealed class PaginaSensores : UserControl
             "Grava CPU, GPU, potência e frequência uma vez por segundo em " +
             "~/.local/share/linux-explode/sessoes. No fim ficam aqui o resumo e o gráfico da sessão inteira.", "sub"));
 
-        _botaoGravar.Content = "Gravar sessão";
+        _botaoGravar.Content = Textos.T("Gravar sessão");
         _botaoGravar.Classes.Add("primario");
         _botaoGravar.Click += (_, _) =>
         {
@@ -631,18 +632,18 @@ public sealed class PaginaSensores : UserControl
         _sessaoGraficos.Children.Clear();
         _sessaoResumo.Text = "";
 
-        _botaoGravar.Content = "Parar e ver";
+        _botaoGravar.Content = Textos.T("Parar e ver");
         _sessaoEstado.Text = _gravador.FalhouEscrita
-            ? $"a gravar mas o CSV não pôde ser escrito — amostras só em memória ({caminho})"
-            : $"a gravar · 0 amostras · {caminho}";
+            ? Textos.TF("a gravar mas o CSV não pôde ser escrito — amostras só em memória ({0})", caminho)
+            : Textos.TF("a gravar · 0 amostras · {0}", caminho);
     }
 
     private void PararSessao()
     {
         var (amostras, resumo) = _gravador.Parar();
-        _botaoGravar.Content = "Gravar sessão";
+        _botaoGravar.Content = Textos.T("Gravar sessão");
 
-        _sessaoEstado.Text = $"{amostras.Count} amostras em {resumo.Duracao.TotalSeconds:0} s · {_gravador.Caminho}";
+        _sessaoEstado.Text = Textos.TF("{0} amostras em {1} s · {2}", amostras.Count, $"{resumo.Duracao.TotalSeconds:0}", _gravador.Caminho);
         if (resumo.Amostras == 0)
         {
             _sessaoResumo.Text = "nada gravado";
@@ -656,11 +657,11 @@ public sealed class PaginaSensores : UserControl
         AdicionarSerie("potência", amostras.Select(a => a.Watts), "W", "Fg", 0, resumo.Watts);
         AdicionarSerie("frequência", amostras.Select(a => a.FreqMhz), "MHz", "Atencao", 0, resumo.Freq);
 
-        _sessaoResumo.Text = $"CPU {TextoResumo(resumo.Cpu, "°C")} · GPU {TextoResumo(resumo.Gpu, "°C")}\n" +
-                             $"potência {TextoResumo(resumo.Watts, "W")} · frequência {TextoResumo(resumo.Freq, "MHz")}";
+        _sessaoResumo.Text = Textos.TF("CPU {0} · GPU {1}", TextoResumo(resumo.Cpu, "°C"), TextoResumo(resumo.Gpu, "°C")) + "\n" +
+                             Textos.TF("potência {0} · frequência {1}", TextoResumo(resumo.Watts, "W"), TextoResumo(resumo.Freq, "MHz"));
 
         static string TextoResumo((double? Min, double? Max, double? Media) t, string unidade) =>
-            t.Media is double m ? $"{m:0.0} {unidade} (min {t.Min:0.0}, max {t.Max:0.0})" : "sem leitura";
+            t.Media is double m ? Textos.TF("{0} {1} (min {2}, max {3})", $"{m:0.0}", unidade, $"{t.Min:0.0}", $"{t.Max:0.0}") : Textos.T("sem leitura");
     }
 
     private void AdicionarSerie(string nome, IEnumerable<double?> valores, string unidade, string cor,
@@ -696,9 +697,9 @@ public sealed class PaginaSensores : UserControl
         }
 
         if (!_gravador.FalhouEscrita)
-            _sessaoEstado.Text = $"a gravar · {_gravador.Amostras} amostras · {_gravador.Caminho}";
+            _sessaoEstado.Text = Textos.TF("a gravar · {0} amostras · {1}", _gravador.Amostras, _gravador.Caminho);
         else
-            _sessaoEstado.Text = $"a gravar (falha ao escrever o CSV) · {_gravador.Amostras} amostras em memória";
+            _sessaoEstado.Text = Textos.TF("a gravar (falha ao escrever o CSV) · {0} amostras em memória", _gravador.Amostras);
     }
 
     private Control CartaoAlertas()
@@ -776,7 +777,7 @@ public sealed class PaginaSensores : UserControl
 
         _alertasEstado.Text = alertas.Count == 0
             ? "sem alertas — temperaturas, ventoinhas e espaço dentro dos limites"
-            : $"{alertas.Count} alerta(s) activo(s)";
+            : Textos.TF("{0} alerta(s) activo(s)", alertas.Count);
 
         string chave = string.Join("|", alertas.Select(a => a.Chave));
         if (chave == _alertasChave) return;

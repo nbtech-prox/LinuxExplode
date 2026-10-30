@@ -57,8 +57,8 @@ public sealed class PaginaRede : UserControl
 
     private Control CartaoNetbench()
     {
-        _nbModo.Items.Add("Cliente (medir até outro PC)");
-        _nbModo.Items.Add("Servidor (este PC a servir)");
+        _nbModo.Items.Add(Textos.T("Cliente (medir até outro PC)"));
+        _nbModo.Items.Add(Textos.T("Servidor (este PC a servir)"));
         _nbModo.SelectedIndex = 0;
 
         _nbMb.Items.Add("8 MB");
@@ -110,7 +110,7 @@ public sealed class PaginaRede : UserControl
     private static Control Campo(string rotulo, Control controlo)
     {
         var p = new StackPanel { Spacing = 4 };
-        p.Children.Add(UI.Texto(rotulo.ToUpperInvariant(), "rotulo"));
+        p.Children.Add(UI.Texto(Textos.T(rotulo).ToUpperInvariant(), "rotulo"));
         p.Children.Add(controlo);
         return p;
     }
@@ -134,7 +134,7 @@ public sealed class PaginaRede : UserControl
         {
             if (servidor)
             {
-                _nbEstado.Text = $"a escutar na porta {porta} — inicia o cliente no outro PC…";
+                _nbEstado.Text = Textos.TF("a escutar na porta {0} — inicia o cliente no outro PC…", porta);
                 _ = Task.Run(async () =>
                 {
                     try
@@ -145,7 +145,7 @@ public sealed class PaginaRede : UserControl
                     catch (OperationCanceledException) { }
                     catch (Exception ex)
                     {
-                        Dispatcher.UIThread.Post(() => _nbEstado.Text = "servidor falhou: " + ex.Message);
+                        Dispatcher.UIThread.Post(() => _nbEstado.Text = Textos.T("servidor falhou: ") + ex.Message);
                     }
                     Dispatcher.UIThread.Post(TerminarNetbench);
                 });
@@ -177,11 +177,11 @@ public sealed class PaginaRede : UserControl
     private void MostrarNetbench(ResultadoRedeBench r)
     {
         _nbConcluido = true;
-        _nbEstado.Text = $"{r.Destino} · {Util.Bytes(r.Bytes)} em cada sentido · {r.Segundos:0.00} s";
+        _nbEstado.Text = Textos.TF("{0} · {1} em cada sentido · {2} s", r.Destino, Util.Bytes(r.Bytes), $"{r.Segundos:0.00}");
         _nbResultado.Children.Clear();
         _nbResultado.Children.Add(UI.Linha("Subida", $"{r.SubidaMbs:0.0} MB/s"));
         _nbResultado.Children.Add(UI.Linha("Descida", $"{r.DescidaMbs:0.0} MB/s"));
-        _nbResultado.Children.Add(UI.Linha("Latência", $"{r.LatenciaMs:0.00} ms · jitter {r.JitterMs:0.00} ms", false));
+        _nbResultado.Children.Add(UI.Linha("Latência", Textos.TF("{0} ms · jitter {1} ms", $"{r.LatenciaMs:0.00}", $"{r.JitterMs:0.00}"), false));
         foreach (var l in r.Linhas) _nbResultado.Children.Add(UI.Texto("· " + l, "mono"));
     }
 
@@ -237,7 +237,7 @@ public sealed class PaginaRede : UserControl
                 g.Children.Add(v);
                 linhaAlvo.Children.Add(g);
                 linhaAlvo.Children.Add(UI.Texto(
-                    $"min {a.Min:0.0} · max {a.Max:0.0} ms · jitter {a.Jitter:0.0} ms · perda {a.Perda:0}%", "mono"));
+                    Textos.TF("min {0} · max {1} ms · jitter {2} ms · perda {3}%", $"{a.Min:0.0}", $"{a.Max:0.0}", $"{a.Jitter:0.0}", $"{a.Perda:0}"), "mono"));
                 var borda = new Border { Child = linhaAlvo, Margin = new Thickness(0, 8, 0, 0) };
                 borda.Classes.Add("linha");
                 _resultado.Children.Add(borda);
@@ -247,11 +247,11 @@ public sealed class PaginaRede : UserControl
             _resultado.Children.Add(UI.Linha("Download", r.DownloadMBs > 0 ? $"{r.DownloadMBs:0.0} MB/s" : "sem dados"));
             _resultado.Children.Add(UI.Linha("Upload", r.UploadMBs > 0 ? $"{r.UploadMBs:0.0} MB/s" : "sem dados", false));
 
-            _estado.Text = $"medição concluída às {DateTime.Now:HH:mm:ss}";
+            _estado.Text = Textos.TF("medição concluída às {0}", $"{DateTime.Now:HH:mm:ss}");
         }
         catch (Exception ex)
         {
-            _estado.Text = "falhou: " + ex.Message;
+            _estado.Text = Textos.T("falhou: ") + ex.Message;
         }
     }
 }

@@ -9,15 +9,13 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // A língua vem da configuração; na primeira execução segue a do sistema (pt/es/en) e o resto
-        // fica em pt-PT. A cultura acompanha o idioma para os números e as datas mudarem com ele.
+        // O português é o idioma principal: por omissão a interface abre sempre em pt-PT. Quem quiser
+        // espanhol ou inglês escolhe no selector da barra lateral e a escolha fica gravada.
         // LINUXEXPLODE_IDIOMA=pt|es|en força a escolha (capturas e testes).
         var forcar = Environment.GetEnvironmentVariable("LINUXEXPLODE_IDIOMA");
         var idioma = !string.IsNullOrWhiteSpace(forcar)
             ? Core.Textos.DeCodigo(forcar)
-            : string.IsNullOrWhiteSpace(Core.Config.Atual.Idioma)
-                ? Core.Textos.DoSistema()
-                : Core.Textos.DeCodigo(Core.Config.Atual.Idioma);
+            : Core.Textos.DeCodigo(Core.Config.Atual.Idioma);
         Core.Textos.Aplicar(idioma);
 
         if (args.Length > 0 && args[0] == "--cli")

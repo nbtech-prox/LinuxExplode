@@ -109,9 +109,9 @@ public sealed class PaginaBench : UserControl
         }
 
         foreach (var g in _gpus)
-            _gpuLista.Items.Add($"{g.Nome}  ({g.Tipo})");
+            _gpuLista.Items.Add($"{g.Nome}  ({Textos.T(g.Tipo)})");
         _gpuLista.SelectedIndex = 0;
-        _gpuEstado.Text = $"{_gpus.Count} GPU(s) Vulkan detetada(s)";
+        _gpuEstado.Text = Textos.TF("{0} GPU(s) Vulkan detetada(s)", _gpus.Count);
     }
 
     private Control CartaoGpu()
@@ -277,10 +277,10 @@ public sealed class PaginaBench : UserControl
                 _ramResultado.Children.Add(UI.Linha("Leitura sequencial", $"{r.LeituraMBs:N0} MB/s"));
                 _ramResultado.Children.Add(UI.Linha("Cópia", $"{r.CopiaMBs:N0} MB/s"));
                 _ramResultado.Children.Add(UI.Linha("Latência", $"{r.LatenciaNs:N1} ns", false));
-                _ramEstado.Text = $"bloco de {Util.Bytes(r.Tamanho)}";
+                _ramEstado.Text = Textos.TF("bloco de {0}", Util.Bytes(r.Tamanho));
 
-                string detalheRam = $"escrita {r.EscritaMBs:N0} MB/s · leitura {r.LeituraMBs:N0} MB/s · " +
-                                    $"cópia {r.CopiaMBs:N0} MB/s · latência {r.LatenciaNs:N1} ns";
+                string detalheRam = Textos.TF("escrita {0} MB/s · leitura {1} MB/s · ", $"{r.EscritaMBs:N0}", $"{r.LeituraMBs:N0}") +
+                                    Textos.TF("cópia {0} MB/s · latência {1} ns", $"{r.CopiaMBs:N0}", $"{r.LatenciaNs:N1}");
                 Historico.Registar("ram", Util.Bytes(r.Tamanho), r.EscritaMBs, detalheRam);
 
                 _ramResultado.Children.Add(UI.Texto(
@@ -335,11 +335,11 @@ public sealed class PaginaBench : UserControl
             _curva.Definir(pontos);
             _latResumo.Text = $"{BenchMemoria.Resumo(pontos)}\n" +
                               string.Join(" · ", pontos.Select(p => $"{p.Tamanho} {p.Ns:0.0} ns"));
-            _latEstado.Text = $"{pontos.Count} pontos medidos";
+            _latEstado.Text = Textos.TF("{0} pontos medidos", pontos.Count);
         }
         catch (Exception ex)
         {
-            _latEstado.Text = $"falhou: {ex.Message}";
+            _latEstado.Text = Textos.TF("falhou: {0}", ex.Message);
         }
     }
 
@@ -378,16 +378,16 @@ public sealed class PaginaBench : UserControl
             var r = await Task.Run(() => TarefaReal.Correr(
                 t => Dispatcher.UIThread.Post(() => _realEstado.Text = t)));
 
-            _realResultado.Children.Add(UI.Texto($"descompressão   {r.DescompressaoMBs:N0} MB/s", "mono"));
+            _realResultado.Children.Add(UI.Texto(Textos.TF("descompressão   {0} MB/s", $"{r.DescompressaoMBs:N0}"), "mono"));
             _realResultado.Children.Add(UI.Texto(
                 r.CompilacaoSegundos is double s
-                    ? $"compilação      {r.CompilacaoKBs:N0} kB/s   ({s:0.00} s, {r.Compilador})"
-                    : $"compilação      —   {r.CompilacaoMotivo}", "mono"));
-            _realResultado.Children.Add(UI.Texto($"total           {r.TotalSegundos:0.00} s", "mono"));
+                    ? Textos.TF("compilação      {0} kB/s   ({1} s, {2})", $"{r.CompilacaoKBs:N0}", $"{s:0.00}", r.Compilador)
+                    : Textos.TF("compilação      —   {0}", r.CompilacaoMotivo), "mono"));
+            _realResultado.Children.Add(UI.Texto(Textos.TF("total           {0} s", $"{r.TotalSegundos:0.00}"), "mono"));
 
             _realEstado.Text = r.CompilacaoSegundos is null
-                ? $"descompressão verificada (SHA-256 {r.Sha256[..12]}…); a compilação não correu"
-                : $"concluído · SHA-256 {r.Sha256[..12]}… igual ao original";
+                ? Textos.TF("descompressão verificada (SHA-256 {0}…); a compilação não correu", r.Sha256[..12])
+                : Textos.TF("concluído · SHA-256 {0}… igual ao original", r.Sha256[..12]);
 
             Historico.Registar("real", $"gzip {TarefaReal.BytesPayload / (1024 * 1024)} MB", r.DescompressaoMBs, "MB/s");
             if (r.CompilacaoKBs is double kbs)
@@ -397,7 +397,7 @@ public sealed class PaginaBench : UserControl
         }
         catch (Exception ex)
         {
-            _realEstado.Text = $"falhou: {ex.Message}";
+            _realEstado.Text = Textos.TF("falhou: {0}", ex.Message);
         }
     }
 
@@ -434,7 +434,7 @@ public sealed class PaginaBench : UserControl
             return;
         }
 
-        _rankingEstado.Text = $"{linhas.Count} alvo(s) no histórico";
+        _rankingEstado.Text = Textos.TF("{0} alvo(s) no histórico", linhas.Count);
 
         foreach (var l in linhas)
         {
@@ -473,10 +473,10 @@ public sealed class PaginaBench : UserControl
                 _discoResultado.Children.Add(UI.Linha("Sequencial · leitura", $"{r.SeqLeituraMBs:N0} MB/s"));
                 _discoResultado.Children.Add(UI.Linha("4K aleatório · leitura", $"{r.RandLeituraMBs:N1} MB/s"));
                 _discoResultado.Children.Add(UI.Linha("4K aleatório · escrita", $"{r.RandEscritaMBs:N1} MB/s", false));
-                _discoEstado.Text = $"ficheiro de {Util.Bytes(r.Ficheiro)} em {pasta}";
+                _discoEstado.Text = Textos.TF("ficheiro de {0} em {1}", Util.Bytes(r.Ficheiro), pasta);
 
-                string detalheDisco = $"seq escrita {r.SeqEscritaMBs:N0} · seq leitura {r.SeqLeituraMBs:N0} · " +
-                                      $"4K leitura {r.RandLeituraMBs:N1} · 4K escrita {r.RandEscritaMBs:N1} MB/s";
+                string detalheDisco = Textos.TF("seq escrita {0} · seq leitura {1} · ", $"{r.SeqEscritaMBs:N0}", $"{r.SeqLeituraMBs:N0}") +
+                                      Textos.TF("4K leitura {0} · 4K escrita {1} MB/s", $"{r.RandLeituraMBs:N1}", $"{r.RandEscritaMBs:N1}");
                 Historico.Registar("disco", "sequencial (escrita)", r.SeqEscritaMBs, detalheDisco);
 
                 _discoResultado.Children.Add(UI.Texto(
@@ -508,10 +508,10 @@ public sealed class PaginaBench : UserControl
             "no primeiro arranque e guardado como resultados.json.migrado.", "sub"));
         conteudo.Children.Add(botoes);
 
-        _histPeriodo.Items.Add("tudo");
-        _histPeriodo.Items.Add("7 dias");
-        _histPeriodo.Items.Add("30 dias");
-        _histPeriodo.Items.Add("90 dias");
+        _histPeriodo.Items.Add(Textos.T("tudo"));
+        _histPeriodo.Items.Add(Textos.T("7 dias"));
+        _histPeriodo.Items.Add(Textos.T("30 dias"));
+        _histPeriodo.Items.Add(Textos.T("90 dias"));
         _histPeriodo.SelectedIndex = 0;
         _histPeriodo.SelectionChanged += (_, _) => ActualizarHistorico();
 
@@ -557,8 +557,8 @@ public sealed class PaginaBench : UserControl
         var lista = Historico.Pesquisar(_histProcura.Text, desde, limite: 80);
         int total = Historico.Todos().Count;
 
-        _histResumo.Text = $"{lista.Count} de {total} resultado(s) no histórico" +
-                           (desde is not null ? $" · desde {desde:dd/MM/yyyy}" : "");
+        _histResumo.Text = Textos.TF("{0} de {1} resultado(s) no histórico", lista.Count, total) +
+                           (desde is not null ? Textos.TF(" · desde {0}", $"{desde:dd/MM/yyyy}") : "");
 
         _histGrafico.Children.Clear();
         _histLista.Children.Clear();
@@ -587,8 +587,8 @@ public sealed class PaginaBench : UserControl
 
             var caixa = new StackPanel { Spacing = 2 };
             caixa.Children.Add(UI.Texto(
-                $"últimas {serie.Count} corridas · {serie[0].Tipo} · {serie[0].Alvo} · " +
-                $"mín {serie.Min(r => r.Nota):N0} · máx {serie.Max(r => r.Nota):N0}", "mono"));
+                Textos.TF("últimas {0} corridas · {1} · {2} · ", serie.Count, serie[0].Tipo, serie[0].Alvo) +
+                Textos.TF("mín {0} · máx {1}", $"{serie.Min(r => r.Nota):N0}", $"{serie.Max(r => r.Nota):N0}"), "mono"));
             caixa.Children.Add(spark);
             _histGrafico.Children.Add(caixa);
         }
@@ -626,7 +626,7 @@ public sealed class PaginaBench : UserControl
             if (formato == "csv") Historico.ExportarCsv(ficheiro);
             else Historico.ExportarJson(ficheiro);
 
-            _historicoEstado.Text = $"gravado em {ficheiro}";
+            _historicoEstado.Text = Textos.TF("gravado em {0}", ficheiro);
         }
         catch (Exception ex)
         {
@@ -656,7 +656,7 @@ public sealed class PaginaBench : UserControl
 
             int novos = Historico.Importar(ficheiros[0].Path.LocalPath);
             _historicoEstado.Text = novos > 0
-                ? $"{novos} resultado(s) importado(s) de {ficheiros[0].Name}"
+                ? Textos.TF("{0} resultado(s) importado(s) de {1}", novos, ficheiros[0].Name)
                 : "o ficheiro não tinha resultados novos";
         }
         catch (Exception ex)
