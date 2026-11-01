@@ -4,11 +4,11 @@ Documento de trabalho: o que está feito, o que vem a seguir e como cada fase é
 As versões sobem de **2 em 2 no último número** (0.20.1 → 0.20.3 → 0.20.5 …) e cada uma sai com notas,
 instaladores, repositório Flatpak actualizado e CI verde.
 
-- **Estado actual:** 0.20.15 (migração para .NET 10 LTS; relatório completo em HTML, histórico em
+- **Estado actual:** 0.20.16 (migração para .NET 10 LTS; relatório completo em HTML, histórico em
   SQLite com pesquisa/período, débito real cliente/servidor, ciclos de stress, auto-teste S.M.A.R.T.,
   VRAM, suspender/retomar, ranking com mediana, latência de memória, tarefa real, sessões em CSV,
   Dispositivos, placa-mãe, bandeja, Stress, gráficos ao vivo, throttling, energia, temas, `--json`,
-  alertas e 125 testes).
+  alertas e 130 testes).
 
 ## Fase 1 — 0.20.1 (feito)
 
@@ -153,7 +153,8 @@ retomar a submissão; a assinatura GPG e a migração para .NET 10 já não são
 1. `git log --oneline -5` e `git status -sb` — ver o que está commitado e por publicar.
 2. Ler a secção da fase actual neste documento e o CHANGELOG da última versão.
 3. `dotnet build -c Release` e `--cli info` devem dizer a versão do topo do CHANGELOG;
-   `dotnet test tests/LinuxExplode.Tests -c Release` tem de passar (99 testes na 0.20.7).
+   `dotnet test tests/LinuxExplode.Tests -c Release` tem de passar com 0 falhas (o total impresso
+   manda — era 130 na 0.20.16).
 4. Verificar o que está instalado: `flatpak info pt.linuxexplode.LinuxExplode` e
    `flatpak --user remote-info linuxexplode pt.linuxexplode.LinuxExplode`.
 5. Antes de publicar: `dotnet build`, `--cli bench`, `--cli stress … --json`, e o pop a abrir; depois
