@@ -92,11 +92,15 @@ campos — nada de texto solto no `stdout`:
 
 ```json
 {
-  "aplicacao": "LinuxExplode",
-  "versao": "0.20.15",
+  "aplicacao": "LINUX EXPLODE",
+  "versao": "0.20.16",
   "comando": "potencia",
-  "quando": "2026-10-30T18:12:03Z",
-  "dados": { }
+  "quando": "2026-11-01T10:50:32+00:00",
+  "dados": {
+    "PacoteW": 20.96,
+    "TotalW": 29.96,
+    "TemRapl": true
+  }
 }
 ```
 
